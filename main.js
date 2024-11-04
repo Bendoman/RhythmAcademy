@@ -47,17 +47,21 @@ let translationAmount = 0;
 
 
 function testDraw() {
+    let loops = 0;
     // ctx.fillRect(0, laneCanvas.height - 100, 100, 100);
     for(let y = laneCanvas.height - yGap; y > laneCanvas.height - laneHeight; y -= yGap){
-        ctx.fillStyle = 'black'
+        loops++;
+        let yDist = ((hitzoneY - translationAmount - 50) - y)
+        ctx.fillStyle = `rgb(${255/(((yDist/translationSpeed)/fps)/1.5)}, 0, 0)`
+        if(loops % 15 == 0)
+            ctx.fillStyle = 'green'
         ctx.fillRect(laneCanvas.width/2 - laneCanvas.width/4, y, laneCanvas.width/2, 25);
 
         ctx.fillStyle = 'white'
         ctx.font = "20px sans-serif"
 
-        let yDist = ((hitzoneY - translationAmount - 50) - y)
 
-        ctx.fillText((((yDist/translationSpeed)/fps)).toFixed(2), laneCanvas.width/2 - laneCanvas.width/4, y + 20)
+        ctx.fillText(`${(((yDist/translationSpeed)/fps)).toFixed(2)}s to zone`, laneCanvas.width/2 - laneCanvas.width/4, y + 20)
     }
 
     ctx.fillStyle = 'rgba(50, 255, 50, .5)'
