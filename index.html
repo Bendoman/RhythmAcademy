@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Prototype 2</title>
+        <link rel="stylesheet" href="style.css">
+    </head>
+    <body>
+        <nav>
+            <div id="bpm_container">
+                <label for="BPM_input">BPM</label>
+                <input type="number" id="BPM_input" placeholder="BPM" min="30" value="120">
+            </div>
+
+            <div id="p_container">
+                <p id="fps_pagraph"></p>
+                <p id="translation_pagraph"></p>
+            </div>
+            <!-- <p id="fps_pagraph"></p>
+            <p id="fps_pagraph"></p> -->
+        </nav>
+        <section id="content">
+            <div id="canvas_container">
+                <canvas class="lane_canvas" id="lane1_canvas"></canvas>
+            </div>
+        </section>
+
+    </body>
+    <script src="main.js"></script>
+</html>
