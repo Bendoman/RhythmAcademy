@@ -115,8 +115,8 @@ window.addEventListener("keypress", (e) => {
         console.log(lane_input.inputActive);
     }
 
+    sound.cloneNode().play();
     if(inzone) {
-        sound.cloneNode().play();
         console.log((Date.now() - starttime) / 1000)
         hitStatus = "hit"
         misstime = ''
