@@ -17,15 +17,15 @@ window.addEventListener('mousemove', () => {
 
 
 if(navigator.requestMIDIAccess) {
-    navigator.requestMIDIAccess().then(success, failure);
+    navigator.requestMIDIAccess().then(midi_connection_success, midi_connection_failure);
 }
 
-function success(midiAccess) {
+function midi_connection_success(midiAccess) {
     midiAccess.onstatechange = updateDevices;
     const inputs = midiAccess.inputs;
 
     inputs.forEach(input => {
-        input.onmidimessage = midiMessage;
+        input.onmidimessage = processMidiMessage;
     });
 }
 
@@ -33,7 +33,7 @@ function updateDevices(event) {
     console.log(event);
 }
 
-function midiMessage(input) {
+function processMidiMessage(input) {
     // 153 is on 137 is off
     const command = input.data[0]
     const note = input.data[1]
@@ -47,7 +47,7 @@ function midiMessage(input) {
     }
 }
 
-function failure() {
+function midi_connection_failure() {
     console.log('Failed to connect MIDI device');
 }
 
