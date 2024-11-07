@@ -18,14 +18,16 @@ let audioContext;
 
 const contentContainer = document.getElementById('content');
 
-let width = contentContainer.clientWidth;   laneCanvas.width = width / 6;
-let height = contentContainer.clientHeight; laneCanvas.height = height * 0.85;
+let width = contentContainer.clientWidth;   laneCanvas.width = width / 3;
+let height = contentContainer.clientHeight; laneCanvas.height = height * .9;
 
-let bpm = 10;
+let bpm = 5;
 let translationSpeed = 0.6;
 let translationAmount = 0; 
 
 let hitzone_start_y = laneCanvas.height - 50;
+let input_visuals_height = 50; 
+let laneInputFill = 'black';
 
 // DOM Elements
 // Inputs
@@ -33,6 +35,7 @@ const bpmInput = document.getElementById('BPM_input');
 
 // Buttons
 const enableAudioButton = document.getElementById('enable_audio_button');
+const pauseButton = document.getElementById('pause_button');
 
 // Debug displays
 const upsParagraph = document.getElementById('ups_pagraph');
@@ -45,9 +48,11 @@ function Lane(height, bpm, notes, note_gap, input_key, hitzone) {
     this.height = height; 
     this.bpm = bpm; 
     this.notes = notes; 
+    this.nextNoteIndex = 0; 
     this.note_gap = note_gap; // Defines the distance between full notes
     this.input_key = input_key;
-    this.handleInput = () => { handleLaneInput(this) };
+    this.handleInputOn = () => { handleLaneInputOn(this) };
+    this.handleInputOff = () => { handleLaneInputOff(this) };
     this.hitzone = hitzone;
 }
 
@@ -78,6 +83,11 @@ enableAudioButton.addEventListener('click', () => {
     }
 });
 
+pauseButton.addEventListener('click', () => { 
+    // Fetching BPM from input
+    bpm = 0;
+});
+
 bpmInput.addEventListener('change', (event) => {
     let inputValue = parseInt(bpmInput.value);
 
@@ -95,7 +105,13 @@ bpmInput.addEventListener('change', (event) => {
 window.addEventListener('keydown', (event) => {
     let associated_lane = key_lane_pairs[event.key]
     if(associated_lane != null)
-        associated_lane.handleInput();
+        associated_lane.handleInputOn();
+});
+
+window.addEventListener('keyup', (event) => {
+    let associated_lane = key_lane_pairs[event.key]
+    if(associated_lane != null)
+        associated_lane.handleInputOff();
 });
 
 // MIDI related
@@ -135,16 +151,42 @@ function midi_connection_success(midiAccess) {
 // TODO: Alert the user in input selection menu of the failure
 function midi_connection_failure() { console.log('Failed to connect MIDI device'); }
 
-function handleLaneInput(lane) {
-    console.log(lane);
+function handleLaneInputOn(lane) {
+    let nextNote = lane.notes[lane.nextNoteIndex];
+    console.log(`Time: ${nextNote.secondsToPerfectHitzone}\nCurrent Zone: ${nextNote.currentZone}`);
+    laneInputFill = 'red';
+
+    if(nextNote.currentZone == 'early') {
+        console.log('WRONG NOTE');
+    } else if(nextNote.currentZone == 'early_hit') {
+        console.log('early_hit');
+        lane.nextNoteIndex++;
+        nextNote.hitStatus = 'early_hit';
+    } else if(nextNote.currentZone == 'perfect_hit') {
+        console.log('perfect_hit');
+        lane.nextNoteIndex++;
+        nextNote.hitStatus = 'perfect_hit';
+        
+    } else if(nextNote.currentZone == 'late_hit') {
+        console.log('late_hit');
+        lane.nextNoteIndex++;
+        nextNote.hitStatus = 'late_hit';
+    }
 }
+
+function handleLaneInputOff(lane) {
+    // console.log(lane);
+    laneInputFill = 'black';
+}
+
 
 // For testing purposes, will be replaced.
 // Populates lane with as many full notes as will fit within its assigned height
 function populateNotes(lane) {
-    for(let y = lane.hitzone.early_hit_y - lane.note_gap; y > laneCanvas.height - lane.height; y -= lane.note_gap) {
-        lane.notes.push({x:laneCanvas.width/2 - laneCanvas.width/4, y:y, width:laneCanvas.width/2, height:lane.note_gap/8, currentZone:'early', secondsToPerfectHitzone:null}) // Height should be lane.note_gap/8
+    for(let y = lane.hitzone.early_hit_y - lane.note_gap; y > laneCanvas.height - lane.height; y -= lane.note_gap*3) {
+        lane.notes.push({x:laneCanvas.width/2 - laneCanvas.width/4, y:y, width:laneCanvas.width/2, height:lane.note_gap/8, currentZone:'early', hitStatus:'unhit', secondsToPerfectHitzone:null}) // Height should be lane.note_gap/8
     }
+    lane.nextNoteIndex = 0;
 }
 
 function updateNotes(lane, notes, note_gap) {
@@ -158,47 +200,51 @@ function updateNotes(lane, notes, note_gap) {
         let secondsToPerfectHitzone = ((disanceToPerfectHitzone/translationSpeed)/ups).toFixed(2);
         note.secondsToPerfectHitzone = secondsToPerfectHitzone;
 
+        let early_hit_y = lane.hitzone.early_hit_y;
+        let perfect_hit_y = lane.hitzone.perfect_hit_y;
+        let late_hit_y = lane.hitzone.late_hit_y;
+
+        let early_hit_height = lane.hitzone.early_hit_height;
+        let perfect_hit_height = lane.hitzone.perfect_hit_height;
+        let late_hit_height = lane.hitzone.late_hit_height;
+
+        let effective_note_y = note.y + translationAmount;
+
         // TODO: Review this with Sean. Should it be done this way or by timings?
-        ctx.fillStyle = 'purple';
-
-        if(secondsToPerfectHitzone > 0) {
-            // Note is before perfect hit zone
-            if(note.y + translationAmount > lane.hitzone.early_hit_y) {
-                ctx.fillStyle = 'black';
-                if(note.currentZone != 'early_hit') {
-                    note.currentZone = 'early_hit';
-                }
-            } 
-        } else {
-            // Note is inside or after perfect hit zone
-            if(note.y + translationAmount > lane.hitzone.perfect_hit_y && note.y + translationAmount < lane.hitzone.perfect_hit_y + lane.hitzone.perfect_hit_height) {
-                // Note is inside perfect hit zone
-                ctx.fillStyle = 'green';
-                if(note.currentZone != 'perfect_hit') {
-                    note.currentZone = 'perfect_hit';
-                }
-            } else if(note.y + translationAmount > lane.hitzone.late_hit_y && note.y + translationAmount < lane.hitzone.late_hit_y + lane.hitzone.late_hit_height) {
-                // Note is inside late hit zone
-                ctx.fillStyle = 'yellow';
-                if(note.currentZone != 'late_hit') {
-                    note.currentZone = 'late_hit';
-                }
-            } else {
-                // Note is inside miss hit zone
-                ctx.fillStyle = 'red';
-                if(note.currentZone != 'miss') {
-                    note.currentZone = 'miss';
-                }
+        if(effective_note_y > early_hit_y && effective_note_y < (early_hit_y + early_hit_height) && note.currentZone != 'early_hit') {
+            ctx.fillStyle = 'orange';
+            note.currentZone = 'early_hit';
+            // console.log('Note entered early hit zone', note, lane);
+        } else if (effective_note_y > perfect_hit_y && effective_note_y < (perfect_hit_y + perfect_hit_height) && note.currentZone != 'perfect_hit') {
+            ctx.fillStyle = 'white';
+            note.currentZone = 'perfect_hit';
+            // console.log('Note entered perfect hit zone', note, lane);
+        } else if (effective_note_y > late_hit_y && effective_note_y < (late_hit_y + late_hit_height) && note.currentZone != 'late_hit') {
+            ctx.fillStyle = 'yellow';
+            note.currentZone = 'late_hit';
+            // console.log('Note entered late hit zone', note, lane);
+        } else if(effective_note_y > late_hit_y + late_hit_height && note.currentZone != 'miss') {
+            ctx.fillStyle = 'red';
+            note.currentZone = 'miss';
+            if(note.hitStatus == 'unhit') {
+                note.hitStatus = 'late_miss';
+                lane.nextNoteIndex++;
             }
-
+            // console.log('Note entered miss zone', note, lane);
+        } else if(note.currentZone != 'miss') {
+            ctx.fillStyle = 'purple';
         }
+
+        if(n == lane.nextNoteIndex)
+            ctx.fillStyle = 'blue';
 
         ctx.fillRect(note.x, note.y-1.5 + translationAmount, note.width, 5);
 
         ctx.fillStyle = 'white';
         ctx.font = "12px sans-serif"
-        ctx.fillText(`${note.secondsToPerfectHitzone}s to zone`, note.x + 30, note.y - 2 + translationAmount)
-        ctx.fillText(`${note.currentZone}`, note.x + 30, note.y - 15 + translationAmount)
+        ctx.fillText(`${note.secondsToPerfectHitzone}s to zone`, note.xa, note.y - 2 + translationAmount)
+        ctx.fillText(`zone: ${note.currentZone}`, note.x, note.y - 15 + translationAmount)
+        ctx.fillText(`hit status: ${note.hitStatus}`, note.x + 100, note.y - 15 + translationAmount)
     }
 }
 
@@ -229,15 +275,16 @@ function drawHitZone(lane) {
     // Hitzone should have early hit area and late hit area each half of the note resolution's length.
     let hitzone = lane.hitzone; 
     
-    ctx.fillStyle = 'rgba(50, 255, 50, .15)';
+    // TODO: Decide on the best colours for the hitzone. If custom background colours are allowed deal with transparency affecting the colours here. 
+    ctx.fillStyle = 'rgba(50, 255, 50, .45)';
     // Perfect hit zone
     ctx.fillRect(0, hitzone.perfect_hit_y, laneCanvas.width, hitzone.perfect_hit_height);
 
-    ctx.fillStyle = 'rgba(255, 255, 50, .15)';
+    ctx.fillStyle = 'rgba(255, 255, 50, .45)';
     // Early hit zone
-    ctx.fillRect(0, hitzone.early_hit_y, laneCanvas.width, hitzone.perfect_hit_height);    
+    ctx.fillRect(0, hitzone.early_hit_y, laneCanvas.width, hitzone.early_hit_height);    
     // Late hit zone
-    ctx.fillRect(0, hitzone.late_hit_y, laneCanvas.width, hitzone.perfect_hit_height);
+    ctx.fillRect(0, hitzone.late_hit_y, laneCanvas.width, hitzone.late_hit_height);
  
     // TODO: Remove old drawing logic below
     // ctx.fillRect(0, hitzone_start_y- 50, laneCanvas.width, lane.note_gap/16);
@@ -250,6 +297,14 @@ function drawLaneBackground(lane) {
     ctx.fillRect(0, laneCanvas.height - lane.height, laneCanvas.width, lane.height);
 }
 
+function drawLaneInputVisual(lane) {
+    ctx.fillStyle = laneInputFill;
+    ctx.fillRect(0, laneCanvas.height - input_visuals_height, laneCanvas.width, input_visuals_height);
+
+    ctx.fillStyle = 'white';
+    ctx.font = "40px sans-serif"
+    ctx.fillText(lane.input_key.toUpperCase(), laneCanvas.width/2 - 20, laneCanvas.height - input_visuals_height + 40);   
+}
 // #endregion
 
 
@@ -284,6 +339,7 @@ function update() {
     drawMeasureLines(lane_one);
     updateNotes(lane_one, lane_one.notes, lane_one.note_gap);
     drawHitZone(lane_one);
+    drawLaneInputVisual(lane_one);
 
     // Canvas translation
     translationSpeed = ((lane_one.note_gap * (bpm/60)) / ups)
@@ -291,6 +347,9 @@ function update() {
 
     if(translationAmount > lane_one.height) {
         translationAmount = 0;
+        lane_one.nextNoteIndex = 0;
+        lane_one.notes = [];
+        populateNotes(lane_one);
         // ctx.restore();
         // ctx.save(); 
     }
@@ -307,9 +366,9 @@ function update() {
 // #region (Initial setup)
 let lane_one = new Lane(3000, bpm, [], 150, 'a');
 
-
+// TODO: Decide if hitzone should be flush with input visuals as it might be confusing
 let startingY = laneCanvas.height - 200;
-let measure32ndNote = lane_one.note_gap/8; 
+let measure32ndNote = lane_one.note_gap/2; 
 let areaHeight = measure32ndNote/2;
 let lane_one_hitzone = new Hitzone(startingY, areaHeight, startingY + areaHeight, areaHeight, startingY + (2*areaHeight), areaHeight);
 lane_one.hitzone = lane_one_hitzone;
