@@ -161,10 +161,6 @@ function noteOn(note, velocity) {
     osc.gain = oscGain;
 
     osc.start();
-
-
-
-
 }
 
 function noteOff(note) {
