@@ -21,6 +21,39 @@
             <div>
                 <button id="enable_audio_button">Enable Audio Context</button>
                 <button id="pause_button">Pause scroll</button>
+                <button id="restart_button">Restart</button>
+            </div>
+
+
+            <div>
+                <label for="lane_sound_select">Lane sound</label>
+                <select name="" id="lane_sound_select">
+                    <option value="kick">kick</option>
+                    <option value="snare">snare</option>
+                    <option value="clap">clap</option>
+                    <option value="crash">crash</option>
+                    <option value="open-hihat">open-hihat</option>
+                    <option value="closed-hihat">closed-hihat</option>
+                </select>
+            </div>
+
+            <div id="note_stats">
+                <p id="total_notes">Total notes: 0</p>
+                <p id="hit_notes">Hit notes: 0</p>
+                <p id="missed_notes">Missed notes: 0</p>
+                <p id="wrong_notes">Wrong notes: 0</p>
+                <p id="hit_percentage">Hit percentage: %</p>
+            </div>
+
+            <div>
+                <button id="input_key_setter">Listen for lane input</button>
+            </div>
+
+            <div>
+                <button id="play_mode">Enter play mode</button>
+                <button id="edit_mode">Enter edit mode</button>
+                <label for="measures">Measures: </label>
+                <input type="number" min="1" value="1" id="measures_input">
             </div>
             <!-- <p id="fps_pagraph"></p>
             <p id="fps_pagraph"></p> -->
@@ -32,6 +65,6 @@
         </section>
 
     </body>
-    <script src="audio_test/audioSprite.js"></script>
+    <script src="main.js"></script>
     <!-- <script src="main.js"></script> -->
 </html>

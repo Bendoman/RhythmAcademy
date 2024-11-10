@@ -32,3 +32,14 @@ nav label {
     /* Removes unwanted margin after canvas */
     display: block;
 }
+
+#note_stats {
+    background-color: #eee;
+    padding: 1em;
+    display: flex;
+    gap: 2em;
+}
+
+#measures_input {
+    max-width: 4em;
+}
