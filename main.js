@@ -22,6 +22,7 @@ let width = contentContainer.clientWidth;   laneCanvas.width = width / 3;
 let height = contentContainer.clientHeight; laneCanvas.height = height * .9;
 
 let bpm = 100;
+let paused = false;
 let translationSpeed = 0.6;
 let translationAmount = 0; 
 
@@ -43,6 +44,7 @@ const measuresInput = document.getElementById('measures_input');
 // Buttons
 const enableAudioButton = document.getElementById('enable_audio_button');
 const pauseButton = document.getElementById('pause_button');
+const resumeButton = document.getElementById('resume_button');
 const inputKeySetter = document.getElementById('input_key_setter');
 const editModeButton = document.getElementById('edit_mode');
 const playModeButton = document.getElementById('play_mode');
@@ -188,6 +190,12 @@ enableAudioButton.addEventListener('click', () => {
 pauseButton.addEventListener('click', () => { 
     // Fetching BPM from input
     bpm = 0;
+    paused = true; 
+});
+
+resumeButton.addEventListener('click', () => {
+    paused = false;
+    bpm = bpmInput.value;
 });
 
 inputKeySetter.addEventListener('click', () => {
@@ -246,6 +254,9 @@ restartButton.addEventListener('click', () => {
 
 // TODO: Disallow duplicate notes from being placed. And sort by y value upon insertion.
 laneCanvas.addEventListener('click', (event) => {
+    if(!inEditMode)
+        return; 
+
     console.log(getMousePos(laneCanvas, event));
     let y = getMousePos(laneCanvas, event).y - translationAmount;
     y = lane_one.startY - (Math.round((lane_one.startY - y)/(lane_one.note_gap/2)) * (lane_one.note_gap/2));
@@ -389,6 +400,12 @@ function midi_connection_success(midiAccess) {
 function midi_connection_failure() { console.log('Failed to connect MIDI device'); }
 
 function handleLaneInputOn(lane) {
+    if(paused) {
+        paused = false;
+        bpm = bpmInput.value;
+        console.log('resume');
+    }
+
     laneInputFill = 'red';
     let nextNote = lane.notes[lane.nextNoteIndex];
     console.log(`Time: ${nextNote.secondsToPerfectHitzone}\nCurrent Zone: ${nextNote.currentZone}`);
@@ -437,7 +454,7 @@ function populateNotes(lane) {
     lane.notesHit = 0;
     lane.notesMissed = 0;
     lane.wrongNotes = 0; 
-    for(let y = lane.hitzone.early_hit_y - lane.note_gap; y > laneCanvas.height - lane.height; y -= lane.note_gap) {
+    for(let y = lane.hitzone.perfect_hit_y - lane.note_gap; y > laneCanvas.height - lane.height; y -= lane.note_gap) {
         lane.notes.push({x:laneCanvas.width/2 - laneCanvas.width/4, y:y, width:laneCanvas.width/2, height:lane.note_gap/8, currentZone:'early', hitStatus:'unhit', secondsToPerfectHitzone:null}) // Height should be lane.note_gap/8
         lane.totalNotes++;
     }
@@ -480,6 +497,8 @@ function updateNotes(lane, notes, note_gap) {
         } else if (effective_note_y > perfect_hit_y && effective_note_y < (perfect_hit_y + perfect_hit_height) && note.currentZone != 'perfect_hit') {
             ctx.fillStyle = 'yellow';
             note.currentZone = 'perfect_hit';
+            hitSounds.play('snare');  
+            
             // console.log('Note entered perfect hit zone', note, lane);
         } else if (effective_note_y > late_hit_y && effective_note_y < (late_hit_y + late_hit_height) && note.currentZone != 'late_hit') {
             ctx.fillStyle = 'yellow';
@@ -522,7 +541,7 @@ function updateNotes(lane, notes, note_gap) {
 // Temporary for testing. Needs to be solidified.
 function drawMeasureLines(lane) {
     let barCount = 1; // Only considering 4/4 time signature for now
-    for(let y = lane.hitzone.early_hit_y - lane.note_gap; y > laneCanvas.height - lane.height; y -= lane.note_gap) {
+    for(let y = lane.hitzone.perfect_hit_y - lane.note_gap; y > laneCanvas.height - lane.height; y -= lane.note_gap) {
         if(y + translationAmount < 0)
             return;
         // console.log(y);
@@ -619,6 +638,9 @@ function update() {
 
         // translation
         translationSpeed = ((lane_one.note_gap * (bpm/60)) / ups)
+        // if(translationSpeed != 0) {
+        //     translationSpeed -= 0.035;
+        // }
         translationParagraph.innerText = translationSpeed.toFixed(2);
 
         if(translationAmount > lane_one.height) {
@@ -682,7 +704,7 @@ const hitSounds = new Sprite({
   });
 
 
-let lane_one = new Lane(400, bpm, [], 150, 43);
+let lane_one = new Lane(400, bpm, [], 150, 'a');
 
 // TODO: Decide if hitzone should be flush with input visuals as it might be confusing
 let startingY = laneCanvas.height - 200;

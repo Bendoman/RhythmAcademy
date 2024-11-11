@@ -6,7 +6,7 @@
 
 nav {
     display: flex;
-    height: 5vh;
+    height: 8vh;
     gap: 2em;
     background-color: rgb(129, 127, 127);
 }
@@ -18,7 +18,7 @@ nav label {
 #content {
     gap: 2em;
     width: 100vw;
-    height: 95vh;
+    height: 92vh;
 
     display: flex;
     justify-content: center;
