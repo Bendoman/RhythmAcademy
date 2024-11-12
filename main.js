@@ -21,7 +21,11 @@ const contentContainer = document.getElementById('content');
 let width = contentContainer.clientWidth;   laneCanvas.width = width / 3;
 let height = contentContainer.clientHeight; laneCanvas.height = height * .9;
 
-let bpm = 100;
+let bpm = 150;
+
+let actualBPM = 0; 
+let beats = 0; 
+
 let paused = false;
 let translationSpeed = 0.6;
 let translationAmount = 0; 
@@ -53,6 +57,7 @@ const restartButton = document.getElementById('restart_button');
 // Debug displays
 const upsParagraph = document.getElementById('ups_pagraph');
 const translationParagraph = document.getElementById('translation_pagraph');
+const actualBPMParagraph = document.getElementById('actualBPM_paragraph');
 
 // Stats
 const totalNotesStat = document.getElementById('total_notes')
@@ -497,7 +502,9 @@ function updateNotes(lane, notes, note_gap) {
         } else if (effective_note_y > perfect_hit_y && effective_note_y < (perfect_hit_y + perfect_hit_height) && note.currentZone != 'perfect_hit') {
             ctx.fillStyle = 'yellow';
             note.currentZone = 'perfect_hit';
-            hitSounds.play('snare');  
+            hitSounds.play('kick');  
+            beats++;
+            
             
             // console.log('Note entered perfect hit zone', note, lane);
         } else if (effective_note_y > late_hit_y && effective_note_y < (late_hit_y + late_hit_height) && note.currentZone != 'late_hit') {
@@ -607,22 +614,27 @@ function drawLaneInputVisual(lane) {
 let ups = 0;    
 let filterStrength = 20; 
 let updateTime = 0, thisUpdateTime; 
-let lastLoop = new Date, thisLoop; 
+let lastLoop = performance.now(), thisLoop; 
 // Game exit boolean
 let stopGame = false;
 // Game loop method
-function update() {
+function update(timeStamp) {
     if(stopGame)
         return; 
 
     // Calculating the nubmer of updates per second
-    thisLoop = new Date;
-    thisUpdateTime = thisLoop - lastLoop; 
-    updateTime += (thisUpdateTime - updateTime) / filterStrength; 
-    lastLoop = thisLoop;
+    // thisLoop = performance.now();
+    timeInterval = timeStamp - lastLoop;
+    // thisUpdateTime = thisLoop - lastLoop; 
+    updateTime += (timeInterval - updateTime) / filterStrength; 
+
     
-    ups = (1000/updateTime).toFixed(1);
-    upsParagraph.innerText = `UPS: ${ups}`;
+    ups = (1000/updateTime);
+    upsParagraph.innerText = `UPS: ${ups.toFixed(1)}`;
+
+    lastLoop = timeStamp
+    
+    // console.log(timeInterval / (60000/bpm));
 
     // Clear canvas based on lane size (Will loop through all lanes)
     ctx.clearRect(0, laneCanvas.height - lane_one.height, laneCanvas.width, laneCanvas.height + lane_one.height);
@@ -637,11 +649,16 @@ function update() {
         drawLaneInputVisual(lane_one);
 
         // translation
-        translationSpeed = ((lane_one.note_gap * (bpm/60)) / ups)
+        // translationSpeed = (((lane_one.note_gap) * (bpm/60)) / ups)
+        // translationSpeed = ((lane_one.note_gap) * ((60000/bpm) / timeInterval))
+        translationSpeed = (timeInterval / (60000/bpm)) * lane_one.note_gap;
+
+        // translationIncrement = ();
         // if(translationSpeed != 0) {
         //     translationSpeed -= 0.035;
         // }
         translationParagraph.innerText = translationSpeed.toFixed(2);
+
 
         if(translationAmount > lane_one.height) {
             translationAmount = 0;
@@ -731,4 +748,40 @@ let highlightedArea = {
 
 // First call to game loop
 requestAnimationFrame(update);
+
+function Timer(callback, timeInterval) {
+    this.timeInterval = timeInterval; 
+    this.start = () => {
+        this.expected = Date.now() + this.timeInterval;
+        this.timeout = setTimeout(this.round, this.timeInterval);
+        console.log('Started');
+    }
+
+    this.stop = () => {
+        clearTimeout(this.timeout);
+        console.log('stopped');
+    }
+
+    this.round = () => {
+        let drift = Date.now() - this.expected; 
+        callback();
+        this.expected += this.timeInterval;
+        // console.log(drift);
+        // console.log(this.timeInterval - drift);
+
+        console.log(`Beat ${drift}`)
+
+        this.timeout = setTimeout(this.round, this.timeInterval - drift);
+    }
+}
+
+// const kick = new Timer(() => {hitSounds.play('kick')}, 60000/150);
+// const snare = new Timer(() => {hitSounds.play('snare')}, 1000/60);
+// kick.start();
+// snare.start();
+
+// const s = new Timer(() => {update()}, 0.5)
+// s.start();
+
+
 // #endregion

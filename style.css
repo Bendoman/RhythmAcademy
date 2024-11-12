@@ -43,3 +43,8 @@ nav label {
 #measures_input {
     max-width: 4em;
 }
+
+#ups_pagraph {
+    max-width: 3em;
+    overflow: hidden;
+}
