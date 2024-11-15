@@ -61,3 +61,7 @@ replaced with a button to retract in expanded form.
   background-color: var(--lane_background);
   border-radius: 15px;
 }
+
+.lane_canvas:hover {
+ background-color: red; 
+}

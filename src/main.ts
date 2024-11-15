@@ -2,13 +2,15 @@
 import Hitzone from "./Hitzone.ts";
 import Lane from "./Lane.ts"
 import Note from "./Note.ts";
+import { resetLaneStats } from "./Utils.ts";
 // #endregion
 
 // #region ( Global variables )
 let laneCount = 0; 
 let canvases: HTMLCanvasElement[] = [];
 const laneContainer = document.getElementById('lane_container') as HTMLElement | null; 
-const lane_ctx_pairs: { [key: string]: [Lane, CanvasRenderingContext2D | null] } = {};
+// const lane_ctx_pairs: { [key: string]: [Lane, CanvasRenderingContext2D | null] } = {};
+const input_lane_pairs: { [key: string ]: Lane } = {};
 
 // const lane_one_canvas = document.getElementById('lane_one_canvas') as HTMLCanvasElement | null;
 
@@ -25,13 +27,28 @@ let container_height = laneContainer?.clientHeight;
 
 
 // #endregion
+
+
+function populateTestNotes(lane: Lane) {
+  resetLaneStats(lane);
+  for(let y = lane.startY; y > lane.topOfLane; y -= lane.noteGap) {
+    // TODO: Change lane.notegap/8
+    let height = lane.noteGap/16
+    if(height < 5)
+      height = 5; 
+
+    let newNote = new Note(lane.canvasWidth/2 - lane.canvasWidth/4, y, lane.canvasWidth/2, height);
+    lane.notes.push(newNote);
+  }
+  console.log(lane);
+}
+
 function updateLaneWidths(multiplier: number) {
   canvases.forEach(canvas => {
     if(container_width)
       canvas.width = (container_width / 4) * multiplier;
   });
 }
-
 
 function createNewLane() {
   if(!container_width || !container_height) {
@@ -46,21 +63,25 @@ function createNewLane() {
   newCanvas.width = container_width / 4;
   newCanvas.height = container_height;
 
-  const new_lane = new Lane(bpm, 10, 250, 'kick', 3, [], [4, 4], newCanvas.height);
-  
-  lane_ctx_pairs[newCanvas.id] = [new_lane, newCanvas.getContext('2d')];
-  // console.log(newCanvas);
-  // lane_ctx_pairs[newCanvas.id][1]?.fillRect(0, newCanvas.height - (newCanvas.height * 0.36), newCanvas.width, 2); 
+  let ctx = newCanvas.getContext('2d');
+  if(ctx != null) {
+    const new_lane = new Lane(bpm, 10, 150, 'kick', 3, [], [4, 4], newCanvas.width, newCanvas.height, 'a', ctx);
+    input_lane_pairs[new_lane.inputKey] = new_lane;
 
-  let ctx = lane_ctx_pairs[newCanvas.id][1];
-  if(ctx != null)
-    new_lane.drawHitzone(ctx, newCanvas.width);
+    new_lane.drawHitzone(newCanvas.width);
+    new_lane.drawMeasureIndicators(0);
 
+    populateTestNotes(new_lane);
+    new_lane.drawNotes(0);
+
+    new_lane.drawInputVisualUnpressed();
+  }
 
   laneCount++;
   canvases.push(newCanvas);
   laneContainer?.appendChild(newCanvas);
-
+  // TODO: Revist this to make it more robust
+  // Dynamically updates lane widths based on the number of lanes
   switch(laneCount) {
     case 4:
       updateLaneWidths(0.75);
@@ -74,13 +95,13 @@ function createNewLane() {
   }
 }
 
-// createNewLane();
 createNewLane();
 // createNewLane();
 // createNewLane();
 // createNewLane();
 // createNewLane();
-console.log(lane_ctx_pairs);
+// createNewLane();
+// console.log(lane_ctx_pairs);
 console.log(canvases);
 
 
@@ -89,6 +110,30 @@ console.log(canvases);
 window.addEventListener('resize', () => {
   // TODO: Dynamically resize lanes
 });
+
+// TODO: Make this specific to key event
+let keyHeld = false;
+window.addEventListener('keydown', (event) => {
+  if(keyHeld)
+    return;
+
+  let associatedLane = input_lane_pairs[event.key];
+  if(associatedLane != null)
+    associatedLane.handleInputOn(); 
+
+  // TODO: Make this specific to key event
+  keyHeld = true; 
+})
+
+window.addEventListener('keyup', (event) => {
+  let associatedLane = input_lane_pairs[event.key];
+  if(associatedLane != null)
+    associatedLane.handleInputOff(); 
+
+  // TODO: Make this specific to key event
+  keyHeld = false; 
+})
+
 // #endregion
 
 

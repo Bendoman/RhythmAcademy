@@ -1,4 +1,5 @@
 import { drawLine } from "./Utils";
+import { COLORS } from "./constants";
 
 export default class Hitzone {
     public early_hit_y: number;
@@ -29,20 +30,20 @@ export default class Hitzone {
     }
 
     public drawHitZone(ctx: CanvasRenderingContext2D, width: number) {
-    ctx.fillStyle = 'rgba(28, 124, 84, .25)';
-
     // Perfect hit zone
-    drawLine(ctx, 0, this.perfect_hit_y, width, this.perfect_hit_y, 'black');
+    ctx.fillStyle = COLORS.PERFECT_HITZONE_FILL;
+    drawLine(ctx, 0, this.perfect_hit_y, width, this.perfect_hit_y, 'black', 1);
     ctx.fillRect(0, this.perfect_hit_y, width, this.perfect_hit_height);
-    drawLine(ctx, 0, this.perfect_hit_y + this.perfect_hit_height, width, this.perfect_hit_y + this.perfect_hit_height, 'black');
+    drawLine(ctx, 0, this.perfect_hit_y + this.perfect_hit_height, width, this.perfect_hit_y + this.perfect_hit_height, 'black', 1);
 
-    ctx.fillStyle = 'rgba(28, 124, 84, .1)';
     // Early hit zone
-    drawLine(ctx, 0, this.early_hit_y, width, this.early_hit_y, 'black', [5, 5]);
+    ctx.fillStyle = COLORS.EARLY_HITZONE_FILL;
+    drawLine(ctx, 0, this.early_hit_y, width, this.early_hit_y, 'black', 1, [5, 5]);
     ctx.fillRect(0, this.early_hit_y, width, this.early_hit_height);    
-    // Late hit zone
-    ctx.fillRect(0, this.late_hit_y, width, this.late_hit_height);
-    drawLine(ctx, 0, this.late_hit_y + this.late_hit_height, width, this.late_hit_y + this.late_hit_height, 'black', [5, 5]);
 
+    // Late hit zone
+    ctx.fillStyle = COLORS.LATE_HITZONE_FILL;
+    ctx.fillRect(0, this.late_hit_y, width, this.late_hit_height);
+    drawLine(ctx, 0, this.late_hit_y + this.late_hit_height, width, this.late_hit_y + this.late_hit_height, 'black', 1, [5, 5]);
     }
 }
