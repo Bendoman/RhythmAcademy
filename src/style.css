@@ -65,3 +65,12 @@ replaced with a button to retract in expanded form.
 .lane_canvas:hover {
  background-color: red; 
 }
+
+
+#debug_text {
+  padding: .5em;
+  color: white; 
+  background-color: blue;
+  
+  position: absolute;
+}

@@ -34,7 +34,12 @@ export default class Lane {
     public topOfInputVisual: number;
 
     public inputKey: string; 
+    public inputAreaHeight: number;
+    public pressed: boolean;
+    
+    public canvas: HTMLCanvasElement;
     public ctx: CanvasRenderingContext2D;
+    public translationAmount: number; 
 
     constructor(
         bpm: number, 
@@ -44,10 +49,8 @@ export default class Lane {
         maxWrongNotes: number,
         notes: Note[],
         timeSignature: number[],
-        canvasWidth: number,
-        canvasHeight: number,
         inputKey: string,
-        ctx: CanvasRenderingContext2D
+        canvas: HTMLCanvasElement
     ) {
         this.bpm = bpm; 
         this.measureCount = measureCount;
@@ -61,8 +64,11 @@ export default class Lane {
 
         this.maxWrongNotes = maxWrongNotes;
         
-        this.canvasWidth = canvasWidth;
-        this.canvasHeight = canvasHeight;
+        this.canvas = canvas; 
+        this.ctx = this.canvas.getContext('2d')!; 
+
+        this.canvasWidth = this.canvas.width;
+        this.canvasHeight = this.canvas.height;
         // TODO: Decide if this level of dynamic sizing is even necessary.
         let measure32ndNote = this.noteGap / (32/this.timeSignature[1])
         let early_hit_y = this.canvasHeight - (this.canvasHeight * 0.25); 
@@ -75,12 +81,15 @@ export default class Lane {
         
         // timeSignature[0] represents the upper numeral (the number of notes per bar)
         this.height = measureCount * (this.timeSignature[0] * this.noteGap); 
-        this.topOfLane = this.canvasHeight - this.height; 
+        this.topOfLane = this.startY - this.height; 
         this.topOfInputVisual = this.canvasHeight - 70;
         this.nextNoteIndex = 0; 
 
         this.inputKey = inputKey;
-        this.ctx = ctx; 
+        this.inputAreaHeight = this.canvasHeight - this.topOfInputVisual;
+
+        this.translationAmount = 0; 
+        this.pressed = false;
     }
 
     public setNotes(notes: Note[]): void { this.notes = notes; }
@@ -89,64 +98,63 @@ export default class Lane {
 
     public resetNoteIndex() { this.nextNoteIndex = 0; }
 
-    public handleInputOn() {
-        console.log('input on')
-        this.drawInputVisualPressed();
-    }
+    public handleInputOn() { this.pressed = true; }
 
-    public handleInputOff() {
-        console.log('input off')
-        this.drawInputVisualUnpressed();
-    }
+    public handleInputOff() { this.pressed = false; }
 
-    public drawInputVisualPressed() {
-        let inputHeight = this.canvasHeight - this.topOfInputVisual;
-        this.ctx.clearRect(0, this.topOfInputVisual, this.canvasWidth, inputHeight);
+    public drawInputVisual() {
+        this.ctx.fillStyle = this.pressed ? COLORS.PRESSED_INPUT_FILL : COLORS.UNPRESSED_INPUT_FILL;
         drawLine(this.ctx, 0, this.topOfInputVisual, this.canvasWidth, this.topOfInputVisual, 'black', 2);
+        this.ctx.fillRect(0, this.topOfInputVisual, this.canvasWidth, this.inputAreaHeight);
 
-        this.ctx.fillStyle = COLORS.PRESSED_INPUT_FILL;
-        this.ctx.fillRect(0, this.topOfInputVisual, this.canvasWidth, inputHeight);
-
-        this.ctx.fillStyle = COLORS.INPUT_KEY_PRESSED;
-        // TODO: Make this fontsize and positioning more generic
+        this.ctx.fillStyle = this.pressed ? COLORS.INPUT_KEY_PRESSED : COLORS.INPUT_KEY_UNPRESSED;
         this.ctx.font = "italic 50px Inria-serif"
-        this.ctx.fillText(this.inputKey.toUpperCase(), this.canvasWidth/2 - 20, this.topOfInputVisual + 50);  
+        this.ctx.fillText(this.inputKey.toUpperCase(), this.canvasWidth/2 - 20, this.topOfInputVisual + 50); 
     }
 
-    public drawInputVisualUnpressed() {
-        // Clears area of input area so that it doesn't have to be drawn every update as overwriting the pressed input will be done here
-        let inputHeight = this.canvasHeight - this.topOfInputVisual;
-        this.ctx.clearRect(0, this.topOfInputVisual, this.canvasWidth, inputHeight);
-        drawLine(this.ctx, 0, this.topOfInputVisual, this.canvasWidth, this.topOfInputVisual, 'black', 2);
 
-        this.ctx.fillStyle = COLORS.INPUT_KEY_UNPRESSED;
-        // TODO: Make this fontsize and positioning more generic
-        this.ctx.font = "italic 50px Inria-serif"
-        this.ctx.fillText(this.inputKey.toUpperCase(), this.canvasWidth/2 - 20, this.topOfInputVisual + 50);  
-    }
-
-    public drawNotes(translationAmount: number) {
+    public drawNotes() {
         if(!this.notes)
-            return; 
+            return;     
 
-        this.notes.forEach(note => { note.drawNote(this.ctx, translationAmount); });
+        for(let i = 0; i < this.notes.length; i++) {
+            let note = this.notes[i];
+
+            // Reduces time spent drawing notes that have scrolled passed the bottom of the screen
+            if(note.y + this.translationAmount > this.canvasHeight)
+                continue;
+
+            if(note.y + this.translationAmount < 0)
+                return;
+
+            note.drawNote(this.ctx, this.translationAmount, this.topOfInputVisual); 
+        }
     }
 
-    public drawHitzone(width: number) {
-        this.hitzone.drawHitZone(this.ctx, width);
+    public drawHitzone() {
+        this.hitzone.drawHitZone(this.ctx, this.canvasWidth);
     }
     
-    public drawMeasureIndicators(translationAmount: number) {
+    public drawMeasureIndicators() {
         let noteCount = 1; 
         for(let y = this.startY; y > this.topOfLane; y -= this.noteGap) {
             // Optimisation so that only the measure lines actually visible on the page need to be drawn
-            if(y + translationAmount < 0)
+            if(y + this.translationAmount > this.canvasHeight) {
+                noteCount++;
+                // Resets the note count back to 1 after reaching the maximum defined by the time signature
+                if(noteCount > this.timeSignature[0]) 
+                    noteCount = 1;
+
+                continue; 
+            }
+            
+            if(y + this.translationAmount < 0)
                 return; 
             // TODO: Add a continue statement here so that measure lines before the currently visible section aren't drawn either. Potentially use an index range?
 
             // this.ctx.strokeStyle = COLORS.MEASURE_LINE_FILL;
             // So that the actual y values can be held constant
-            let effectiveY = y + translationAmount;
+            let effectiveY = y + this.translationAmount;
             // TODO: Choose more generic starting X value
             drawLine(this.ctx, 30, effectiveY, this.canvasWidth - 30, effectiveY,COLORS.MEASURE_LINE, 1);
 
@@ -155,15 +163,15 @@ export default class Lane {
             this.ctx.fillStyle = COLORS.MEASURE_NUMBER;
             if(noteCount == 1) {
                 this.ctx.font = "italic 36px Inria-serif"
-                this.ctx.fillText(noteCount.toString(), 6, y + 10 + translationAmount)
+                this.ctx.fillText(noteCount.toString(), 6, y + 10 + this.translationAmount)
             } else {
                 this.ctx.font = "italic 20px Inria-serif"
-                this.ctx.fillText(noteCount.toString(), 10, y + 5 + translationAmount)
+                this.ctx.fillText(noteCount.toString(), 10, y + 5 + this.translationAmount)
             }
 
             noteCount++;
             // Resets the note count back to 1 after reaching the maximum defined by the time signature
-            if(noteCount > this.timeSignature[1]) 
+            if(noteCount > this.timeSignature[0]) 
                 noteCount = 1;
         }
     }

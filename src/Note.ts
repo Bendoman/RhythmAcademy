@@ -33,7 +33,7 @@ export default class Note {
     }
 
     // Should this be part of the object, or a seperate util function? 
-    public drawNote(ctx: CanvasRenderingContext2D, translationAmount: number): void {
+    public drawNote(ctx: CanvasRenderingContext2D, translationAmount: number, topOfInputVisual: number): void {
         ctx.fillStyle = COLORS.NOTE_FILL; 
 
         // Drop shadow
