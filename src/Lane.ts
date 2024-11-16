@@ -1,7 +1,8 @@
 import Note from "./Note.ts";
 import Hitzone from "./Hitzone.ts";
 import { drawLine } from "./Utils";
-import { COLORS } from "./constants";
+import { COLORS, HIT_STATUSES, ZONE_NAMES } from "./constants";
+import AudioSprite from "./AudioSprite.ts";
 
 // TODO: Make sure that values relient on height can be updated when the window size changes. Have an update function for this. 
 
@@ -41,6 +42,8 @@ export default class Lane {
     public ctx: CanvasRenderingContext2D;
     public translationAmount: number; 
 
+    public audioSprite: any;
+
     constructor(
         bpm: number, 
         measureCount: number, 
@@ -72,9 +75,9 @@ export default class Lane {
         // TODO: Decide if this level of dynamic sizing is even necessary.
         let measure32ndNote = this.noteGap / (32/this.timeSignature[1])
         let early_hit_y = this.canvasHeight - (this.canvasHeight * 0.25); 
-        let perfect_hit_y = early_hit_y + measure32ndNote; 
+        let perfect_hit_y = early_hit_y + measure32ndNote/2; 
         let late_hit_y = perfect_hit_y + measure32ndNote/2; 
-        this.hitzone = new Hitzone(early_hit_y, measure32ndNote, perfect_hit_y, measure32ndNote/2, late_hit_y, measure32ndNote); 
+        this.hitzone = new Hitzone(early_hit_y, measure32ndNote/2, perfect_hit_y, measure32ndNote/2, late_hit_y, measure32ndNote/2); 
         
         // So that the first note drawn will be exaclty one full note above the perfect hit area
         this.startY = perfect_hit_y - this.noteGap;
@@ -98,41 +101,92 @@ export default class Lane {
 
     public resetNoteIndex() { this.nextNoteIndex = 0; }
 
-    public handleInputOn() { this.pressed = true; }
+    public handleInputOn() { 
+        this.pressed = true; 
+        let nextNote = this.notes[this.nextNoteIndex];
+        // TODO: Replace this with if else block. check that note is unhit.
+        switch(nextNote.currentZone) {
+            case ZONE_NAMES.EARLY_ZONE:
+                console.log(`Wrong note:\nTime to zone: ${nextNote.timeToZone}\nZone: ${nextNote.currentZone}`);
+                break;
+            case ZONE_NAMES.EARLY_HIT_ZONE:
+                console.log(`Early hit:\nTime to zone: ${nextNote.timeToZone}\nZone: ${nextNote.currentZone}`);
+                if(this.audioSprite)
+                    this.audioSprite.play(this.hitsound);
+                // TODO: Temporary, replace with const
+                nextNote.hitStatus = 'hit';
+                break;
+            case ZONE_NAMES.PERFECT_HIT_ZONE:
+                console.log(`Perfect hit:\nTime to zone: ${nextNote.timeToZone}\nZone: ${nextNote.currentZone}`);
+                if(this.audioSprite)
+                    this.audioSprite.play(this.hitsound);
+                nextNote.hitStatus = 'hit';
+                break;
+            case ZONE_NAMES.LATE_HIT_ZONE:
+                console.log(`Late hit:\nTime to zone: ${nextNote.timeToZone}\nZone: ${nextNote.currentZone}`);
+                if(this.audioSprite)
+                    this.audioSprite.play(this.hitsound);
+                nextNote.hitStatus = 'hit';
+                break;
+        }
+    }
 
-    public handleInputOff() { this.pressed = false; }
+    public handleInputOff() { 
+        this.pressed = false; 
+    }
 
     public drawInputVisual() {
         this.ctx.fillStyle = this.pressed ? COLORS.PRESSED_INPUT_FILL : COLORS.UNPRESSED_INPUT_FILL;
-        drawLine(this.ctx, 0, this.topOfInputVisual, this.canvasWidth, this.topOfInputVisual, 'black', 2);
-        this.ctx.fillRect(0, this.topOfInputVisual, this.canvasWidth, this.inputAreaHeight);
+        drawLine(this.ctx, 0, this.topOfInputVisual, this.canvas.width, this.topOfInputVisual, 'black', 2);
+        this.ctx.fillRect(0, this.topOfInputVisual, this.canvas.width, this.inputAreaHeight);
 
         this.ctx.fillStyle = this.pressed ? COLORS.INPUT_KEY_PRESSED : COLORS.INPUT_KEY_UNPRESSED;
         this.ctx.font = "italic 50px Inria-serif"
-        this.ctx.fillText(this.inputKey.toUpperCase(), this.canvasWidth/2 - 20, this.topOfInputVisual + 50); 
+        this.ctx.fillText(this.inputKey.toUpperCase(), this.canvas.width/2 - 20, this.topOfInputVisual + 50); 
     }
 
 
-    public drawNotes() {
+    public updateNotes(ups:number, translationSpeed:number) {
         if(!this.notes)
             return;     
 
         for(let i = 0; i < this.notes.length; i++) {
             let note = this.notes[i];
+            let effectiveY = note.y + this.translationAmount;
 
             // Reduces time spent drawing notes that have scrolled passed the bottom of the screen
-            if(note.y + this.translationAmount > this.canvasHeight)
+            if(effectiveY > this.canvasHeight)
                 continue;
 
-            if(note.y + this.translationAmount < 0)
+            // Does not loop through any notes that won't be dispalyed on the screen
+            if(effectiveY < -this.noteGap) 
+                // -noteGap instead of 0 as notes are on a slight y offset and would pop in
                 return;
 
-            note.drawNote(this.ctx, this.translationAmount, this.topOfInputVisual); 
+            let x = (this.canvas.width/2) - (this.canvas.width/4);
+            let width = this.canvas.width/2;
+
+            let height = this.noteGap/(this.timeSignature[1] * this.timeSignature[0])
+            if(height < 5)
+                height = 5; 
+            
+            let nextNote = false;
+            if(i == this.nextNoteIndex)
+                nextNote = true;
+
+            let currentZone = note.currentZone; 
+
+            // TODO: See about reducing the number of parameters that this function requires
+            // TODO: Potentially use a settings object, or restructure so that it is unecessary. Review either way.
+            note.updateNote(this.ctx, this.translationAmount, x, width, height, this.hitzone, this.audioSprite, nextNote, ups, translationSpeed); 
+
+            if(note.currentZone != currentZone && note.currentZone == ZONE_NAMES.MISS_ZONE)
+                this.nextNoteIndex++;
         }
     }
 
     public drawHitzone() {
-        this.hitzone.drawHitZone(this.ctx, this.canvasWidth);
+        this.hitzone.drawHitZone(this.ctx, this.canvas.width);
     }
     
     public drawMeasureIndicators() {
@@ -156,8 +210,9 @@ export default class Lane {
             // So that the actual y values can be held constant
             let effectiveY = y + this.translationAmount;
             // TODO: Choose more generic starting X value
-            drawLine(this.ctx, 30, effectiveY, this.canvasWidth - 30, effectiveY,COLORS.MEASURE_LINE, 1);
+            drawLine(this.ctx, 30, effectiveY, this.canvas.width - 30, effectiveY,COLORS.MEASURE_LINE, 1);
 
+            // TODO: Filltext is quite unperformant
             // Emphasises the first note of a bar by giving it bigger text
             // TODO: Create a functional pixel to em converted and use relative units to position these.
             this.ctx.fillStyle = COLORS.MEASURE_NUMBER;

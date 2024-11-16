@@ -1,28 +1,22 @@
 import { COLORS } from "./constants";
+import Hitzone from "./Hitzone";
+import { ZONE_NAMES, HIT_STATUSES } from "./constants";
+import AudioSprite from "./AudioSprite";
 
 export default class Note {
-    x: number; 
     y: number; 
-    width: number;
-    height: number; 
     currentZone: string; 
     hitStatus: string; 
     timeToZone: number; 
 
     constructor(
-        x: number, 
         y: number, 
-        width: number,
-        height: number
     ) {
-        this.x = x;
         this.y = y; 
-        this.width = width;
-        this.height = height;
         // Default value before calculations can be made and when scrolling is paused
         this.timeToZone = -1; 
 
-        this.currentZone = 'early'; 
+        this.currentZone = ZONE_NAMES.EARLY_ZONE; 
         this.hitStatus = 'unhit';
     }
 
@@ -33,24 +27,62 @@ export default class Note {
     }
 
     // Should this be part of the object, or a seperate util function? 
-    public drawNote(ctx: CanvasRenderingContext2D, translationAmount: number, topOfInputVisual: number): void {
-        ctx.fillStyle = COLORS.NOTE_FILL; 
+    public updateNote(ctx: CanvasRenderingContext2D, translationAmount: number, x: number, width:number, height:number, hitzone: Hitzone, audioSprite: AudioSprite, nextNote: boolean, ups:number, translationSpeed: number): void {       
+        let effectiveY = this.y + translationAmount;
+        
+        let distanceToPerfectHitzone = ((hitzone.perfect_hit_y - translationAmount) - this.y)
+        this.timeToZone = (distanceToPerfectHitzone/translationSpeed)/ups;
+                
+        if(effectiveY > hitzone.early_hit_y && this.currentZone == ZONE_NAMES.EARLY_ZONE) 
+            this.currentZone = ZONE_NAMES.EARLY_HIT_ZONE;
+        else if(effectiveY > hitzone.perfect_hit_y && this.currentZone == ZONE_NAMES.EARLY_HIT_ZONE) {
+            this.currentZone = ZONE_NAMES.PERFECT_HIT_ZONE;
+            // if(audioSprite)
+            //     audioSprite.play('clap');
+        }
+        else if(effectiveY > hitzone.late_hit_y && this.currentZone == ZONE_NAMES.PERFECT_HIT_ZONE) 
+            this.currentZone = ZONE_NAMES.LATE_HIT_ZONE;
+        else if(effectiveY > hitzone.late_hit_y + hitzone.late_hit_height && this.currentZone == ZONE_NAMES.LATE_HIT_ZONE) {
+            this.currentZone = ZONE_NAMES.MISS_ZONE;
+        }
 
+        if(this.currentZone == ZONE_NAMES.EARLY_ZONE)
+            ctx.fillStyle = COLORS.NOTE_FILL; 
+        else if(this.currentZone == ZONE_NAMES.EARLY_HIT_ZONE)
+            ctx.fillStyle = 'red'; 
+        else if(this.currentZone == ZONE_NAMES.PERFECT_HIT_ZONE)
+            ctx.fillStyle = 'blue'; 
+        else if(this.currentZone == ZONE_NAMES.LATE_HIT_ZONE)
+            ctx.fillStyle = 'orange'; 
+        else if(this.currentZone == ZONE_NAMES.MISS_ZONE) {
+            ctx.fillStyle = 'maroon'; 
+            if(this.hitStatus == 'hit')
+                ctx.fillStyle = 'gray'; 
+        }
+
+        if(nextNote) {
+            ctx.fillStyle = 'blue'; 
+        }
         // Drop shadow
-        // TODO: Put this behind a settings toggle
-        ctx.shadowColor = COLORS.NOTE_SHADOW_FILL;
-        ctx.shadowBlur = 8;
-        ctx.shadowOffsetY = 4;
-        ctx.shadowOffsetX = 2;
+        // TODO: Put this behind a settings toggle it seriously affects performance
+        // ctx.shadowColor = COLORS.NOTE_SHADOW_FILL;
+        // ctx.shadowBlur = 8;
+        // ctx.shadowOffsetY = 4;
+        // ctx.shadowOffsetX = 2;
 
         ctx.beginPath();
-        ctx.roundRect(this.x, this.y + translationAmount - (this.height/2), this.width, this.height, 20);
+        ctx.roundRect(x, effectiveY - (height/2), width, height, 20);
         ctx.fill();
 
-        // So that future strokes are not affected
-        ctx.shadowBlur = 0; 
-        ctx.shadowOffsetY = 0;
-        ctx.shadowOffsetX = 0;
+        ctx.fillStyle = 'white';
+        ctx.font = "12px sans-serif"
+        ctx.fillText(`${this.timeToZone.toFixed(1)}s to zone`, x, this.y + 3 + translationAmount)
+
+        
+        // So that future strokes are not affected by the shadow
+        // ctx.shadowBlur = 0; 
+        // ctx.shadowOffsetY = 0;
+        // ctx.shadowOffsetX = 0;
     }
 
     // When this is implemented it will cycle through an array of animation values

@@ -3,6 +3,9 @@ import Hitzone from "./Hitzone.ts";
 import Lane from "./Lane.ts"
 import Note from "./Note.ts";
 import { resetLaneStats } from "./Utils.ts";
+import { ZONE_NAMES } from "./constants.ts";
+import AudioSprite from "./AudioSprite.ts";
+
 // #endregion
 
 // #region ( Global variables )
@@ -25,17 +28,25 @@ let inEditMode = false;
 
 let container_width = laneContainer?.clientWidth;
 let container_height = laneContainer?.clientHeight;
-
+let audioSprite: AudioSprite;
 
 // DOM Elements
 const upsParagraph = document.getElementById('ups_paragraph') as HTMLElement;
+const enableAudioButton = document.getElementById('enable_audio') as HTMLElement;
 
 // #endregion
 
 
 function populateTestNotes(lane: Lane) {
   resetLaneStats(lane);
-  for(let y = lane.startY; y > lane.topOfLane; y -= lane.noteGap) {
+  // TODO: Temporary
+  let multiplier = 1;
+  if(lane.hitsound == 'kick')
+    multiplier = 2;
+  if(lane.hitsound == 'clap')
+    multiplier = .5;
+
+  for(let y = lane.startY; y > lane.topOfLane; y -= lane.noteGap/multiplier) {
    
     // TODO:???? Ask Sean about this
     // lane.timeSignature[0]: Number of below notes per bar
@@ -45,9 +56,10 @@ function populateTestNotes(lane: Lane) {
     if(height < 5)
       height = 5; 
 
-    let newNote = new Note(lane.canvasWidth/2 - lane.canvasWidth/4, y, lane.canvasWidth/2, height);
+    let newNote = new Note(y);
     lane.notes.push(newNote);
   }
+  console.log(lane.notes);
 }
 
 function updateLaneWidths(multiplier: number) {
@@ -94,8 +106,8 @@ function createNewLane(
 
   input_lane_pairs[new_lane.inputKey] = new_lane;
 
-  populateTestNotes(new_lane);
   new_lane.drawInputVisual();
+  populateTestNotes(new_lane);
 
   laneCount++;
   laneContainer?.appendChild(newCanvas);
@@ -115,9 +127,15 @@ function createNewLane(
 }
 
 // Have a max number of measures. 
-createNewLane(15, 1, 500, 'kick', 3, [], [4, 4], 'q');
-createNewLane(100, 2, 200, 'kick', 3, [], [4, 4], 'w');
-createNewLane(200, 2000, 200, 'kick', 3, [], [4, 4], 'e');
+// For this prototype max number of lanes will be 4. Further optimisation will be needed for more. turns out it was the shadows.
+createNewLane(60, 3000, 200, 'kick', 3, [], [4, 4], 'q');
+createNewLane(60, 3000, 200, 'snare', 3, [], [4, 4], 'w');
+createNewLane(60, 2000, 200, 'clap', 3, [], [4, 4], 'e');
+// createNewLane(100, 2000, 200, 'kick', 3, [], [4, 4], 'd');
+// createNewLane(100, 2000, 200, 'kick', 3, [], [4, 4], 'a');
+// createNewLane(100, 2000, 200, 'kick', 3, [], [4, 4], 's');
+// createNewLane(100, 2000, 200, 'kick', 3, [], [4, 4], 'd');
+// createNewLane(100, 2000, 200, 'kick', 3, [], [4, 4], 'f');
 // createNewLane();
 // createNewLane();
 // createNewLane();
@@ -152,6 +170,49 @@ window.addEventListener('keyup', (event) => {
   keyHeld[event.key] = false
 })
 
+enableAudioButton.addEventListener('click', () => {
+  if(audioSprite) 
+    return;
+
+  audioSprite = new AudioSprite({
+    "src": [
+      "../public/drums.mp3"
+    ],
+    "sprite": {
+      "clap": [
+        0,
+        734.2630385487529
+      ],
+      "closed-hihat": [
+        2000,
+        445.94104308390035
+      ],
+      "crash": [
+        4000,
+        1978.6848072562354
+      ],
+      "kick": [
+        7000,
+        553.0839002267571
+      ],
+      "open-hihat": [
+        9000,
+        962.7664399092968
+      ],
+      "snare": [
+        11000,
+        354.48979591836684
+      ]
+    }
+  });
+
+  for (let key in input_lane_pairs) {
+    let lane = input_lane_pairs[key];
+    lane.audioSprite = audioSprite;
+  }
+
+});
+
 // #endregion
 
 
@@ -178,13 +239,13 @@ function gameLoop(timeStamp: number) {
   
    for (let key in input_lane_pairs) {
     let lane = input_lane_pairs[key];
-    lane.ctx.clearRect(0, 0, lane.canvasWidth, lane.canvasHeight - lane.inputAreaHeight);
+    lane.ctx.clearRect(0, 0, lane.canvas.width, lane.canvas.height - lane.inputAreaHeight);
     // Determining the speed of translation for each lane based on the current loop interval
     let translationSpeed = (interval / (60000/lane.bpm)) * lane.noteGap;
     lane.translationAmount += translationSpeed;
     
     // TODO: Need a much more robust way of looping
-    if(lane.translationAmount > (lane.canvasHeight - lane.startY) + lane.height) {
+    if(lane.translationAmount > (lane.canvas.height - lane.startY) + lane.height) {
       lane.translationAmount = 0; 
       lane.nextNoteIndex = 0;
     }
@@ -192,7 +253,7 @@ function gameLoop(timeStamp: number) {
 
     lane.drawHitzone();
     lane.drawMeasureIndicators();
-    lane.drawNotes();
+    lane.updateNotes(ups, translationSpeed);
     lane.drawInputVisual();
   }
 
