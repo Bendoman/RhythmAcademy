@@ -8,6 +8,44 @@ import AudioSprite from "./AudioSprite.ts";
 
 // #endregion
 
+// ( Midi Access Setup )
+if(navigator.requestMIDIAccess) { // Ensures that MIDI access is enabled in the current browser
+  navigator.requestMIDIAccess().then(midi_connection_success, midi_connection_failure);
+}
+
+// TODO: Will need redo this so that it runs by default. Will need to remove existing event listeners.
+function midi_connection_success(midiAccess: MIDIAccess) {
+  midiAccess.onstatechange = updateDevices;
+  const inputs = midiAccess.inputs;
+
+  inputs.forEach(input => { input.onmidimessage = processMidiMessage;});
+}
+// TODO: Alert the user in input selection menu of the failure
+function midi_connection_failure() { console.log('Failed to connect MIDI device'); }
+
+// MIDI related
+// TODO: Dynamically update list of available midi inputs 
+function updateDevices(event: Event) { console.log(event); }
+
+function processMidiMessage(input: MIDIMessageEvent) {
+    // 153 is on 137 is off
+    const inputData = input.data; 
+    if(inputData == null)
+      return; 
+
+    const command = inputData[0];
+    const note = inputData[1];
+    const velocity = inputData[2];
+
+    // console.log(command, note, velocity)
+
+    if(velocity > 0) { // See if this is always true
+        midiNoteOn(note, velocity)
+    } else {
+        midiNoteOff(note);
+    }
+}
+
 // #region ( Global variables )
 let laneCount = 0; 
 const laneContainer = document.getElementById('lane_container') as HTMLElement | null; 
@@ -26,6 +64,9 @@ let ups = 0;
 let translationAmount = 0; 
 let inEditMode = false; 
 
+let paused = false; 
+let controlsPinned = false; 
+
 let container_width = laneContainer?.clientWidth;
 let container_height = laneContainer?.clientHeight;
 let audioSprite: AudioSprite;
@@ -33,6 +74,14 @@ let audioSprite: AudioSprite;
 // DOM Elements
 const upsParagraph = document.getElementById('ups_paragraph') as HTMLElement;
 const enableAudioButton = document.getElementById('enable_audio') as HTMLElement;
+const runControls = document.getElementById('run_controls');
+
+// Buttons 
+const playButton = document.getElementById('play_button');
+const pauseButton = document.getElementById('pause_button');
+const stopButton = document.getElementById('stop_button');
+const editButton = document.getElementById('edit_button')
+// const lockButton = document.getElementById('lock_button');
 
 // #endregion
 
@@ -101,6 +150,8 @@ function createNewLane(
 
   newCanvas.width = container_width / 4;
   newCanvas.height = container_height;
+  
+  newCanvas.addEventListener('click', handleCanvasClick);
 
   const new_lane = new Lane(bpm, measureCount, noteGap, hitsound, maxWrongNotes, notes, timeSignature, inputKey, newCanvas);
 
@@ -128,10 +179,10 @@ function createNewLane(
 
 // Have a max number of measures. 
 // For this prototype max number of lanes will be 4. Further optimisation will be needed for more. turns out it was the shadows.
-createNewLane(60, 3000, 200, 'kick', 3, [], [4, 4], 'q');
-createNewLane(60, 3000, 200, 'snare', 3, [], [4, 4], 'w');
-createNewLane(60, 2000, 200, 'clap', 3, [], [4, 4], 'e');
-// createNewLane(100, 2000, 200, 'kick', 3, [], [4, 4], 'd');
+createNewLane(10, 50000, 200, 'kick', 3, [], [4, 4], '40');
+createNewLane(20, 3000, 200, 'snare', 3, [], [4, 4], '41');
+createNewLane(20, 2000, 200, 'clap', 3, [], [4, 4], '42');
+// createNewLane(100, 2000, 200, 'kick', 3, [], [4, 4], 'd'); 
 // createNewLane(100, 2000, 200, 'kick', 3, [], [4, 4], 'a');
 // createNewLane(100, 2000, 200, 'kick', 3, [], [4, 4], 's');
 // createNewLane(100, 2000, 200, 'kick', 3, [], [4, 4], 'd');
@@ -143,12 +194,24 @@ createNewLane(60, 2000, 200, 'clap', 3, [], [4, 4], 'e');
 // createNewLane();
 // console.log(lane_ctx_pairs);
 
-
+// TODO: Move this?
 // #region ( Event listeners )
 
 window.addEventListener('resize', () => {
   // TODO: Dynamically resize lanes
 });
+
+function midiNoteOn(note: number, velocity: number) {
+  let associatedLane = input_lane_pairs[note.toString()];
+  if(associatedLane != null)
+    associatedLane.handleInputOn(paused); 
+}
+
+function midiNoteOff(note: number) {
+  let associatedLane = input_lane_pairs[note.toString()];
+  if(associatedLane != null)
+    associatedLane.handleInputOff(); 
+}
 
 const keyHeld: { [key: string]: boolean } = {};
 window.addEventListener('keydown', (event) => {
@@ -157,7 +220,7 @@ window.addEventListener('keydown', (event) => {
 
   let associatedLane = input_lane_pairs[event.key];
   if(associatedLane != null)
-    associatedLane.handleInputOn(); 
+    associatedLane.handleInputOn(paused); 
 
   keyHeld[event.key] = true
 })
@@ -210,9 +273,88 @@ enableAudioButton.addEventListener('click', () => {
     let lane = input_lane_pairs[key];
     lane.audioSprite = audioSprite;
   }
-
 });
 
+
+// TODO: Come back to this
+// let mouseOverTime;
+// runControls?.addEventListener('mouseover', () => {
+//   console.log('mouse over')
+//   runControls.classList.add('expanded')
+
+//   mouseOverTime = performance.now();
+// });
+// runControls?.addEventListener('mouseout', (event) => {
+    
+//   const target = event.relatedTarget as HTMLElement;
+//   if(!target || !runControls.contains(target)) {
+//     runControls.classList.remove('expanded')
+//     console.log('mouse out')
+
+//   }
+
+// });
+
+playButton?.addEventListener('click', () => { 
+  paused = false; 
+
+  playButton.classList.add('selected');
+  pauseButton?.classList.remove('selected');
+  stopButton?.classList.remove('selected');
+  editButton?.classList.remove('selected');
+});
+pauseButton?.addEventListener('click', () => { 
+  paused = true 
+
+  pauseButton.classList.add('selected');
+  playButton?.classList.remove('selected');
+  stopButton?.classList.remove('selected');
+  editButton?.classList.remove('selected');
+});
+stopButton?.addEventListener('click', () => {
+  paused = true 
+
+  stopButton.classList.add('selected');
+  playButton?.classList.remove('selected');
+  pauseButton?.classList.remove('selected');
+  editButton?.classList.remove('selected');
+  // TODO: reset run
+});
+
+editButton?.addEventListener('click', () => {
+  paused = true 
+
+  editButton.classList.add('selected');
+  playButton?.classList.remove('selected');
+  pauseButton?.classList.remove('selected');
+  stopButton?.classList.remove('selected');
+});
+
+function handleCanvasClick(event: PointerEvent) {
+  let canvas = event.target as HTMLElement; 
+  canvas.classList.add('editing');
+  canvas.classList.remove('background');
+
+  for (let key in input_lane_pairs) {
+    let lane = input_lane_pairs[key];
+    if(lane.canvas != canvas) {
+      lane.canvas.classList.remove('editing');
+      lane.canvas.classList.add('background');
+    }
+  }
+
+}
+// TODO: Come back to this
+// lockButton?.addEventListener('click', () => { 
+//   controlsPinned = !controlsPinned; 
+//   if(controlsPinned && runControls)
+//     runControls.classList.add('pinned')
+//   else if(runControls)
+//     runControls.classList.remove('pinned')
+// });
+
+// window.addEventListener('focus', () => {});
+// window.addEventListener('blur', () => {paused = true});
 // #endregion
 
 
@@ -226,6 +368,7 @@ enableAudioButton.addEventListener('click', () => {
 let lastLoop = performance.now();
 let updateTime = 0; 
 let filterStrength = 20; 
+// TODO: Pause updating when the window is out of focus. 
 function gameLoop(timeStamp: number) {
 
   // Calculating the number of updates per second
@@ -235,10 +378,16 @@ function gameLoop(timeStamp: number) {
   ups = (1000/updateTime); 
   upsParagraph.innerText = ups.toString().substring(0, 6); 
   lastLoop = timeStamp;
-
   
-   for (let key in input_lane_pairs) {
+  for (let key in input_lane_pairs) {
+    // TODO: Review if this is the best way
     let lane = input_lane_pairs[key];
+
+    if(paused) {
+      lane.drawInputVisual(); // So that when paused an in edit mode you can verify that your input mode works
+      continue;
+    }
+    
     lane.ctx.clearRect(0, 0, lane.canvas.width, lane.canvas.height - lane.inputAreaHeight);
     // Determining the speed of translation for each lane based on the current loop interval
     let translationSpeed = (interval / (60000/lane.bpm)) * lane.noteGap;

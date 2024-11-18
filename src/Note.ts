@@ -37,8 +37,8 @@ export default class Note {
             this.currentZone = ZONE_NAMES.EARLY_HIT_ZONE;
         else if(effectiveY > hitzone.perfect_hit_y && this.currentZone == ZONE_NAMES.EARLY_HIT_ZONE) {
             this.currentZone = ZONE_NAMES.PERFECT_HIT_ZONE;
-            // if(audioSprite)
-            //     audioSprite.play('clap');
+            if(audioSprite)
+                audioSprite.play('kick');
         }
         else if(effectiveY > hitzone.late_hit_y && this.currentZone == ZONE_NAMES.PERFECT_HIT_ZONE) 
             this.currentZone = ZONE_NAMES.LATE_HIT_ZONE;

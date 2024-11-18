@@ -101,8 +101,12 @@ export default class Lane {
 
     public resetNoteIndex() { this.nextNoteIndex = 0; }
 
-    public handleInputOn() { 
+    public handleInputOn(paused: boolean) { 
         this.pressed = true; 
+        // Sets pressed so that input modes can be tested, but returns after so that notes can't be hit
+        if(paused)
+            return; 
+
         let nextNote = this.notes[this.nextNoteIndex];
         // TODO: Replace this with if else block. check that note is unhit.
         switch(nextNote.currentZone) {
