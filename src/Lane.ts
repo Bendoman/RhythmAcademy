@@ -10,13 +10,14 @@ export default class Lane {
     public bpm: number;
     public measureCount: number; 
     public timeSignature: number[]; // Index 0 will be the upper numeral, index 1 the lower
+    public metronomeEnabled: boolean; 
 
     // Defines the distance between full* notes
     public noteGap: number; 
     public nextNoteIndex: number; 
     
     public hitzone: Hitzone; 
-    public hitsound: String; 
+    public hitsound: string; 
     
     // The height above the hitzone that notes will be populated upon run start
     public startY: number; 
@@ -48,7 +49,7 @@ export default class Lane {
         bpm: number, 
         measureCount: number, 
         noteGap: number,
-        hitsound: String, 
+        hitsound: string, 
         maxWrongNotes: number,
         notes: Note[],
         timeSignature: number[],
@@ -93,14 +94,33 @@ export default class Lane {
 
         this.translationAmount = 0; 
         this.pressed = false;
+        this.metronomeEnabled = false;
     }
 
     public setNotes(notes: Note[]): void { this.notes = notes; }
 
     public incrementNoteIndex() { this.nextNoteIndex++; }
 
-    public resetNoteIndex() { this.nextNoteIndex = 0; }
+    public recalculateHeight() {
+        this.height = this.measureCount * (this.timeSignature[0] * this.noteGap); 
+        this.topOfLane = this.startY - this.height;
+    }
 
+    // TODO: Give this better name and have one that also removes all notes 
+    public resetLane() { 
+        this.translationAmount = 0; 
+        this.notesHit = [];
+        this.notesMissed = [];
+
+        for(let i = 0; i < this.notes.length; i++) {
+            let note = this.notes[i];
+            note.resetNote();
+        }
+
+        this.nextNoteIndex = 0; 
+    }
+
+    // TODO: Update note colours based on hitzone at time of hit
     public handleInputOn(paused: boolean) { 
         this.pressed = true; 
         // Sets pressed so that input modes can be tested, but returns after so that notes can't be hit
@@ -109,6 +129,7 @@ export default class Lane {
 
         let nextNote = this.notes[this.nextNoteIndex];
         // TODO: Replace this with if else block. check that note is unhit.
+
         switch(nextNote.currentZone) {
             case ZONE_NAMES.EARLY_ZONE:
                 console.log(`Wrong note:\nTime to zone: ${nextNote.timeToZone}\nZone: ${nextNote.currentZone}`);
@@ -119,18 +140,21 @@ export default class Lane {
                     this.audioSprite.play(this.hitsound);
                 // TODO: Temporary, replace with const
                 nextNote.hitStatus = 'hit';
+                this.nextNoteIndex++;
                 break;
             case ZONE_NAMES.PERFECT_HIT_ZONE:
                 console.log(`Perfect hit:\nTime to zone: ${nextNote.timeToZone}\nZone: ${nextNote.currentZone}`);
                 if(this.audioSprite)
                     this.audioSprite.play(this.hitsound);
                 nextNote.hitStatus = 'hit';
+                this.nextNoteIndex++;
                 break;
             case ZONE_NAMES.LATE_HIT_ZONE:
                 console.log(`Late hit:\nTime to zone: ${nextNote.timeToZone}\nZone: ${nextNote.currentZone}`);
                 if(this.audioSprite)
                     this.audioSprite.play(this.hitsound);
                 nextNote.hitStatus = 'hit';
+                this.nextNoteIndex++;
                 break;
         }
     }
@@ -150,7 +174,7 @@ export default class Lane {
     }
 
 
-    public updateNotes(ups:number, translationSpeed:number) {
+    public updateNotes(ups:number, translationSpeed:number, editMode?: boolean) {
         if(!this.notes)
             return;     
 
@@ -159,18 +183,20 @@ export default class Lane {
             let effectiveY = note.y + this.translationAmount;
 
             // Reduces time spent drawing notes that have scrolled passed the bottom of the screen
-            if(effectiveY > this.canvasHeight)
+            if(effectiveY > this.canvas.height)
                 continue;
 
             // Does not loop through any notes that won't be dispalyed on the screen
+            // -noteGap instead of 0 as notes are on a slight y offset and would pop in
             if(effectiveY < -this.noteGap) 
-                // -noteGap instead of 0 as notes are on a slight y offset and would pop in
                 return;
 
             let x = (this.canvas.width/2) - (this.canvas.width/4);
             let width = this.canvas.width/2;
 
+            // TODO: Talk about this with Sean
             let height = this.noteGap/(this.timeSignature[1] * this.timeSignature[0])
+
             if(height < 5)
                 height = 5; 
             
@@ -182,9 +208,10 @@ export default class Lane {
 
             // TODO: See about reducing the number of parameters that this function requires
             // TODO: Potentially use a settings object, or restructure so that it is unecessary. Review either way.
-            note.updateNote(this.ctx, this.translationAmount, x, width, height, this.hitzone, this.audioSprite, nextNote, ups, translationSpeed); 
+            // TODO: Pass editmode boolean so that notes aren't updated while scrolling during editing.
+            note.updateNote(this.ctx, this.translationAmount, x, width, height, this.hitzone, this.audioSprite, nextNote, ups, translationSpeed, this.metronomeEnabled, this.hitsound); 
 
-            if(note.currentZone != currentZone && note.currentZone == ZONE_NAMES.MISS_ZONE)
+            if(note.currentZone != currentZone && note.currentZone == ZONE_NAMES.MISS_ZONE && note.hitStatus == 'unhit')
                 this.nextNoteIndex++;
         }
     }

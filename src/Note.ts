@@ -20,25 +20,30 @@ export default class Note {
         this.hitStatus = 'unhit';
     }
 
-    // TODO: Have this implement time calculation logic here.
+    public resetNote() { 
+        this.currentZone = ZONE_NAMES.EARLY_ZONE; 
+        this.hitStatus = 'unhit';
+    }
 
+    // TODO: Have this implement time calculation logic here.
     public updateTimeToZone(time: number): void { 
         this.timeToZone = time; 
     }
 
+    // TODO: Split this into two functions, one for updating, one for drawing. 
     // Should this be part of the object, or a seperate util function? 
-    public updateNote(ctx: CanvasRenderingContext2D, translationAmount: number, x: number, width:number, height:number, hitzone: Hitzone, audioSprite: AudioSprite, nextNote: boolean, ups:number, translationSpeed: number): void {       
+    public updateNote(ctx: CanvasRenderingContext2D, translationAmount: number, x: number, width:number, height:number, hitzone: Hitzone, audioSprite: AudioSprite, nextNote: boolean, ups:number, translationSpeed: number, metronomeEnabled: boolean, hitsound: string): void {       
         let effectiveY = this.y + translationAmount;
         
         let distanceToPerfectHitzone = ((hitzone.perfect_hit_y - translationAmount) - this.y)
-        this.timeToZone = (distanceToPerfectHitzone/translationSpeed)/ups;
+        this.timeToZone = ((distanceToPerfectHitzone/translationSpeed)/ups)*1000;
                 
         if(effectiveY > hitzone.early_hit_y && this.currentZone == ZONE_NAMES.EARLY_ZONE) 
             this.currentZone = ZONE_NAMES.EARLY_HIT_ZONE;
         else if(effectiveY > hitzone.perfect_hit_y && this.currentZone == ZONE_NAMES.EARLY_HIT_ZONE) {
             this.currentZone = ZONE_NAMES.PERFECT_HIT_ZONE;
-            if(audioSprite)
-                audioSprite.play('kick');
+            if(audioSprite && metronomeEnabled)
+                audioSprite.play(hitsound);
         }
         else if(effectiveY > hitzone.late_hit_y && this.currentZone == ZONE_NAMES.PERFECT_HIT_ZONE) 
             this.currentZone = ZONE_NAMES.LATE_HIT_ZONE;

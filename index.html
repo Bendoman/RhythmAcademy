@@ -7,7 +7,7 @@
     <title>RhythmAcademy</title>
     <link rel="stylesheet" href="src/style.css">
   </head>
-  <body>
+  <body >
     <div id="debug_text">
       <p id="ups_paragraph">0</p>
       <button id="enable_audio">Enable audio</button>
@@ -40,12 +40,66 @@
             <button id="edit_button">
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-pencil-ruler"><path d="M13 7 8.7 2.7a2.41 2.41 0 0 0-3.4 0L2.7 5.3a2.41 2.41 0 0 0 0 3.4L7 13"/><path d="m8 6 2-2"/><path d="m18 16 2-2"/><path d="m17 11 4.3 4.3c.94.94.94 2.46 0 3.4l-2.6 2.6c-.94.94-2.46.94-3.4 0L11 17"/><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg>
             </button>
+
+            <button id="add_lane_button">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-circle-plus"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>
+            </button>
+            <input id="new_lane_input" type="text" maxlength="1">
             <!-- <button id="lock_button">
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-lock"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
             </button> -->
           </div>
         </div>
-        <!-- <canvas class="lane_canvas" id="lane_one_canvas"></canvas> -->
+
+
+        <!-- <div class="canvas_container">
+          <canvas class="lane_canvas" id="test_canvas">
+
+          </canvas>
+
+          <div class="lane_editing activated">
+            <div id="metronome_container">
+              <button class="metronome_button">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-list-music"><path d="M21 15V6"/><path d="M18.5 18a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"/><path d="M12 12H3"/><path d="M16 6H3"/><path d="M12 18H3"/></svg>
+              </button>
+              <label>Metronome</label>
+            </div>  
+
+            <div class="bpm_container">
+              <input class="bpm_input" type="number" min="1">
+              <label>BPM</label>
+            </div>
+
+            
+            <div class="lane_sound_container">
+              <select class="lane_sound_select">
+                  <option value="kick">kick</option>
+                  <option value="snare">snare</option>
+                  <option value="clap">clap</option>
+                  <option value="crash">crash</option>
+                  <option value="open-hihat">open-hihat</option>
+                  <option value="closed-hihat">closed-hihat</option>
+              </select>
+              <label for="lane_sound_select">Lane sound</label>
+            </div>
+
+            <button class="clear_notes">clear notes</button>
+            
+            <div class="pattern_loading_container">
+                <select class="load_notes_select">
+                  <option value="kick">Pattern_1</option>
+                  <option value="snare">Pattern_2</option>
+                  <option value="clap">Pattern_3</option>
+                  <option value="crash">Pattern_4</option>
+                  <option value="open-hihat">Pattern_5</option>
+                  <option value="closed-hihat">Pattern_6</option>
+                </select>
+                <button class="clear_notes">Load note pattern</button>
+            </div>
+          </div>
+          
+        </div> -->
+
       </div>
     </section>
 

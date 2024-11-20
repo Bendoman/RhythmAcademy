@@ -5,6 +5,7 @@ export const COLORS = {
     // Note
     NOTE_FILL: "#141414",
     NOTE_SHADOW_FILL: "#rgba(50, 50, 50, 10)",
+    HIGHLIGHTED_NOTE_FILL: "#FFD700",
 
     // Lane
     LANE_FILL: "#ECDFCC",
@@ -22,6 +23,9 @@ export const COLORS = {
     INPUT_KEY_PRESSED: "#ECDFCC",
     PRESSED_INPUT_FILL: "#141414",
     UNPRESSED_INPUT_FILL: "#ECDFCC",
+
+    // Edit mode
+    NOTE_AREA_HIGHLIGHT: "#14141410", 
 };
 
 

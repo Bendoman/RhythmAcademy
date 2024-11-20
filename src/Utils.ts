@@ -1,4 +1,5 @@
 import Lane from "./Lane";
+import Note from "./Note";
 
 export function drawLine(ctx: CanvasRenderingContext2D, startX: number, startY: number, endX: number, endY: number, strokeStyle: string = 'white', weight: number, dashValues?: number[]) {
     // If no dash values are provided then resets the line dash value to unbroken
@@ -27,3 +28,29 @@ export function resetLaneStats(lane: Lane) {
 
 //     return pixels / baseFontSize; 
 // }
+
+
+
+export function findSortedIndex(notes: Note[], yValue: number): number[] {
+    for(let i = 0; i < notes.length; i++) {
+        if(i == 0) {
+            if(notes[0].y < yValue)
+                return [0, 0]; 
+            if(notes[0].y == yValue)
+                return [0, 1]; 
+            
+            continue; 
+        }
+
+        if(notes[i - 1].y > yValue && notes[i].y < yValue)
+            return [i, 0]; 
+
+        if(notes[i - 1].y == yValue)
+            return [i - 1, 1];
+        
+        if(notes[i].y == yValue)
+            return [i, 1];
+    }
+
+    return [notes.length, 0];
+}

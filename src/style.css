@@ -9,6 +9,7 @@
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+  font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif; 
 }
 
 #content {
@@ -34,12 +35,18 @@ replaced with a button to retract in expanded form.
   transition-timing-function: ease-in-out;
 }
 
+#new_lane_input {
+
+  max-width: 2.5em;
+  text-align: center;
+}
+
 #sidebar:hover {
   width: 15vw;
 }
 
 #sidebar_expand {
-  background-color: red;
+  background-color: #ecdfcc67;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -53,39 +60,99 @@ replaced with a button to retract in expanded form.
   height: 100%;
 
   display: flex;
-  gap: 5em;
+  gap: 3em;
   justify-content: center;
 }
 
 .lane_canvas {
   background-color: var(--lane_background);
   border-radius: 15px;
-}
-
-.lane_canvas:hover {
- background-color: red; 
+  z-index: 2;
 }
 
 .lane_canvas.editing {
-  background-color: blue; 
-  position: absolute;
-  left: 50;
-  z-index: 1;
+  /* background-color: blue;  */
+  color: #14141410;
 }
 
-.lane_canvas.background {
-  /* opacity: 0; */
+.canvas_container.background {
   display: none;
-  /* z-index: 0; */
+}
+
+#test_canvas {
+  width: 25vw;
+  height: 100vh;
+}
+
+
+.lane_editing.activated {
+  left: -25px;
+  position: relative;
+  transition: left .65s ease-in-out;
+
+  margin-right: -25px;
+}
+
+
+.lane_editing {
+  /* width: 10vw; */
+  height: 100%;
+  border-radius: 15px;
+  background-color: #ecdfcc69;
+
+  padding-left: 45px;
+  padding-right: 20px;
+  
+  left: -100%;
+  
+  position: absolute;
+
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  /* align-items: center; */
+  justify-content: center;  
+  /* transition: left .65s ease; */
+
+  gap: 1em;
+}
+
+.bpm_input, .measure_count_input{
+  max-width: 4em;
+}
+
+.pattern_loading_container {
+  display: flex;
+  flex-direction: column;
+}
+
+.canvas_container {
+  z-index: 0;
+  display: flex;
+  border: 1px dashed #eccccc00;
+  transition: border .1s linear, background-color .5s ease;
+  /* width: fit-content; */
+  padding: 0 1em 0 1em;
+}
+
+/* TODO: ONLY WHEN IN EDIT MODE */
+#lane_container.editing .canvas_container:hover {
+  /* background-color: red; */
+  border-radius: 5px;
+  border-left: 1px dashed var(--lane_background); 
+  border-right: 1px dashed var(--lane_background); 
+  background-color: #ecdfcc33;
 }
 
 #debug_text {
   padding: .5em;
-  color: white; 
-  background-color: blue;
+  color: black; 
+  background-color: var(--lane_background); 
+  border-radius: 15px;
   
   position: absolute;
-  bottom: 0;
+  left: 1em;
+  bottom: .5em;
 }
 
 #run_controls {
@@ -145,3 +212,11 @@ replaced with a button to retract in expanded form.
   opacity: 100%;
 }
 
+/* .lane_canvas:hover {
+  background-color: red; 
+ } */
+
+.time_signature_select {
+  max-width: 4em;
+  text-align: center;
+}
