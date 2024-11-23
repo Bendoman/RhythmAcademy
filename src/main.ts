@@ -65,7 +65,7 @@ const canvas_lane_pairs: { [key: string ]: Lane } = {};
 let ups = 0; 
 let translationAmount = 0; 
 
-let paused = false; 
+let paused = true; 
 let editing = false;
 let controlsPinned = false; 
 
@@ -155,8 +155,10 @@ function updateAllLaneWidths() {
 
   for (let key in input_lane_pairs) {
     let lane = input_lane_pairs[key];
-    if(container_width)
+    if(container_width) {
       lane.canvas.width = (container_width / 4) * multiplier;
+      drawSingleLane(lane)
+    }
   }
 }
 
@@ -168,7 +170,8 @@ function createNewLane(
   maxWrongNotes: number,
   notes: Note[],
   timeSignature: number[],
-  inputKey: string
+  inputKey: string,
+  hitPrecision: number
 ) {
   if(!container_width || !container_height) {
     console.error('Container dimensions undefined');
@@ -189,7 +192,7 @@ function createNewLane(
   
   newCanvas.addEventListener('click', handleCanvasClick);
 
-  const new_lane = new Lane(bpm, measureCount, noteGap, hitsound, maxWrongNotes, notes, timeSignature, inputKey, newCanvas);
+  const new_lane = new Lane(bpm, measureCount, noteGap, hitsound, maxWrongNotes, notes, timeSignature, inputKey, newCanvas, hitPrecision);
 
   // TODO: Review if these can be unified
   input_lane_pairs[new_lane.inputKey] = new_lane;
@@ -204,7 +207,7 @@ function createNewLane(
   canvasContainer.appendChild(newCanvas);
 
   const laneEditingSection = document.createElement('div') as HTMLElement;
-  laneEditingSection.innerHTML = getLaneEditingHTML(newCanvas.id, bpm, measureCount, hitsound);
+  laneEditingSection.innerHTML = getLaneEditingHTML(newCanvas.id, bpm, measureCount, hitsound, "metronome1");
   canvasContainer.appendChild(laneEditingSection);
 
   if(audioSprite)
@@ -220,7 +223,10 @@ function createNewLane(
   document.getElementById(`${newCanvas.id}_back_to_start`)?.addEventListener('click', backToStartClick);
   document.getElementById(`${newCanvas.id}_close`)?.addEventListener('click', closeClick);
   document.getElementById(`${newCanvas.id}_clear_notes_button`)?.addEventListener('click', clearNotesClick);
+
   document.getElementById(`${newCanvas.id}_hitsound_select`)?.addEventListener('change', hitsoundSelectChange);
+  document.getElementById(`${newCanvas.id}_metronome_select`)?.addEventListener('change', metronomeSelectChange);
+
   document.getElementById(`${newCanvas.id}`)?.addEventListener('mousemove', canvasMouseOver);
   document.getElementById(`${newCanvas.id}`)?.addEventListener('wheel', canvaseMouseWheel);
  
@@ -240,6 +246,7 @@ function findLaneFromEvent(event: Event): Lane {
   return associatedLane;
 }
 
+// TODO: Add listener for esc key
 function closeClick(event: MouseEvent) {
   offsetY = -10;
   for (let key in input_lane_pairs) {
@@ -267,6 +274,13 @@ function hitsoundSelectChange(event: Event) {
   let target = event.target as HTMLSelectElement;
   let lane = findLaneFromEvent(event);
   lane.hitsound = target.value; 
+}
+
+function metronomeSelectChange(event: Event) {
+  let target = event.target as HTMLSelectElement;
+  let lane = findLaneFromEvent(event);
+  lane.metronomeSound = target.value; 
+  console.log(target.value)
 }
 
 function clearNotesClick(event: MouseEvent) {
@@ -328,9 +342,9 @@ function metronomeButtonClick(event: MouseEvent) {
 
 // Have a max number of measures. 
 // For this prototype max number of lanes will be 4. Further optimisation will be needed for more. turns out it was the shadows.
-createNewLane(100, 200, 200, 'kick', 3, [], [4, 4], '40');
-createNewLane(100, 200, 200, 'snare', 3, [], [4, 4], '41');
-createNewLane(100, 200, 200, 'closed-hihat', 3, [], [4, 4], '42');
+createNewLane(100, 200, 200, 'kick', 3, [], [4, 4], '40', 16);
+createNewLane(100, 200, 200, 'snare', 3, [], [4, 4], '41', 16);
+createNewLane(100, 200, 200, 'closed-hihat', 3, [], [4, 4], '42', 16);
 // createNewLane(100, 2000, 200, 'kick', 3, [], [4, 4], 'd'); 
 // createNewLane(100, 2000, 200, 'kick', 3, [], [4, 4], 'a');
 // createNewLane(100, 2000, 200, 'kick', 3, [], [4, 4], 's');
@@ -382,10 +396,11 @@ window.addEventListener('keyup', (event) => {
   keyHeld[event.key] = false
 })
 
-enableAudioButton.addEventListener('click', () => {
+function enableAudio() {
   if(audioSprite) 
     return;
 
+  // TODO:  Combine these into one sprite and remove metronome sprite from lane 
   audioSprite = new AudioSprite({
     "src": [
       "../public/drums.mp3"
@@ -418,11 +433,45 @@ enableAudioButton.addEventListener('click', () => {
     }
   });
 
+  let metronomeSprite = new AudioSprite({
+    "src": [
+      "../metronome/metronome.mp3"
+    ],
+    "sprite": {
+      "metronome1": [
+        0,
+        100.1360544217687
+      ],
+      "metronome2": [
+        2000,
+        100.13605442176888
+      ],
+      "metronome3": [
+        4000,
+        100.13605442176842
+      ],
+      "metronome4": [
+        6000,
+        100.13605442176842
+      ],
+      "metronome5": [
+        8000,
+        100.13605442176932
+      ],
+      "metronome6": [
+        10000,
+        100.13605442176932
+      ]
+    }
+  });
+
+  // TODO: Fix this horribleness
   for (let key in input_lane_pairs) {
     let lane = input_lane_pairs[key];
     lane.audioSprite = audioSprite;
+    lane.metronomeSprite = metronomeSprite;
   }
-});
+}
 
 
 // TODO: Come back to this
@@ -452,7 +501,7 @@ addLaneButton?.addEventListener('click', () => {
     return;
 
   paused = true; 
-  createNewLane(80, 2, 200, 'kick', 3, [], [4, 4], input);
+  createNewLane(80, 2, 200, 'kick', 3, [], [4, 4], input, 16);
   resetLanes();
   drawLanes();
   
@@ -463,6 +512,9 @@ playButton?.addEventListener('click', () => {
   if(editing)
     return;
   
+  if(!audioSprite)
+    enableAudio(); 
+
   paused = false; 
 
   playButton.classList.add('selected');
@@ -650,7 +702,7 @@ function handleCanvasClick(event: MouseEvent) {
       updateLaneWidth(lane, 1); 
       resetLanes();
 
-      drawSingleLane(lane);
+      // drawSingleLane(lane);
     }
   }
 }

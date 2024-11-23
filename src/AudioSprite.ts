@@ -38,13 +38,19 @@ export default class AudioSprite {
         return audioBuffer;
     }
 
-    public play(sampleName: string) {
+    public play(sampleName: string, gainValue: number = 1) {
         const startTime = this.samples[sampleName][0] / 1000;
         const duration = this.samples[sampleName][1] / 1000;
 
+
+        const gain = this.audioCtx.createGain();
+        gain.gain.value = gainValue; 
+        
         const sampleSource = this.audioCtx.createBufferSource();
         sampleSource.buffer = this.audioBuffer; 
-        sampleSource.connect(this.audioCtx.destination);
+        // sampleSource.connect(this.audioCtx.destination);
+        gain.connect(this.audioCtx.destination)
+        sampleSource.connect(gain); 
 
         sampleSource.start(this.audioCtx.currentTime, startTime, duration);
     }

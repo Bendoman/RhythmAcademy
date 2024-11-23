@@ -1,5 +1,5 @@
 // TODO: This needs to take in parameters to update note patterns compatible with the lanes time signature
-export function getLaneEditingHTML(id: string, bpm: number, measureCount: number, hitsound: string): string {
+export function getLaneEditingHTML(id: string, bpm: number, measureCount: number, hitsound: string, metronomeSound: string): string {
     return `    
     <div class="lane_editing">
         <div id="metronome_container">
@@ -30,6 +30,18 @@ export function getLaneEditingHTML(id: string, bpm: number, measureCount: number
                 <option value="closed-hihat" ${hitsound == 'closed-hihat' ? 'selected' : ''}>closed-hihat</option>
             </select>
             <label for="lane_sound_select">Lane sound</label>
+        </div>
+
+        <div class="metronome_sound_container">
+            <select class="metronome_select" id="${id}_metronome_select">
+                <option value="metronome1" ${metronomeSound == 'metronome1' ? 'selected' : ''}>metronome1</option>
+                <option value="metronome2" ${metronomeSound == 'metronome2' ? 'selected' : ''}>metronome2</option>
+                <option value="metronome3" ${metronomeSound == 'metronome3' ? 'selected' : ''}>metronome3</option>
+                <option value="metronome4" ${metronomeSound == 'metronome4' ? 'selected' : ''}>metronome4</option>
+                <option value="metronome5" ${metronomeSound == 'metronome5' ? 'selected' : ''}>metronome5</option>
+                <option value="metronome6" ${metronomeSound == 'metronome6' ? 'selected' : ''}>metronome6</option>
+            </select>
+            <label for="lane_sound_select">Metronome sound</label>
         </div>
 
         <div class="time_signature_container">

@@ -18,6 +18,7 @@ export default class Lane {
     
     public hitzone: Hitzone; 
     public hitsound: string; 
+    public metronomeSound: string; 
     
     // The height above the hitzone that notes will be populated upon run start
     public startY: number; 
@@ -30,8 +31,10 @@ export default class Lane {
 
     public maxWrongNotes: number; 
 
+    // TODO: Remove 
     public canvasWidth: number; 
     public canvasHeight: number; 
+
     public topOfLane: number; 
     public topOfInputVisual: number;
 
@@ -44,6 +47,9 @@ export default class Lane {
     public translationAmount: number; 
 
     public audioSprite: any;
+    public metronomeSprite: any;
+
+    public hitPrecision: number; 
 
     constructor(
         bpm: number, 
@@ -54,7 +60,8 @@ export default class Lane {
         notes: Note[],
         timeSignature: number[],
         inputKey: string,
-        canvas: HTMLCanvasElement
+        canvas: HTMLCanvasElement,
+        hitPrecision: number
     ) {
         this.bpm = bpm; 
         this.measureCount = measureCount;
@@ -73,15 +80,14 @@ export default class Lane {
 
         this.canvasWidth = this.canvas.width;
         this.canvasHeight = this.canvas.height;
-        // TODO: Decide if this level of dynamic sizing is even necessary.
-        let measure32ndNote = this.noteGap / (32/this.timeSignature[1])
-        let early_hit_y = this.canvasHeight - (this.canvasHeight * 0.25); 
-        let perfect_hit_y = early_hit_y + measure32ndNote/2; 
-        let late_hit_y = perfect_hit_y + measure32ndNote/2; 
-        this.hitzone = new Hitzone(early_hit_y, measure32ndNote/2, perfect_hit_y, measure32ndNote/2, late_hit_y, measure32ndNote/2); 
+        
+        this.hitPrecision = hitPrecision;
+
+        this.hitzone = this.calculateHitzone(); 
+
         
         // So that the first note drawn will be exaclty one full note above the perfect hit area
-        this.startY = perfect_hit_y - this.noteGap;
+        this.startY = this.calculatePerfectHitY() - this.noteGap;
         
         // timeSignature[0] represents the upper numeral (the number of notes per bar)
         this.height = measureCount * (this.timeSignature[0] * this.noteGap); 
@@ -95,6 +101,8 @@ export default class Lane {
         this.translationAmount = 0; 
         this.pressed = false;
         this.metronomeEnabled = false;
+
+        this.metronomeSound = 'metronome1';
     }
 
     public setNotes(notes: Note[]): void { this.notes = notes; }
@@ -209,7 +217,7 @@ export default class Lane {
             // TODO: See about reducing the number of parameters that this function requires
             // TODO: Potentially use a settings object, or restructure so that it is unecessary. Review either way.
             // TODO: Pass editmode boolean so that notes aren't updated while scrolling during editing.
-            note.updateNote(this.ctx, this.translationAmount, x, width, height, this.hitzone, this.audioSprite, nextNote, ups, translationSpeed, this.metronomeEnabled, this.hitsound); 
+            note.updateNote(this.ctx, this.translationAmount, x, width, height, this.hitzone, this.metronomeSprite, nextNote, ups, translationSpeed, this.metronomeEnabled, this.metronomeSound); 
 
             if(note.currentZone != currentZone && note.currentZone == ZONE_NAMES.MISS_ZONE && note.hitStatus == 'unhit')
                 this.nextNoteIndex++;
@@ -260,5 +268,26 @@ export default class Lane {
             if(noteCount > this.timeSignature[0]) 
                 noteCount = 1;
         }
+    }
+
+    private calculatePerfectHitY() {
+        return this.canvasHeight - (this.canvasHeight * 0.25); 
+    }
+
+    private calculateHitzone(): Hitzone {
+        // TODO: Decide if this level of dynamic sizing is even necessary.
+        let nonPerfectHitArea = (this.noteGap / ((this.hitPrecision*2)/this.timeSignature[1]))/2; //TODO: Write justifcation for this
+        let perfectHitArea = (this.noteGap / (32/this.timeSignature[1]))/2;
+
+        // let early_hit_y = this.canvasHeight - (this.canvasHeight * 0.25); 
+        let perfect_hit_y = this.calculatePerfectHitY();
+
+        // let perfect_hit_y = early_hit_y + nonPerfectHitArea; 
+        let early_hit_y = perfect_hit_y - nonPerfectHitArea
+
+        let late_hit_y = perfect_hit_y + perfectHitArea; 
+
+
+        return new Hitzone(early_hit_y, nonPerfectHitArea, perfect_hit_y, perfectHitArea, late_hit_y, nonPerfectHitArea); 
     }
 }

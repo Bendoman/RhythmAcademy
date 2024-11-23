@@ -43,7 +43,7 @@ export default class Note {
         else if(effectiveY > hitzone.perfect_hit_y && this.currentZone == ZONE_NAMES.EARLY_HIT_ZONE) {
             this.currentZone = ZONE_NAMES.PERFECT_HIT_ZONE;
             if(audioSprite && metronomeEnabled)
-                audioSprite.play(hitsound);
+                audioSprite.play(hitsound, 0.25);
         }
         else if(effectiveY > hitzone.late_hit_y && this.currentZone == ZONE_NAMES.PERFECT_HIT_ZONE) 
             this.currentZone = ZONE_NAMES.LATE_HIT_ZONE;
