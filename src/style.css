@@ -12,6 +12,10 @@
   font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif; 
 }
 
+body {
+  overflow-y: hidden;
+}
+
 #content {
   width: 100vw;
   height: 100vh;
@@ -219,4 +223,51 @@ replaced with a button to retract in expanded form.
 .time_signature_select {
   max-width: 4em;
   text-align: center;
+}
+
+
+#settings_panel {
+
+  display: none;
+}
+
+#settings_panel.visible {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  
+  background-color: teal;
+  border-radius: 15px;
+  
+  position: absolute;
+  left: 25vw;
+  width: 50vw;
+  
+  top: 25vh;
+  height: 50vh;
+  z-index: 2;
+
+  gap: 1em;
+}
+
+#workspace_measure_count_container {
+  display: flex;
+  gap: 1em;
+  /* flex-direction: column; */
+}
+
+#workspace_measure_count {
+  max-width: 4em;
+}
+
+.loop_button {
+  border: none; 
+  padding: 0.25em; 
+  border-radius: 10px;
+}
+
+.loop_button.selected {
+  background-color: #131B23;
+  color: #ECDFCC;
 }

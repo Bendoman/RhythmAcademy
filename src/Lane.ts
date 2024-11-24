@@ -1,6 +1,6 @@
 import Note from "./Note.ts";
 import Hitzone from "./Hitzone.ts";
-import { drawLine } from "./Utils";
+import { drawLine, getNoteFill } from "./Utils";
 import { COLORS, HIT_STATUSES, ZONE_NAMES } from "./constants";
 import AudioSprite from "./AudioSprite.ts";
 
@@ -9,6 +9,7 @@ import AudioSprite from "./AudioSprite.ts";
 export default class Lane {
     public bpm: number;
     public measureCount: number; 
+    public maxMeasureCount: number;
     public timeSignature: number[]; // Index 0 will be the upper numeral, index 1 the lower
     public metronomeEnabled: boolean; 
 
@@ -23,8 +24,14 @@ export default class Lane {
     // The height above the hitzone that notes will be populated upon run start
     public startY: number; 
     public height: number; 
+    // TODO: come back to this
+    public effectiveHeight: number; 
     
     public notes: Note[];
+    public looped: boolean;
+    public loopedNotes: number;
+    public nonLoopedNotes: any;
+
     public notesHit: Note[] = [];
     public notesMissed: Note[] = [];
     public wrongNotes: Note[] = []; 
@@ -54,6 +61,7 @@ export default class Lane {
     constructor(
         bpm: number, 
         measureCount: number, 
+        maxMeasureCount: number,
         noteGap: number,
         hitsound: string, 
         maxWrongNotes: number,
@@ -65,14 +73,17 @@ export default class Lane {
     ) {
         this.bpm = bpm; 
         this.measureCount = measureCount;
+        this.maxMeasureCount = maxMeasureCount;
         this.timeSignature = timeSignature;
 
         this.notes = notes; 
+        this.loopedNotes = 0;
+
         // Note gap defines the distance between between note values that the time signature is counting
         this.noteGap = noteGap;
         
         this.hitsound = hitsound; 
-
+        this.looped = false; 
         this.maxWrongNotes = maxWrongNotes;
         
         this.canvas = canvas; 
@@ -90,8 +101,15 @@ export default class Lane {
         this.startY = this.calculatePerfectHitY() - this.noteGap;
         
         // timeSignature[0] represents the upper numeral (the number of notes per bar)
-        this.height = measureCount * (this.timeSignature[0] * this.noteGap); 
-        this.topOfLane = this.startY - this.height; 
+        // this.height = measureCount * (this.timeSignature[0] * this.noteGap); 
+        // this.topOfLane = this.startY - this.height; 
+        
+        this.height = this.calculateHeight(false);
+        this.effectiveHeight = this.calculateHeight(true);
+
+        // this.effectiveHeight = this.calculateHeight(true); 
+        this.topOfLane = this.calculateTopOfLane(false); 
+
         this.topOfInputVisual = this.canvasHeight - 70;
         this.nextNoteIndex = 0; 
 
@@ -135,7 +153,9 @@ export default class Lane {
         if(paused)
             return; 
 
-        let nextNote = this.notes[this.nextNoteIndex];
+
+        let nextNote;
+        nextNote = this.notes[this.nextNoteIndex];
         // TODO: Replace this with if else block. check that note is unhit.
 
         switch(nextNote.currentZone) {
@@ -165,6 +185,8 @@ export default class Lane {
                 this.nextNoteIndex++;
                 break;
         }
+
+
     }
 
     public handleInputOff() { 
@@ -179,6 +201,87 @@ export default class Lane {
         this.ctx.fillStyle = this.pressed ? COLORS.INPUT_KEY_PRESSED : COLORS.INPUT_KEY_UNPRESSED;
         this.ctx.font = "italic 50px Inria-serif"
         this.ctx.fillText(this.inputKey.toUpperCase(), this.canvas.width/2 - 20, this.topOfInputVisual + 50); 
+    }
+
+    // Draws all notes and looped notes to the screen
+    public drawNotes(editMode: boolean, ups: number, translationSpeed: number) {
+        for(let i = 0; i < this.notes.length; i++) {
+            let note = this.notes[i]; 
+            let effectiveY = note.y + this.translationAmount;
+            // Reduces time spent drawing notes that have scrolled passed the bottom of the screen
+            if(effectiveY > this.canvas.height)
+                continue;
+            // Does not loop through any notes that won't be dispalyed on the screen
+            // -noteGap instead of 0 as notes are on a slight y offset and would pop in
+            if(effectiveY < -this.noteGap) 
+                return;
+            
+            if(!editMode) 
+                this.updateNote(note, effectiveY, ups, translationSpeed);
+            this.drawNote(note, effectiveY);
+
+        }
+
+        // for(let i = 0; i < this.loopedNotes.length; i++) {
+        //     let note = this.loopedNotes[i]; 
+        //     let effectiveY = note.y + this.translationAmount;
+
+        //     if(effectiveY > this.canvas.height)
+        //         continue;
+        //     if(effectiveY < -this.noteGap) 
+        //         return;
+
+        //     if(!editMode) 
+        //         this.updateNote(note, effectiveY, ups, translationSpeed);
+        //     this.drawNote(note, effectiveY);
+        // }
+
+
+        // if(!editMode) // Only updates the hitstatus of notes if not in edit mode
+        //     this.updateNote(note); 
+    }
+
+    public drawNote(note: Note, y: number) {
+        let x = (this.canvas.width/2) - (this.canvas.width/4);
+        let width = this.canvas.width/2;
+
+        // TODO: Review this, justify it.
+        let height = this.noteGap/(this.timeSignature[1] * this.timeSignature[0])
+        if(height < 5) // TODO: Alter this min height
+            height = 5; 
+
+        this.ctx.fillStyle = getNoteFill(note.currentZone, note.hitStatus); 
+        if(this.notes.indexOf(note) == this.nextNoteIndex)
+            this.ctx.fillStyle = 'blue';
+        
+        this.ctx.beginPath();
+        this.ctx.roundRect(x, y - (height/2), width, height, 20);
+        this.ctx.fill();
+
+        this.ctx.fillStyle = 'white';
+        this.ctx.font = "12px sans-serif"
+        this.ctx.fillText(`${note.timeToZone.toFixed(1)}ms to zone`, x, y + 3)
+    }
+
+    // Updates the hitzone and hitstatus of a specific note
+    public updateNote(note: Note, y: number, ups: number, translationSpeed: number) {
+        let distanceToPerfectHitzone = ((this.hitzone.perfect_hit_y - this.translationAmount) - note.y)
+        note.timeToZone = ((distanceToPerfectHitzone/translationSpeed)/ups)*1000;
+
+        if(y > this.hitzone.early_hit_y && note.currentZone == ZONE_NAMES.EARLY_ZONE) 
+            note.currentZone = ZONE_NAMES.EARLY_HIT_ZONE;
+        else if(y > this.hitzone.perfect_hit_y && note.currentZone == ZONE_NAMES.EARLY_HIT_ZONE) {
+            note.currentZone = ZONE_NAMES.PERFECT_HIT_ZONE;
+            if(this.audioSprite && this.metronomeEnabled)
+                this.audioSprite.play(this.hitsound, 0.25);
+        }
+        else if(y > this.hitzone.late_hit_y && note.currentZone == ZONE_NAMES.PERFECT_HIT_ZONE) 
+            note.currentZone = ZONE_NAMES.LATE_HIT_ZONE;
+        else if(y > this.hitzone.late_hit_y + this.hitzone.late_hit_height && note.currentZone == ZONE_NAMES.LATE_HIT_ZONE) {
+            note.currentZone = ZONE_NAMES.MISS_ZONE;
+            if(this.notes.indexOf(note) == this.nextNoteIndex)
+                this.nextNoteIndex++;
+        }
     }
 
 
@@ -218,7 +321,8 @@ export default class Lane {
             // TODO: Potentially use a settings object, or restructure so that it is unecessary. Review either way.
             // TODO: Pass editmode boolean so that notes aren't updated while scrolling during editing.
             note.updateNote(this.ctx, this.translationAmount, x, width, height, this.hitzone, this.metronomeSprite, nextNote, ups, translationSpeed, this.metronomeEnabled, this.metronomeSound); 
-
+           
+            // Note travels from late hit zone to miss zone, and is unhit 
             if(note.currentZone != currentZone && note.currentZone == ZONE_NAMES.MISS_ZONE && note.hitStatus == 'unhit')
                 this.nextNoteIndex++;
         }
@@ -230,7 +334,13 @@ export default class Lane {
     
     public drawMeasureIndicators() {
         let noteCount = 1; 
-        for(let y = this.startY; y > this.topOfLane; y -= this.noteGap) {
+        let topOfLane;
+        if(this.looped)
+            topOfLane = this.calculateTopOfLane(true);
+        else 
+            topOfLane = this.calculateTopOfLane(false);
+
+        for(let y = this.startY; y > topOfLane; y -= this.noteGap) {
             // Optimisation so that only the measure lines actually visible on the page need to be drawn
             if(y + this.translationAmount > this.canvasHeight) {
                 noteCount++;
@@ -274,7 +384,7 @@ export default class Lane {
         return this.canvasHeight - (this.canvasHeight * 0.25); 
     }
 
-    private calculateHitzone(): Hitzone {
+    public calculateHitzone(): Hitzone {
         // TODO: Decide if this level of dynamic sizing is even necessary.
         let nonPerfectHitArea = (this.noteGap / ((this.hitPrecision*2)/this.timeSignature[1]))/2; //TODO: Write justifcation for this
         let perfectHitArea = (this.noteGap / (32/this.timeSignature[1]))/2;
@@ -290,4 +400,36 @@ export default class Lane {
 
         return new Hitzone(early_hit_y, nonPerfectHitArea, perfect_hit_y, perfectHitArea, late_hit_y, nonPerfectHitArea); 
     }
+
+    public loopNotes(loops: number) {
+        let length = this.notes.length; 
+        this.loopedNotes = 0; 
+        for(let l = 1; l < loops; l++) {
+            for(let i = 0; i < length; i++) {
+                let newNote = new Note(this.notes[i].y - (this.height * l));
+                this.notes.push(newNote); // Change this to looped notes 
+                this.loopedNotes++; 
+                console.log('pushing new note');
+                // this.notes.push(new Note(this.notes[i].y -= (this.height * l)));
+            }
+        }
+    }
+
+    public calculateHeight(looped: boolean) {
+        let measureCount = looped ? this.maxMeasureCount : this.measureCount; 
+        return measureCount * (this.timeSignature[0] * this.noteGap); 
+    }
+
+    public calculateTopOfLane(looped: boolean) {
+        if(looped)
+            return this.startY - this.effectiveHeight; 
+        return this.startY - this.height; 
+    }   
+    
+    public updateMaxMeasureCount(maxMeasureCount: number) {
+        this.maxMeasureCount = maxMeasureCount; 
+        // TODO: Remove looped notes array. If current measure count is greater, remove notes. 
+    }
 }
+
+

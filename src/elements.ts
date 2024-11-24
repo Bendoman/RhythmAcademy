@@ -1,5 +1,5 @@
 // TODO: This needs to take in parameters to update note patterns compatible with the lanes time signature
-export function getLaneEditingHTML(id: string, bpm: number, measureCount: number, hitsound: string, metronomeSound: string): string {
+export function getLaneEditingHTML(id: string, bpm: number, measureCount: number, hitsound: string, metronomeSound: string, precision: string, initialMaxMeasureCount: number): string {
     return `    
     <div class="lane_editing">
         <div id="metronome_container">
@@ -18,6 +18,18 @@ export function getLaneEditingHTML(id: string, bpm: number, measureCount: number
         <div class="measure_count_container">
             <input id="${id}_measure_count_input" class="measure_count_input" type="number" min="1" value="${measureCount}">
             <label>measure count</label>
+            <button id="${id}_loop_button"
+            class="loop_button" ${(initialMaxMeasureCount%measureCount == 0) ? '' : 'disabled'}>
+            loop</button>
+        </div>
+
+        <div class="precisioun_container">
+            <select class="precision_select" id="${id}_precision_select">
+                <option value="16" ${precision == '1/16' ? 'selected' : ''}>1/16</option>
+                <option value="8" ${precision == '1/8' ? 'selected' : ''}>1/8</option>
+                <option value="4" ${precision == '1/4' ? 'selected' : ''}>1/4</option>
+            </select>
+            <label for="precision_select">Hit precision</label>
         </div>
 
         <div class="lane_sound_container">

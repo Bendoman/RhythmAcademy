@@ -49,6 +49,7 @@ function processMidiMessage(input: MIDIMessageEvent) {
 
 // #region ( Global variables )
 let laneCount = 0; 
+let maxMeasureCount = 10; 
 const laneContainer = document.getElementById('lane_container') as HTMLElement | null; 
 // const lane_ctx_pairs: { [key: string]: [Lane, CanvasRenderingContext2D | null] } = {};
 const input_lane_pairs: { [key: string ]: Lane } = {};
@@ -84,6 +85,11 @@ const pauseButton = document.getElementById('pause_button');
 const stopButton = document.getElementById('stop_button');
 const editButton = document.getElementById('edit_button')
 const addLaneButton = document.getElementById('add_lane_button')
+const settingsButton = document.getElementById('settings_button');
+
+// Settings panel
+const workspaceMeasureCountInput = document.getElementById('workspace_measure_count');
+
 // const lockButton = document.getElementById('lock_button');
 
 // #endregion
@@ -182,6 +188,9 @@ function createNewLane(
     console.error('Input key already in use');
     return;
   }
+
+  if(measureCount > maxMeasureCount)
+    measureCount = maxMeasureCount;
   
   const newCanvas = document.createElement('canvas');
   newCanvas.classList.add('lane_canvas');
@@ -192,7 +201,7 @@ function createNewLane(
   
   newCanvas.addEventListener('click', handleCanvasClick);
 
-  const new_lane = new Lane(bpm, measureCount, noteGap, hitsound, maxWrongNotes, notes, timeSignature, inputKey, newCanvas, hitPrecision);
+  const new_lane = new Lane(bpm, measureCount, maxMeasureCount, noteGap, hitsound, maxWrongNotes, notes, timeSignature, inputKey, newCanvas, hitPrecision);
 
   // TODO: Review if these can be unified
   input_lane_pairs[new_lane.inputKey] = new_lane;
@@ -207,7 +216,7 @@ function createNewLane(
   canvasContainer.appendChild(newCanvas);
 
   const laneEditingSection = document.createElement('div') as HTMLElement;
-  laneEditingSection.innerHTML = getLaneEditingHTML(newCanvas.id, bpm, measureCount, hitsound, "metronome1");
+  laneEditingSection.innerHTML = getLaneEditingHTML(newCanvas.id, bpm, measureCount, hitsound, "metronome1", '1/16', maxMeasureCount);
   canvasContainer.appendChild(laneEditingSection);
 
   if(audioSprite)
@@ -215,9 +224,11 @@ function createNewLane(
   
   laneCount++;
   laneContainer?.appendChild(canvasContainer);
-  
+
+  // TODO: Put all this in its own function
   document.getElementById(`${newCanvas.id}_bpm_input`)?.addEventListener('change', bpmInputChange);
   document.getElementById(`${newCanvas.id}_measure_count_input`)?.addEventListener('change', measureCountChange);
+  document.getElementById(`${newCanvas.id}_loop_button`)?.addEventListener('click', loopButtonClick);
   document.getElementById(`${newCanvas.id}_time_signature_select`)?.addEventListener('change', timeSignatureChange);
   document.getElementById(`${newCanvas.id}_metronome_button`)?.addEventListener('click', metronomeButtonClick);
   document.getElementById(`${newCanvas.id}_back_to_start`)?.addEventListener('click', backToStartClick);
@@ -226,6 +237,7 @@ function createNewLane(
 
   document.getElementById(`${newCanvas.id}_hitsound_select`)?.addEventListener('change', hitsoundSelectChange);
   document.getElementById(`${newCanvas.id}_metronome_select`)?.addEventListener('change', metronomeSelectChange);
+  document.getElementById(`${newCanvas.id}_precision_select`)?.addEventListener('change', precisionSelectChange);
 
   document.getElementById(`${newCanvas.id}`)?.addEventListener('mousemove', canvasMouseOver);
   document.getElementById(`${newCanvas.id}`)?.addEventListener('wheel', canvaseMouseWheel);
@@ -258,6 +270,7 @@ function closeClick(event: MouseEvent) {
     laneEditingSection?.classList.remove('activated')
 
     resetLanes();
+    updateAllLaneWidths();
     drawSingleLane(lane);
   }
 }
@@ -280,12 +293,22 @@ function metronomeSelectChange(event: Event) {
   let target = event.target as HTMLSelectElement;
   let lane = findLaneFromEvent(event);
   lane.metronomeSound = target.value; 
-  console.log(target.value)
+}
+
+function precisionSelectChange(event: Event) {
+  let target = event.target as HTMLSelectElement;
+  let lane = findLaneFromEvent(event);
+  lane.hitPrecision = parseInt(target.value);
+  lane.hitzone = lane.calculateHitzone();
+  // lane.metronomeSound = target.value; 
+  drawSingleLane(lane);
+  console.log(lane.hitPrecision)
 }
 
 function clearNotesClick(event: MouseEvent) {
   let lane = findLaneFromEvent(event);
   lane.notes = [];
+  lane.translationAmount = 0; 
   drawSingleLane(lane);
 }
 
@@ -301,10 +324,23 @@ function bpmInputChange(event: Event) {
 
 function measureCountChange(event: Event) {
   let target = event.target as HTMLInputElement;
-  let newMC = target.value; 
+  let newMC = parseInt(target.value);
   
   let lane = findLaneFromEvent(event);
-  lane.measureCount = parseInt(newMC);
+  if(newMC > maxMeasureCount)
+    newMC = maxMeasureCount;
+
+  let loopButton = target.closest('.lane_editing')!.querySelector('.loop_button') as HTMLButtonElement;
+  if(newMC != maxMeasureCount && maxMeasureCount % newMC == 0)
+    loopButton.removeAttribute('disabled');
+  else 
+    loopButton.setAttribute('disabled', '');
+
+
+  lane.measureCount = newMC;
+  // So that input only displays max measure count
+  target.value = newMC.toString(); 
+  lane.translationAmount = 0; 
   
   // TODO: Add ability to keep notes before measure cut off
   lane.notes = [];
@@ -315,6 +351,38 @@ function measureCountChange(event: Event) {
   console.log(target.value);
 }
 
+function loopButtonClick(event: Event) {
+  let target = event.target as HTMLSelectElement;
+  let lane = findLaneFromEvent(event);  
+
+  // Lane has already been looped. Toggle looping off
+  if(target.classList.contains('selected')) { 
+    lane.notes.splice(lane.notes.length - lane.loopedNotes, lane.loopedNotes);
+    lane.looped = false; 
+    lane.loopedNotes = 0; 
+    lane.effectiveHeight = lane.calculateHeight(false);
+    target.classList.remove('selected');
+    drawSingleLane(lane); 
+    console.log(lane.notes);
+  // TODO: Logic around resetting height and such
+    return; 
+  }
+  target.classList.add('selected');
+  lane.looped = true; 
+  
+  let loops = maxMeasureCount / lane.measureCount; 
+  console.log(loops); 
+  
+  if(lane.notes.length > 0)
+    lane.loopNotes(loops); 
+  
+  lane.effectiveHeight = lane.calculateHeight(true); 
+  lane.topOfLane = lane.calculateTopOfLane(true);
+  drawSingleLane(lane); 
+
+  console.log(lane.notes);
+}
+
 function timeSignatureChange(event: Event) {
   let target = event.target as HTMLSelectElement;
   let lane = findLaneFromEvent(event);
@@ -323,6 +391,7 @@ function timeSignatureChange(event: Event) {
   lane.timeSignature = [parseInt(split[0]), parseInt(split[1])];
 
   lane.notes = [];
+  lane.translationAmount = 0; 
   lane.recalculateHeight();
   drawSingleLane(lane);
 
@@ -342,7 +411,7 @@ function metronomeButtonClick(event: MouseEvent) {
 
 // Have a max number of measures. 
 // For this prototype max number of lanes will be 4. Further optimisation will be needed for more. turns out it was the shadows.
-createNewLane(100, 200, 200, 'kick', 3, [], [4, 4], '40', 16);
+createNewLane(100, 3, 200, 'kick', 3, [], [4, 4], '40', 16);
 createNewLane(100, 200, 200, 'snare', 3, [], [4, 4], '41', 16);
 createNewLane(100, 200, 200, 'closed-hihat', 3, [], [4, 4], '42', 16);
 // createNewLane(100, 2000, 200, 'kick', 3, [], [4, 4], 'd'); 
@@ -501,7 +570,9 @@ addLaneButton?.addEventListener('click', () => {
     return;
 
   paused = true; 
-  createNewLane(80, 2, 200, 'kick', 3, [], [4, 4], input, 16);
+  createNewLane(80, 1, 200, 'kick', 3, [], [4, 4], input, 16);
+
+  updateAllLaneWidths();
   resetLanes();
   drawLanes();
   
@@ -605,6 +676,33 @@ editButton?.addEventListener('click', () => {
   }
 });
 
+const settingsPanel = document.getElementById('settings_panel');
+settingsButton?.addEventListener('click', () => {
+  paused = true; 
+  pauseButton?.classList.add('selected');
+  playButton?.classList.remove('selected');
+  stopButton?.classList.remove('selected');
+  editButton?.classList.remove('selected');
+
+  if(settingsPanel?.classList.contains('visible'))
+    settingsPanel?.classList.remove('visible');
+  else 
+    settingsPanel?.classList.add('visible');
+});
+
+const settingsCloseButton = document.getElementById('settings_panel_close');
+settingsCloseButton?.addEventListener('click', () => {
+  settingsPanel?.classList.remove('visible');
+});
+
+
+workspaceMeasureCountInput?.addEventListener('change', (event) => {
+  let target = event.target as HTMLSelectElement;
+  console.log(target.value); 
+})
+
+
+
 function canvaseMouseWheel(event: WheelEvent) {
   let canvas = event.target as HTMLCanvasElement;
   if(!editing || !canvas.classList.contains('editing'))
@@ -669,14 +767,28 @@ function handleCanvasClick(event: MouseEvent) {
 
     if(sortedIndex[1] == 1) {
       if(event.button == 2) {
-        lane.notes.splice(sortedIndex[0], 1);
+        if(lane.looped) {
+          lane.notes.splice(lane.notes.length - lane.loopedNotes, lane.loopedNotes);
+          lane.notes.splice(sortedIndex[0], 1);
+          lane.loopNotes(maxMeasureCount / lane.measureCount)
+        } else {
+          lane.notes.splice(sortedIndex[0], 1);
+        }
+
         drawSingleLane(lane); 
 
       }
       return;
     } else if(event.button != 2) {
       let newNote = new Note(newNoteY);
-      lane.notes.splice(sortedIndex[0], 0, newNote)
+
+      if(lane.looped) {
+        lane.notes.splice(lane.notes.length - lane.loopedNotes, lane.loopedNotes);
+        lane.notes.splice(sortedIndex[0], 0, newNote)
+        lane.loopNotes(maxMeasureCount / lane.measureCount)
+      } else {
+        lane.notes.splice(sortedIndex[0], 0, newNote)
+      }
       drawSingleLane(lane); 
     }
 
@@ -701,8 +813,7 @@ function handleCanvasClick(event: MouseEvent) {
     } else {
       updateLaneWidth(lane, 1); 
       resetLanes();
-
-      // drawSingleLane(lane);
+      drawSingleLane(lane);
     }
   }
 }
@@ -732,17 +843,20 @@ function drawSingleLane(lane: Lane) {
   lane.ctx.clearRect(0, 0, lane.canvas.width, lane.canvas.height - lane.inputAreaHeight);
   lane.drawHitzone();
   lane.drawMeasureIndicators();
-  lane.updateNotes(ups, 0);
+  // lane.updateNotes(ups, 0);
+  lane.drawNotes(editing, ups, 0); 
   lane.drawInputVisual();
 
   if(editing) {
-    let divider = 16/lane.timeSignature[0];
+    let divider = 16/lane.timeSignature[1];
     let height = lane.noteGap/divider;
     let drawHeight = lane.noteGap/(lane.timeSignature[1] * lane.timeSignature[0])
-
+    
+    // So that only non looped part of lane is shown in edit mode
+    let topeOfLane = lane.calculateTopOfLane(false); 
 
     let oddLoop = false;
-    for(let y = lane.startY; y > lane.topOfLane; y -= height) {
+    for(let y = lane.startY; y > topeOfLane; y -= height) {
       let effectiveY = y + lane.translationAmount; 
       if(effectiveY > lane.canvas.height)
         continue; 
@@ -754,17 +868,6 @@ function drawSingleLane(lane: Lane) {
       lane.ctx.beginPath();
       lane.ctx.roundRect(30, effectiveY - (drawHeight/2), lane.canvas.width - 60, drawHeight, 20); 
       lane.ctx.fill();
-
-      // if(oddLoop) {
-      //   lane.ctx.fillStyle = COLORS.NOTE_AREA_HIGHLIGHT;
-      //   lane.ctx.beginPath();
-      //   lane.ctx.roundRect(30, effectiveY - (height/2), lane.canvas.width - 60, height, 20); 
-      //   lane.ctx.fill();
-
-      //   oddLoop = !oddLoop        
-      // } else {
-      //   oddLoop = !oddLoop
-      // }
 
       let effectiveOffsetY = offsetY - translationAmount;
       if(effectiveOffsetY > (effectiveY - (height/2)) && effectiveOffsetY <= (effectiveY - (height/2)) + height) {
@@ -822,16 +925,17 @@ function gameLoop(timeStamp: number) {
     let translationSpeed = (interval / (60000/lane.bpm)) * lane.noteGap;
     lane.translationAmount += translationSpeed;
     
-    // TODO: Need a much more robust way of looping
-    if(lane.translationAmount > (lane.canvas.height - lane.startY) + lane.height) {
-      lane.resetLane();
-    }
+    // // TODO: Need a much more robust way of looping
+    // if(lane.translationAmount > (lane.canvas.height - lane.startY) + lane.height) {
+    //   lane.resetLane();
+    // }
     
     
     lane.ctx.clearRect(0, 0, lane.canvas.width, lane.canvas.height - lane.inputAreaHeight);
     lane.drawHitzone();
     lane.drawMeasureIndicators();
-    lane.updateNotes(ups, translationSpeed);
+    // lane.updateNotes(ups, translationSpeed);
+    lane.drawNotes(editing, ups, translationSpeed);
     lane.drawInputVisual();
   }
 

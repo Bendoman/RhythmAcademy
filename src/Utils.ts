@@ -1,5 +1,7 @@
 import Lane from "./Lane";
 import Note from "./Note";
+import { ZONE_NAMES, HIT_STATUSES } from "./constants";
+import { COLORS } from "./constants";
 
 export function drawLine(ctx: CanvasRenderingContext2D, startX: number, startY: number, endX: number, endY: number, strokeStyle: string = 'white', weight: number, dashValues?: number[]) {
     // If no dash values are provided then resets the line dash value to unbroken
@@ -21,6 +23,29 @@ export function resetLaneStats(lane: Lane) {
     lane.nextNoteIndex = 0;
 }
 
+
+export function getNoteFill(currentZone: string, hitStatus: string): string {
+    let fillStyle = ''; 
+    if(currentZone == ZONE_NAMES.EARLY_ZONE)
+        fillStyle = COLORS.NOTE_FILL; 
+    else if(currentZone == ZONE_NAMES.EARLY_HIT_ZONE)
+        fillStyle = 'red'; 
+    else if(currentZone == ZONE_NAMES.PERFECT_HIT_ZONE)
+        fillStyle = 'blue'; 
+    else if(currentZone == ZONE_NAMES.LATE_HIT_ZONE)
+        fillStyle = 'orange'; 
+    else if(currentZone == ZONE_NAMES.MISS_ZONE) {
+        fillStyle = 'maroon'; 
+        if(hitStatus == 'hit')
+            fillStyle = 'gray'; 
+    }
+
+    return fillStyle; 
+}
+
+
+
+
 // TODO: Come back to this
 // export function pixelsToEm(baseFontSize: number, pixels: number): number {
 //     if(baseFontSize <= 0) 
@@ -28,7 +53,6 @@ export function resetLaneStats(lane: Lane) {
 
 //     return pixels / baseFontSize; 
 // }
-
 
 
 export function findSortedIndex(notes: Note[], yValue: number): number[] {
