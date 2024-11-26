@@ -255,7 +255,6 @@ function createNewLane(
 
 
   document.getElementById(`${newCanvas.id}_load_pattern_select`)?.addEventListener('change', patternSelectChange);
-  document.getElementById(`${newCanvas.id}_load_pattern_select`)?.addEventListener('click', patternSelectClick);
 
   document.getElementById(`${newCanvas.id}_pattern_mode`)?.addEventListener('click', patternModeClick);
   document.getElementById(`${newCanvas.id}_note_mode`)?.addEventListener('click', noteModeClick);
@@ -334,11 +333,18 @@ function loadPatternClick(event: Event) {
 
   let patternSelect = target.parentElement?.previousElementSibling as HTMLSelectElement;
   let patternMeasures = target.nextElementSibling as HTMLInputElement; 
-
-  if(!selectedPattern || !patternMeasures.value)
+  let selectedPatternName = patternSelect.value; 
+  
+  if(!selectedPatternName || !patternMeasures.value)
     return; 
 
-  console.log(selectedPattern, patternMeasures.value);
+  let selectedPatternJSON = localStorage.getItem(selectedPatternName); 
+  let selectedPattern = JSON.parse(selectedPatternJSON!);
+
+  console.log(selectedPatternName, selectedPattern, patternMeasures.value);
+  lane.loadPattern(selectedPattern, parseInt(patternMeasures.value));
+
+  drawSingleLane(lane); 
 }
 
 function createPatternClick(event: Event) {
@@ -351,6 +357,11 @@ function createPatternClick(event: Event) {
   let saveButton = nameInput?.nextElementSibling;
   let closeButton = saveButton?.nextElementSibling;
   let patternMeasures = nameInput?.previousElementSibling?.querySelector(".new_pattern_measures") as HTMLInputElement; 
+
+  let loadPatternButton = target.previousElementSibling?.querySelector('.load_pattern');
+  if(loadPatternButton)
+    loadPatternButton.setAttribute('disabled', ''); 
+
 
   measuresContainer?.classList.add('visible');
   nameInput?.classList.add('visible');
@@ -373,16 +384,20 @@ function closePatternClick(event: Event) {
   let nameInput = saveButton?.previousElementSibling;
   let measuresContainer = nameInput?.previousElementSibling;
 
+  let loadPatternButton = target.closest('.pattern_loading_container')?.querySelector('.load_pattern');
+  if(loadPatternButton)
+    loadPatternButton.removeAttribute('disabled'); 
+
   nameInput?.classList.remove('visible');
   saveButton?.classList.remove('visible');
   target?.classList.remove('visible');
   measuresContainer?.classList.remove('visible');
 
   editMode = EDIT_MODES.PATTERN_MODE;
-  console.log(editMode);
 
   patternInCreationNotes = [];
   patternInCreationPositions = [];
+  lane.translationAmount = 0;
 
   drawSingleLane(lane); 
 }
@@ -400,37 +415,27 @@ function savePatternClick(event: Event) {
   if(!patternName)
     return; 
 
-  localStorage.setItem(patternName, JSON.stringify({measures: patternMeasures, notesPositions: patternInCreationPositions}));
+  localStorage.setItem(patternName, JSON.stringify({measures: patternMeasures, notePositions: patternInCreationPositions}));
+
+  let patternLoadingContainer = target.closest('.pattern_loading_container');
+  let patternSelect = patternLoadingContainer?.querySelector('.load_pattern_select');
+  let patternSelectInnerHTML = '';
+  Object.keys(localStorage).forEach(patternName => {
+    patternSelectInnerHTML += getPatternOptionHTML(patternName); 
+  });
+  if(patternSelect)
+    patternSelect.innerHTML = patternSelectInnerHTML; 
 
   console.log(localStorage.getItem(patternName));
 }
 
-let selectedPattern: any; 
+// let selectedPatternName: any; 
 function patternSelectChange(event: Event) {
   let target = event.target as HTMLSelectElement;
   let lane = findLaneFromEvent(event);
 
-  // selectedPattern = JSON.parse(localStorage.getItem(target.value)); 
-  let selectedPatternJSON = localStorage.getItem(target.value); 
-  selectedPattern = JSON.parse(selectedPatternJSON!);
-  console.log(selectedPattern);
-}
-
-let patternNamesLoaded: string[] = [];
-function patternSelectClick(event: Event) {
-  let target = event.target as HTMLSelectElement;
-  let lane = findLaneFromEvent(event);
-    
-  let patternSelectInnerHTML = '';
-  Object.keys(localStorage).forEach(patternName => {
-    if(!patternNamesLoaded.includes(patternName)) {
-      patternSelectInnerHTML += getPatternOptionHTML(patternName); 
-      patternNamesLoaded.push(patternName);
-    }
-  });
-  
-  target.innerHTML += patternSelectInnerHTML;
-  // console.log(patternSelectInnerHTML);
+  // selectedPatternName = target.value;
+  // console.log(selectedPatternName);
 }
 
 function newPatternMeasuresChange(event: Event) {
@@ -462,17 +467,24 @@ function noteModeClick(event: Event) {
   console.log(editMode);
 
   let patternLoadingContainer = target.closest(".lane_editing")?.querySelector('.pattern_loading_container');
+  let patternContainer = target.closest('.lane_editing')?.querySelector('.pattern_container');
 
   let saveButton = patternLoadingContainer?.querySelector('.save_pattern');
   let closeButton = saveButton?.nextElementSibling;
   let nameInput = saveButton?.previousElementSibling;
   let measuresContainer = nameInput?.previousElementSibling;
 
+  let loopButton = target.parentElement?.parentElement?.querySelector('.loop_button');
+
+  if(maxMeasureCount % lane.measureCount == 0)
+    loopButton?.removeAttribute('disabled');
+  
   closeButton?.classList.remove('visible');
   nameInput?.classList.remove('visible');
   saveButton?.classList.remove('visible');
   measuresContainer?.classList.remove('visible');
   patternLoadingContainer?.classList.remove('visible');
+  patternContainer?.classList.remove('visible');
 
   lane.translationAmount = 0; 
 
@@ -491,14 +503,28 @@ function patternModeClick(event: Event) {
  
   editMode = EDIT_MODES.PATTERN_MODE;
   console.log(editMode);
-  selectedPattern = null; 
 
   let patternLoadingContainer = target.closest(".lane_editing")?.querySelector('.pattern_loading_container');
   patternLoadingContainer?.classList.add('visible');
   
   lane.translationAmount = 0; 
   lane.notes = [];
+  
+  let loopButton = target.parentElement?.parentElement?.querySelector('.loop_button');
+  loopButton?.setAttribute('disabled', '');
+  loopButton?.classList.remove('selected');
+  lane.looped = false;
+  lane.patternStartMeasure = 0;
 
+
+  let patternSelect = patternLoadingContainer?.querySelector('.load_pattern_select');
+  let patternSelectInnerHTML = '';
+  Object.keys(localStorage).forEach(patternName => {
+      patternSelectInnerHTML += getPatternOptionHTML(patternName); 
+  });
+  if(patternSelect)
+    patternSelect.innerHTML = patternSelectInnerHTML; 
+  
   drawSingleLane(lane);
 }
 
@@ -510,6 +536,7 @@ function clearNotesClick(event: MouseEvent) {
     patternInCreationPositions = [];
   } else {
     lane.notes = [];
+    lane.patternStartMeasure = 0; 
   }
   
   lane.translationAmount = 0; 
@@ -540,7 +567,7 @@ function measureCountChange(event: Event) {
   else 
     loopButton.setAttribute('disabled', '');
 
-
+  lane.patternStartMeasure = 0;
   lane.measureCount = newMC;
   // So that input only displays max measure count
   target.value = newMC.toString(); 
@@ -607,7 +634,15 @@ function metronomeButtonClick(event: MouseEvent) {
   console.log(associatedLane);
   let metronomeParagraph = document.getElementById(`${associatedLane.canvas.id}_metronome_paragraph`);
   if(metronomeParagraph)
-    metronomeParagraph.innerText = `Metronome ${associatedLane.metronomeEnabled ? 'enabled' : 'disabled'}`;
+    metronomeParagraph.innerHTML = `Metronome ${associatedLane.metronomeEnabled ? ' <b>(enabled)</b>' : ' <b>(disabled)</b>'}`;
+  
+  
+  let target = event.target as HTMLButtonElement; 
+  let metronomeButton = target.closest('.metronome_button');
+  if(associatedLane.metronomeEnabled)
+    metronomeButton?.classList.add('selected');
+  else
+    metronomeButton?.classList.remove('selected');
 }
 
 
@@ -1034,6 +1069,15 @@ function handleCanvasClick(event: MouseEvent) {
 
   let laneEditingSection = canvas.parentElement?.querySelector('.lane_editing');
   laneEditingSection?.classList.add('activated')
+
+  let noteModeButton = laneEditingSection?.querySelector('.note_mode_button');
+  let patternModeButton = laneEditingSection?.querySelector('.pattern_mode_button');
+
+  if(noteModeButton?.classList.contains('selected'))
+    editMode = EDIT_MODES.NOTE_MODE;
+  else if(patternModeButton?.classList.contains('selected'))
+    editMode = EDIT_MODES.PATTERN_MODE;
+  console.log(editMode, noteModeButton, patternModeButton);
 
   for (let key in input_lane_pairs) {
     let lane = input_lane_pairs[key];

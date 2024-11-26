@@ -119,6 +119,49 @@ replaced with a button to retract in expanded form.
   /* transition: left .65s ease; */
 
   gap: 1em;
+  color: #ECDFCC;
+}
+
+.lane_editing input{
+  background-color: #ffffff;
+  color: #131B23;
+  border: none; 
+  border-radius: 5px;
+  text-align: center;
+}
+
+.lane_editing select{
+  background-color: #ffffff;
+  color: #131B23;
+  border: none; 
+  border-radius: 5px;
+  text-align: center;
+}
+
+.lane_editing select.decorated option:hover {
+  background-color: #131B23;
+  color: #ece5da;
+}
+
+.lane_editing button {
+  background-color: #ECDFCC;
+  color: #131B23;
+  border: none;
+  border-radius: 10px;
+}
+
+.lane_editing button:hover {
+  background-color: #131B23;
+  color: #ece5da;
+}
+
+.metronome_button {
+  padding: 0.25em;
+}
+
+.metronome_button.selected {
+  background-color: #131B23;
+  color: #ece5da;
 }
 
 .bpm_input, .measure_count_input{
@@ -272,6 +315,9 @@ replaced with a button to retract in expanded form.
   border-radius: 10px;
 }
 
+.loop_button[disabled] { background-color: #ecdfcc5e; }
+.loop_button[disabled]:hover { background-color: #ecdfcc5e; color: #131B23;}
+
 .loop_button.selected {
   background-color: #131B23;
   color: #ECDFCC;
@@ -305,3 +351,36 @@ replaced with a button to retract in expanded form.
 .loaded_pattern_measures {
   max-width: 4em;
 }
+
+.precision_select {
+  width: 4em;
+}
+
+.lane_sound_select {
+  width: 7em;
+}
+
+.time_signature_select {
+  width: 4em;
+}
+
+.tootltip {
+  text-align: center;
+}
+
+.metronome_container {
+  display: flex;
+  align-items: center;
+  gap: .25em;
+}
+
+.metronome_select {
+  width: 7em;
+}
+
+.load_pattern {
+  padding: 0.15em;
+}
+
+.load_pattern[disabled] { background-color: #ecdfcc5e; }
+.load_pattern[disabled]:hover { background-color: #ecdfcc5e; color: #131B23;}

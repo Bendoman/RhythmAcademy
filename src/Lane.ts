@@ -3,6 +3,7 @@ import Hitzone from "./Hitzone.ts";
 import { drawLine, getNoteFill } from "./Utils";
 import { COLORS, EDIT_MODES, HIT_STATUSES, ZONE_NAMES } from "./constants";
 import AudioSprite from "./AudioSprite.ts";
+import { selectedPattern } from "./types.ts";
 
 // TODO: Make sure that values relient on height can be updated when the window size changes. Have an update function for this. 
 
@@ -57,6 +58,8 @@ export default class Lane {
     public metronomeSprite: any;
 
     public hitPrecision: number; 
+
+    public patternStartMeasure: number; 
 
     constructor(
         bpm: number, 
@@ -121,6 +124,8 @@ export default class Lane {
         this.metronomeEnabled = false;
 
         this.metronomeSound = 'metronome1';
+
+        this.patternStartMeasure = 0; 
     }
 
     public setNotes(notes: Note[]): void { this.notes = notes; }
@@ -411,6 +416,35 @@ export default class Lane {
         this.maxMeasureCount = maxMeasureCount; 
         // TODO: Remove looped notes array. If current measure count is greater, remove notes. 
     }
+
+    public loadPattern(selectedPattern: selectedPattern, measures: number) {
+        
+        if(this.patternStartMeasure + (measures * selectedPattern.measures) > this.measureCount) {
+            console.error("Loading this pattern will exceed the lane's measure limit");
+            return; 
+        }
+        console.log(selectedPattern);
+
+        let notePositions = selectedPattern.notePositions;
+        console.log(notePositions, measures);
+        
+        let divider = 16/this.timeSignature[1]; 
+        let height = this.noteGap/divider; 
+        
+        for(let i = 0; i < measures; i++) {
+            let patternStartY = this.startY - (this.patternStartMeasure * (this.noteGap * this.timeSignature[1]));
+            for(let x = 0; x < notePositions.length; x++) {
+                let y = patternStartY - (height * -notePositions[x])
+                if(y <= this.calculateTopOfLane(false))
+                    return; // So that notes in patterns longer than the lane's measure length won't overfill it
+                this.notes.push(new Note(y)); 
+            }
+            this.patternStartMeasure += 1; 
+        }
+
+        console.log(this.notes);
+
+    }    
 }
 
 
