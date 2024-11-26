@@ -126,8 +126,13 @@ replaced with a button to retract in expanded form.
 }
 
 .pattern_loading_container {
-  display: flex;
+  display: none;
   flex-direction: column;
+  gap: .25em;
+}
+
+.pattern_loading_container.visible {
+  display: flex;
 }
 
 .canvas_container {
@@ -270,4 +275,33 @@ replaced with a button to retract in expanded form.
 .loop_button.selected {
   background-color: #131B23;
   color: #ECDFCC;
+}
+
+.edit_mode_button {
+  border: none;
+  padding: 0.25em; 
+  border-radius: 10px;
+}
+
+.edit_mode_button.selected {
+  background-color: #131B23;
+  color: #ECDFCC;
+}
+
+/* .save_pattern { display: none; }
+.save_pattern.visible { display: block;}
+
+.pattern_name { display: none; }
+.pattern_name.visible { display: block; } */
+
+.save_pattern, .pattern_name, .close_pattern { display: none;}
+.save_pattern.visible, .pattern_name.visible, .close_pattern.visible { display: block; }
+
+.new_pattern_measures_container {display: none;}
+.new_pattern_measures_container.visible {display: flex; gap: .5em;}
+
+.new_pattern_measures {max-width: 4em;}
+
+.loaded_pattern_measures {
+  max-width: 4em;
 }

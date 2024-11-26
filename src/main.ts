@@ -3,9 +3,9 @@ import Hitzone from "./Hitzone.ts";
 import Lane from "./Lane.ts"
 import Note from "./Note.ts";
 import { resetLaneStats, findSortedIndex } from "./Utils.ts";
-import { COLORS, ZONE_NAMES } from "./constants.ts";
+import { COLORS, ZONE_NAMES, EDIT_MODES } from "./constants.ts";
 import AudioSprite from "./AudioSprite.ts";
-import { getLaneEditingHTML } from "./elements.ts";
+import { getLaneEditingHTML, getPatternOptionHTML } from "./elements.ts";
 
 // #endregion
 
@@ -68,6 +68,8 @@ let translationAmount = 0;
 
 let paused = true; 
 let editing = false;
+let editMode = EDIT_MODES.NOTE_MODE;
+
 let controlsPinned = false; 
 
 let container_width = laneContainer?.clientWidth;
@@ -89,6 +91,11 @@ const settingsButton = document.getElementById('settings_button');
 
 // Settings panel
 const workspaceMeasureCountInput = document.getElementById('workspace_measure_count');
+
+// Pattern creation 
+let patternInCreationNotes: Note[] = []; 
+let patternInCreationPositions: number[] = []; 
+let newPatternMeasures = 1; 
 
 // const lockButton = document.getElementById('lock_button');
 
@@ -239,9 +246,25 @@ function createNewLane(
   document.getElementById(`${newCanvas.id}_metronome_select`)?.addEventListener('change', metronomeSelectChange);
   document.getElementById(`${newCanvas.id}_precision_select`)?.addEventListener('change', precisionSelectChange);
 
+  document.getElementById(`${newCanvas.id}_load_pattern_button`)?.addEventListener('click', loadPatternClick);
+  document.getElementById(`${newCanvas.id}_create_pattern_button`)?.addEventListener('click', createPatternClick);
+  document.getElementById(`${newCanvas.id}_new_pattern_measures`)?.addEventListener('change', newPatternMeasuresChange);
+  document.getElementById(`${newCanvas.id}_loaded_pattern_measures`)?.addEventListener('change', loadedPatternMeasuresChange);
+  document.getElementById(`${newCanvas.id}_save_pattern_button`)?.addEventListener('click', savePatternClick);
+  document.getElementById(`${newCanvas.id}_close_pattern_button`)?.addEventListener('click', closePatternClick);
+
+
+  document.getElementById(`${newCanvas.id}_load_pattern_select`)?.addEventListener('change', patternSelectChange);
+  document.getElementById(`${newCanvas.id}_load_pattern_select`)?.addEventListener('click', patternSelectClick);
+
+  document.getElementById(`${newCanvas.id}_pattern_mode`)?.addEventListener('click', patternModeClick);
+  document.getElementById(`${newCanvas.id}_note_mode`)?.addEventListener('click', noteModeClick);
+
+
   document.getElementById(`${newCanvas.id}`)?.addEventListener('mousemove', canvasMouseOver);
   document.getElementById(`${newCanvas.id}`)?.addEventListener('wheel', canvaseMouseWheel);
  
+  
   // TODO: Revist this to make it more robust (Put in own function)
   // Dynamically updates lane widths based on the number of lanes
   updateAllLaneWidths();
@@ -305,9 +328,190 @@ function precisionSelectChange(event: Event) {
   console.log(lane.hitPrecision)
 }
 
+function loadPatternClick(event: Event) {
+  let target = event.target as HTMLSelectElement;
+  let lane = findLaneFromEvent(event);
+
+  let patternSelect = target.parentElement?.previousElementSibling as HTMLSelectElement;
+  let patternMeasures = target.nextElementSibling as HTMLInputElement; 
+
+  if(!selectedPattern || !patternMeasures.value)
+    return; 
+
+  console.log(selectedPattern, patternMeasures.value);
+}
+
+function createPatternClick(event: Event) {
+  let target = event.target as HTMLSelectElement;
+  let lane = findLaneFromEvent(event);
+  console.log(lane);
+
+  let measuresContainer = target.nextElementSibling;
+  let nameInput = measuresContainer?.nextElementSibling;
+  let saveButton = nameInput?.nextElementSibling;
+  let closeButton = saveButton?.nextElementSibling;
+  let patternMeasures = nameInput?.previousElementSibling?.querySelector(".new_pattern_measures") as HTMLInputElement; 
+
+  measuresContainer?.classList.add('visible');
+  nameInput?.classList.add('visible');
+  saveButton?.classList.add('visible');
+  closeButton?.classList.add('visible');
+
+  editMode = EDIT_MODES.CREATE_PATTERN_MODE;
+  newPatternMeasures = parseInt(patternMeasures.value); 
+
+  console.log(editMode);
+
+  drawSingleLane(lane); 
+}
+
+function closePatternClick(event: Event) {
+  let target = event.target as HTMLSelectElement;
+  let lane = findLaneFromEvent(event);
+
+  let saveButton = target?.previousElementSibling;
+  let nameInput = saveButton?.previousElementSibling;
+  let measuresContainer = nameInput?.previousElementSibling;
+
+  nameInput?.classList.remove('visible');
+  saveButton?.classList.remove('visible');
+  target?.classList.remove('visible');
+  measuresContainer?.classList.remove('visible');
+
+  editMode = EDIT_MODES.PATTERN_MODE;
+  console.log(editMode);
+
+  patternInCreationNotes = [];
+  patternInCreationPositions = [];
+
+  drawSingleLane(lane); 
+}
+
+function savePatternClick(event: Event) {
+  let target = event.target as HTMLSelectElement;
+  let lane = findLaneFromEvent(event);
+  
+  let patternNameElement = target.previousElementSibling as HTMLInputElement; 
+  let patternMeasuresElement = patternNameElement.previousElementSibling?.querySelector(".new_pattern_measures") as HTMLInputElement; 
+
+  let patternName = patternNameElement.value; 
+  let patternMeasures = parseInt(patternMeasuresElement.value); 
+
+  if(!patternName)
+    return; 
+
+  localStorage.setItem(patternName, JSON.stringify({measures: patternMeasures, notesPositions: patternInCreationPositions}));
+
+  console.log(localStorage.getItem(patternName));
+}
+
+let selectedPattern: any; 
+function patternSelectChange(event: Event) {
+  let target = event.target as HTMLSelectElement;
+  let lane = findLaneFromEvent(event);
+
+  // selectedPattern = JSON.parse(localStorage.getItem(target.value)); 
+  let selectedPatternJSON = localStorage.getItem(target.value); 
+  selectedPattern = JSON.parse(selectedPatternJSON!);
+  console.log(selectedPattern);
+}
+
+let patternNamesLoaded: string[] = [];
+function patternSelectClick(event: Event) {
+  let target = event.target as HTMLSelectElement;
+  let lane = findLaneFromEvent(event);
+    
+  let patternSelectInnerHTML = '';
+  Object.keys(localStorage).forEach(patternName => {
+    if(!patternNamesLoaded.includes(patternName)) {
+      patternSelectInnerHTML += getPatternOptionHTML(patternName); 
+      patternNamesLoaded.push(patternName);
+    }
+  });
+  
+  target.innerHTML += patternSelectInnerHTML;
+  // console.log(patternSelectInnerHTML);
+}
+
+function newPatternMeasuresChange(event: Event) {
+  let target = event.target as HTMLSelectElement;
+  let lane = findLaneFromEvent(event);
+  console.log(target.value);
+  
+  newPatternMeasures = parseInt(target.value); 
+
+  
+  drawSingleLane(lane); 
+}
+
+function loadedPatternMeasuresChange(event: Event) {
+  let target = event.target as HTMLSelectElement;
+  let lane = findLaneFromEvent(event);
+  console.log(target.value);
+}
+
+
+function noteModeClick(event: Event) {
+  let target = event.target as HTMLSelectElement;
+  let lane = findLaneFromEvent(event);
+
+  target.nextElementSibling?.classList.remove("selected");
+  target.classList.add("selected");
+
+  editMode = EDIT_MODES.NOTE_MODE;
+  console.log(editMode);
+
+  let patternLoadingContainer = target.closest(".lane_editing")?.querySelector('.pattern_loading_container');
+
+  let saveButton = patternLoadingContainer?.querySelector('.save_pattern');
+  let closeButton = saveButton?.nextElementSibling;
+  let nameInput = saveButton?.previousElementSibling;
+  let measuresContainer = nameInput?.previousElementSibling;
+
+  closeButton?.classList.remove('visible');
+  nameInput?.classList.remove('visible');
+  saveButton?.classList.remove('visible');
+  measuresContainer?.classList.remove('visible');
+  patternLoadingContainer?.classList.remove('visible');
+
+  lane.translationAmount = 0; 
+
+  patternInCreationNotes = []; 
+  patternInCreationPositions = [];
+
+  drawSingleLane(lane);
+}
+
+function patternModeClick(event: Event) {
+  let target = event.target as HTMLSelectElement;
+  let lane = findLaneFromEvent(event);
+
+  target.previousElementSibling?.classList.remove("selected");
+  target.classList.add("selected");
+ 
+  editMode = EDIT_MODES.PATTERN_MODE;
+  console.log(editMode);
+  selectedPattern = null; 
+
+  let patternLoadingContainer = target.closest(".lane_editing")?.querySelector('.pattern_loading_container');
+  patternLoadingContainer?.classList.add('visible');
+  
+  lane.translationAmount = 0; 
+  lane.notes = [];
+
+  drawSingleLane(lane);
+}
+
 function clearNotesClick(event: MouseEvent) {
   let lane = findLaneFromEvent(event);
-  lane.notes = [];
+
+  if(editMode == EDIT_MODES.CREATE_PATTERN_MODE) {
+    patternInCreationNotes = []; 
+    patternInCreationPositions = [];
+  } else {
+    lane.notes = [];
+  }
+  
   lane.translationAmount = 0; 
   drawSingleLane(lane);
 }
@@ -622,7 +826,8 @@ stopButton?.addEventListener('click', () => {
 
     lane.drawHitzone();
     lane.drawMeasureIndicators();
-    lane.updateNotes(ups, 0);
+    // lane.updateNotes(ups, 0);
+    lane.drawNotes(editing, ups, 0);
     lane.drawInputVisual();
   }
 
@@ -646,7 +851,8 @@ editButton?.addEventListener('click', () => {
 
     lane.drawHitzone();
     lane.drawMeasureIndicators();
-    lane.updateNotes(ups, 0);
+    // lane.updateNotes(ups, 0);
+    lane.drawNotes(editing, ups, 0);
     lane.drawInputVisual();
   }
 
@@ -655,7 +861,6 @@ editButton?.addEventListener('click', () => {
     playButton?.classList.remove('selected');
     pauseButton?.classList.remove('selected');
     stopButton?.classList.remove('selected');
-
     laneContainer?.classList.add('editing');
   } else {
     editButton.classList.remove('selected');
@@ -669,6 +874,7 @@ editButton?.addEventListener('click', () => {
       let laneEditingSection = lane.canvas.parentElement?.querySelector('.lane_editing');
       laneEditingSection?.classList.remove('activated')
     }
+  
     // TODO: Dynamic
     resetLanes();
     updateAllLaneWidths();
@@ -699,6 +905,7 @@ settingsCloseButton?.addEventListener('click', () => {
 workspaceMeasureCountInput?.addEventListener('change', (event) => {
   let target = event.target as HTMLSelectElement;
   console.log(target.value); 
+  maxMeasureCount = parseInt(target.value); 
 })
 
 
@@ -762,33 +969,56 @@ function handleCanvasClick(event: MouseEvent) {
     // click while in edit mote     
     // console.log(event.offsetX, event.offsetY, newNoteY);
     let lane = findLaneFromEvent(event); 
-    let sortedIndex = findSortedIndex(lane.notes, newNoteY);
+    let sortedIndex;
+    
+    if(editMode == EDIT_MODES.CREATE_PATTERN_MODE)
+      sortedIndex = findSortedIndex(patternInCreationNotes, newNoteY);
+    else 
+      sortedIndex = findSortedIndex(lane.notes, newNoteY);
     console.log(sortedIndex);
-
-    if(sortedIndex[1] == 1) {
+    
+    if(sortedIndex[1] == 1 && editMode != EDIT_MODES.PATTERN_MODE) {
       if(event.button == 2) {
-        if(lane.looped) {
-          lane.notes.splice(lane.notes.length - lane.loopedNotes, lane.loopedNotes);
-          lane.notes.splice(sortedIndex[0], 1);
-          lane.loopNotes(maxMeasureCount / lane.measureCount)
+        if(editMode == EDIT_MODES.CREATE_PATTERN_MODE) {
+          patternInCreationNotes.splice(sortedIndex[0], 1);
+          patternInCreationPositions.splice(sortedIndex[0], 1);
+          console.log(patternInCreationPositions);
         } else {
-          lane.notes.splice(sortedIndex[0], 1);
+          if(lane.looped) {
+            lane.notes.splice(lane.notes.length - lane.loopedNotes, lane.loopedNotes);
+            lane.notes.splice(sortedIndex[0], 1);
+            lane.loopNotes(maxMeasureCount / lane.measureCount)
+          } else {
+            lane.notes.splice(sortedIndex[0], 1);
+          }
         }
 
         drawSingleLane(lane); 
-
       }
       return;
-    } else if(event.button != 2) {
+    } else if(event.button != 2 && editMode != EDIT_MODES.PATTERN_MODE) {
       let newNote = new Note(newNoteY);
 
-      if(lane.looped) {
-        lane.notes.splice(lane.notes.length - lane.loopedNotes, lane.loopedNotes);
-        lane.notes.splice(sortedIndex[0], 0, newNote)
-        lane.loopNotes(maxMeasureCount / lane.measureCount)
+      if(editMode == EDIT_MODES.CREATE_PATTERN_MODE) {
+        patternInCreationNotes.splice(sortedIndex[0], 0, newNote);
+
+        let divider = 16/lane.timeSignature[1]; 
+        let height = lane.noteGap/divider; 
+        let dif = (patternInCreationNotes[sortedIndex[0]].y - lane.startY) / height;
+        patternInCreationPositions.splice(sortedIndex[0], 0, dif);
+        
+        console.log(patternInCreationPositions);
+
       } else {
-        lane.notes.splice(sortedIndex[0], 0, newNote)
+        if(lane.looped) {
+          lane.notes.splice(lane.notes.length - lane.loopedNotes, lane.loopedNotes);
+          lane.notes.splice(sortedIndex[0], 0, newNote)
+          lane.loopNotes(maxMeasureCount / lane.measureCount)
+        } else {
+          lane.notes.splice(sortedIndex[0], 0, newNote)
+        }
       }
+
       drawSingleLane(lane); 
     }
 
@@ -842,18 +1072,29 @@ let newNoteY = -1;
 function drawSingleLane(lane: Lane) {
   lane.ctx.clearRect(0, 0, lane.canvas.width, lane.canvas.height - lane.inputAreaHeight);
   lane.drawHitzone();
-  lane.drawMeasureIndicators();
+  
+  if(editMode == EDIT_MODES.CREATE_PATTERN_MODE)
+    lane.drawMeasureIndicators(editMode, newPatternMeasures);
+  else
+    lane.drawMeasureIndicators(editMode);
   // lane.updateNotes(ups, 0);
-  lane.drawNotes(editing, ups, 0); 
+
+  if(editMode == EDIT_MODES.CREATE_PATTERN_MODE)
+    lane.drawNotes(editing, ups, 0, patternInCreationNotes); 
+  else
+    lane.drawNotes(editing, ups, 0); 
+
   lane.drawInputVisual();
 
-  if(editing) {
+  if(editing && editMode != EDIT_MODES.PATTERN_MODE) {
     let divider = 16/lane.timeSignature[1];
     let height = lane.noteGap/divider;
     let drawHeight = lane.noteGap/(lane.timeSignature[1] * lane.timeSignature[0])
     
     // So that only non looped part of lane is shown in edit mode
     let topeOfLane = lane.calculateTopOfLane(false); 
+    if(editMode == EDIT_MODES.CREATE_PATTERN_MODE)
+        topeOfLane = lane.calcualteTopOfMeasuresN(newPatternMeasures); 
 
     let oddLoop = false;
     for(let y = lane.startY; y > topeOfLane; y -= height) {
@@ -892,7 +1133,8 @@ function drawLanes() {
 
     lane.drawHitzone();
     lane.drawMeasureIndicators();
-    lane.updateNotes(ups, 0);
+    // lane.updateNotes(ups, 0);
+    lane.drawNotes(editing, ups, 0); 
     lane.drawInputVisual();
   }
 }

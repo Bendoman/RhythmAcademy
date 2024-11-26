@@ -2,6 +2,11 @@
 export function getLaneEditingHTML(id: string, bpm: number, measureCount: number, hitsound: string, metronomeSound: string, precision: string, initialMaxMeasureCount: number): string {
     return `    
     <div class="lane_editing">
+        <div id="edit_mode_container">
+            <button class="edit_mode_button selected" id="${id}_note_mode">Individual note placement</button>
+            <button class="edit_mode_button" id="${id}_pattern_mode">Pattern mode</button>
+        </div>
+
         <div id="metronome_container">
             <button class="metronome_button" id="${id}_metronome_button">
             <!-- TODO: Get better svg for this -->
@@ -68,20 +73,29 @@ export function getLaneEditingHTML(id: string, bpm: number, measureCount: number
 
         <!-- TODO: Ctrl + z | ctrl + y implementation -->
         <button class="clear_notes" id="${id}_clear_notes_button">clear notes</button>
+        <button id=${id}_back_to_start>back to start</button>
 
         <div class="pattern_loading_container">
-            <select class="load_notes_select">
-                <option value="kick">Pattern_1</option>
-                <option value="snare">Pattern_2</option>
-                <option value="clap">Pattern_3</option>
-                <option value="crash">Pattern_4</option>
-                <option value="open-hihat">Pattern_5</option>
-                <option value="closed-hihat">Pattern_6</option>
+            <select class="load_pattern_select" id="${id}_load_pattern_select">
             </select>
-            <button class="load_notes">Load note pattern</button>
+            <div> 
+                <button class="load_pattern" id="${id}_load_pattern_button">Add pattern</button>
+                <input class="loaded_pattern_measures" type="number" id="${id}_loaded_pattern_measures" min="1" value="1"></input>
+                <label for="loaded_pattern_measures">measures</label>
+            </div>
+            
+            <button class="create_pattern visible" id="${id}_create_pattern_button">Create note pattern</button>
+            
+            <div class="new_pattern_measures_container">
+                <input type="number" class="new_pattern_measures" id="${id}_new_pattern_measures" min="1" value="1"></input> 
+                <label for="new_pattern_measures">Pattern measures</label>
+            </div>
+
+            <input type="text" class="pattern_name" placeholder="pattern name" id="${id}_pattern_name"></input>
+            <button class="save_pattern" id="${id}_save_pattern_button">Save note pattern</button>
+            <button class="close_pattern" id="${id}_close_pattern_button">Close pattern</button>
         </div>
 
-        <button id=${id}_back_to_start>back to start</button>
 
         <button id=${id}_close>close</button>
 
@@ -91,3 +105,8 @@ export function getLaneEditingHTML(id: string, bpm: number, measureCount: number
     `;
 }
 
+export function getPatternOptionHTML(patternName: string, selected?: boolean) {
+    return `
+    <option value="${patternName}" ${selected ? 'selected' : ''}>${patternName}</option>    
+    `;
+}

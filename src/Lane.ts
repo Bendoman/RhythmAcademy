@@ -1,7 +1,7 @@
 import Note from "./Note.ts";
 import Hitzone from "./Hitzone.ts";
 import { drawLine, getNoteFill } from "./Utils";
-import { COLORS, HIT_STATUSES, ZONE_NAMES } from "./constants";
+import { COLORS, EDIT_MODES, HIT_STATUSES, ZONE_NAMES } from "./constants";
 import AudioSprite from "./AudioSprite.ts";
 
 // TODO: Make sure that values relient on height can be updated when the window size changes. Have an update function for this. 
@@ -204,9 +204,20 @@ export default class Lane {
     }
 
     // Draws all notes and looped notes to the screen
-    public drawNotes(editMode: boolean, ups: number, translationSpeed: number) {
-        for(let i = 0; i < this.notes.length; i++) {
-            let note = this.notes[i]; 
+    public drawNotes(editMode: boolean, ups: number, translationSpeed: number, noteOverride?: Note[]) {
+        let notesArray;
+        if(noteOverride)
+            notesArray = noteOverride; 
+        else 
+            notesArray = this.notes; 
+        
+        for(let i = 0; i < notesArray.length; i++) {
+            let note;
+            if(noteOverride)
+                note = noteOverride[i]; 
+            else
+                note = this.notes[i]; 
+
             let effectiveY = note.y + this.translationAmount;
             // Reduces time spent drawing notes that have scrolled passed the bottom of the screen
             if(effectiveY > this.canvas.height)
@@ -285,61 +296,22 @@ export default class Lane {
     }
 
 
-    public updateNotes(ups:number, translationSpeed:number, editMode?: boolean) {
-        if(!this.notes)
-            return;     
-
-        for(let i = 0; i < this.notes.length; i++) {
-            let note = this.notes[i];
-            let effectiveY = note.y + this.translationAmount;
-
-            // Reduces time spent drawing notes that have scrolled passed the bottom of the screen
-            if(effectiveY > this.canvas.height)
-                continue;
-
-            // Does not loop through any notes that won't be dispalyed on the screen
-            // -noteGap instead of 0 as notes are on a slight y offset and would pop in
-            if(effectiveY < -this.noteGap) 
-                return;
-
-            let x = (this.canvas.width/2) - (this.canvas.width/4);
-            let width = this.canvas.width/2;
-
-            // TODO: Talk about this with Sean
-            let height = this.noteGap/(this.timeSignature[1] * this.timeSignature[0])
-
-            if(height < 5)
-                height = 5; 
-            
-            let nextNote = false;
-            if(i == this.nextNoteIndex)
-                nextNote = true;
-
-            let currentZone = note.currentZone; 
-
-            // TODO: See about reducing the number of parameters that this function requires
-            // TODO: Potentially use a settings object, or restructure so that it is unecessary. Review either way.
-            // TODO: Pass editmode boolean so that notes aren't updated while scrolling during editing.
-            note.updateNote(this.ctx, this.translationAmount, x, width, height, this.hitzone, this.metronomeSprite, nextNote, ups, translationSpeed, this.metronomeEnabled, this.metronomeSound); 
-           
-            // Note travels from late hit zone to miss zone, and is unhit 
-            if(note.currentZone != currentZone && note.currentZone == ZONE_NAMES.MISS_ZONE && note.hitStatus == 'unhit')
-                this.nextNoteIndex++;
-        }
-    }
-
     public drawHitzone() {
         this.hitzone.drawHitZone(this.ctx, this.canvas.width);
     }
     
-    public drawMeasureIndicators() {
+    public drawMeasureIndicators(editMode?: string, newPatternMeasures?: number) {
         let noteCount = 1; 
         let topOfLane;
         if(this.looped)
             topOfLane = this.calculateTopOfLane(true);
         else 
             topOfLane = this.calculateTopOfLane(false);
+    
+         if(newPatternMeasures && editMode && editMode == EDIT_MODES.CREATE_PATTERN_MODE)
+            topOfLane = this.calcualteTopOfMeasuresN(newPatternMeasures)
 
+            
         for(let y = this.startY; y > topOfLane; y -= this.noteGap) {
             // Optimisation so that only the measure lines actually visible on the page need to be drawn
             if(y + this.translationAmount > this.canvasHeight) {
@@ -417,14 +389,23 @@ export default class Lane {
 
     public calculateHeight(looped: boolean) {
         let measureCount = looped ? this.maxMeasureCount : this.measureCount; 
-        return measureCount * (this.timeSignature[0] * this.noteGap); 
+        return measureCount * this.calculateSingleMeasureHeight(); 
     }
-
+    
+    public calculateSingleMeasureHeight() {
+        return this.timeSignature[0] * this.noteGap;
+    }
+    
     public calculateTopOfLane(looped: boolean) {
         if(looped)
             return this.startY - this.effectiveHeight; 
         return this.startY - this.height; 
     }   
+
+    public calcualteTopOfMeasuresN(n: number) {
+        return this.startY - (this.calculateSingleMeasureHeight() * n); 
+    }
+
     
     public updateMaxMeasureCount(maxMeasureCount: number) {
         this.maxMeasureCount = maxMeasureCount; 

@@ -43,3 +43,9 @@ export const HIT_STATUSES = {
     PERFECT_HIT: "perfect_hit",
     LATE_HIT: "late_hit"
 };
+
+export const EDIT_MODES = {
+    NOTE_MODE: "NOTE_MODE",
+    PATTERN_MODE: "PATTERN_MODE",
+    CREATE_PATTERN_MODE: "CREATE_PATTERN_MODE"
+}
