@@ -28,7 +28,6 @@ export const COLORS = {
     NOTE_AREA_HIGHLIGHT: "#14141410", 
 };
 
-
 export const ZONE_NAMES = {
     EARLY_ZONE: "early_zone",
     EARLY_HIT_ZONE: "early_hit_zone",
@@ -48,4 +47,4 @@ export const EDIT_MODES = {
     NOTE_MODE: "NOTE_MODE",
     PATTERN_MODE: "PATTERN_MODE",
     CREATE_PATTERN_MODE: "CREATE_PATTERN_MODE"
-}
+};

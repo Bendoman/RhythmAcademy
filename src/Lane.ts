@@ -6,7 +6,6 @@ import AudioSprite from "./AudioSprite.ts";
 import { selectedPattern } from "./types.ts";
 
 // TODO: Make sure that values relient on height can be updated when the window size changes. Have an update function for this. 
-
 export default class Lane {
     public bpm: number;
     public measureCount: number; 
@@ -58,7 +57,6 @@ export default class Lane {
     public metronomeSprite: any;
 
     public hitPrecision: number; 
-
     public patternStartMeasure: number; 
 
     constructor(
@@ -96,10 +94,8 @@ export default class Lane {
         this.canvasHeight = this.canvas.height;
         
         this.hitPrecision = hitPrecision;
-
         this.hitzone = this.calculateHitzone(); 
 
-        
         // So that the first note drawn will be exaclty one full note above the perfect hit area
         this.startY = this.calculatePerfectHitY() - this.noteGap;
         
@@ -124,7 +120,6 @@ export default class Lane {
         this.metronomeEnabled = false;
 
         this.metronomeSound = 'metronome1';
-
         this.patternStartMeasure = 0; 
     }
 
@@ -147,7 +142,6 @@ export default class Lane {
             let note = this.notes[i];
             note.resetNote();
         }
-
         this.nextNoteIndex = 0; 
     }
 
@@ -158,10 +152,8 @@ export default class Lane {
         if(paused)
             return; 
 
-
         let nextNote;
         nextNote = this.notes[this.nextNoteIndex];
-        // TODO: Replace this with if else block. check that note is unhit.
 
         switch(nextNote.currentZone) {
             case ZONE_NAMES.EARLY_ZONE:
@@ -190,8 +182,6 @@ export default class Lane {
                 this.nextNoteIndex++;
                 break;
         }
-
-
     }
 
     public handleInputOff() { 
@@ -209,7 +199,7 @@ export default class Lane {
     }
 
     // Draws all notes and looped notes to the screen
-    public drawNotes(editMode: boolean, ups: number, translationSpeed: number, noteOverride?: Note[]) {
+    public updateAndDrawNotes(editMode: boolean, ups: number, translationSpeed: number, noteOverride?: Note[]) {
         let notesArray;
         if(noteOverride)
             notesArray = noteOverride; 
@@ -237,24 +227,6 @@ export default class Lane {
             this.drawNote(note, effectiveY);
 
         }
-
-        // for(let i = 0; i < this.loopedNotes.length; i++) {
-        //     let note = this.loopedNotes[i]; 
-        //     let effectiveY = note.y + this.translationAmount;
-
-        //     if(effectiveY > this.canvas.height)
-        //         continue;
-        //     if(effectiveY < -this.noteGap) 
-        //         return;
-
-        //     if(!editMode) 
-        //         this.updateNote(note, effectiveY, ups, translationSpeed);
-        //     this.drawNote(note, effectiveY);
-        // }
-
-
-        // if(!editMode) // Only updates the hitstatus of notes if not in edit mode
-        //     this.updateNote(note); 
     }
 
     public drawNote(note: Note, y: number) {
@@ -274,9 +246,9 @@ export default class Lane {
         this.ctx.roundRect(x, y - (height/2), width, height, 20);
         this.ctx.fill();
 
-        this.ctx.fillStyle = 'white';
-        this.ctx.font = "12px sans-serif"
-        this.ctx.fillText(`${note.timeToZone.toFixed(1)}ms to zone`, x, y + 3)
+        // this.ctx.fillStyle = 'white';
+        // this.ctx.font = "12px sans-serif"
+        // this.ctx.fillText(`${note.timeToZone.toFixed(1)}ms to zone`, x, y + 3)
     }
 
     // Updates the hitzone and hitstatus of a specific note
@@ -324,7 +296,6 @@ export default class Lane {
                 // Resets the note count back to 1 after reaching the maximum defined by the time signature
                 if(noteCount > this.timeSignature[0]) 
                     noteCount = 1;
-
                 continue; 
             }
             
@@ -338,7 +309,6 @@ export default class Lane {
             // TODO: Choose more generic starting X value
             drawLine(this.ctx, 30, effectiveY, this.canvas.width - 30, effectiveY,COLORS.MEASURE_LINE, 1);
 
-            // TODO: Filltext is quite unperformant
             // Emphasises the first note of a bar by giving it bigger text
             // TODO: Create a functional pixel to em converted and use relative units to position these.
             this.ctx.fillStyle = COLORS.MEASURE_NUMBER;
@@ -410,7 +380,6 @@ export default class Lane {
     public calcualteTopOfMeasuresN(n: number) {
         return this.startY - (this.calculateSingleMeasureHeight() * n); 
     }
-
     
     public updateMaxMeasureCount(maxMeasureCount: number) {
         this.maxMeasureCount = maxMeasureCount; 
@@ -418,7 +387,6 @@ export default class Lane {
     }
 
     public loadPattern(selectedPattern: selectedPattern, measures: number) {
-        
         if(this.patternStartMeasure + (measures * selectedPattern.measures) > this.measureCount) {
             console.error("Loading this pattern will exceed the lane's measure limit");
             return; 
@@ -441,10 +409,6 @@ export default class Lane {
             }
             this.patternStartMeasure += 1; 
         }
-
         console.log(this.notes);
-
     }    
 }
-
-

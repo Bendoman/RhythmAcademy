@@ -104,6 +104,8 @@ replaced with a button to retract in expanded form.
   border-radius: 15px;
   background-color: #ecdfcc69;
 
+  padding-top: 10%;
+  padding-bottom: 5%;
   padding-left: 45px;
   padding-right: 20px;
   
@@ -143,6 +145,12 @@ replaced with a button to retract in expanded form.
   color: #ece5da;
 }
 
+.delete_button {
+  margin-top: auto;
+  top: 0;
+}
+
+
 .lane_editing button {
   background-color: #ECDFCC;
   color: #131B23;
@@ -152,6 +160,11 @@ replaced with a button to retract in expanded form.
 
 .lane_editing button:hover {
   background-color: #131B23;
+  color: #ece5da;
+}
+
+.lane_editing .delete_button:hover {
+  background-color: maroon;
   color: #ece5da;
 }
 
@@ -384,3 +397,4 @@ replaced with a button to retract in expanded form.
 
 .load_pattern[disabled] { background-color: #ecdfcc5e; }
 .load_pattern[disabled]:hover { background-color: #ecdfcc5e; color: #131B23;}
+

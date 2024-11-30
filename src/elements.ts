@@ -99,9 +99,11 @@ export function getLaneEditingHTML(id: string, bpm: number, measureCount: number
 
 
         <button id=${id}_close>close</button>
-
-
+        
         <p class="tootltip">right click to delete note</p>
+
+        <button class="delete_button" id=${id}_delete>Delete lane</button>
+
     </div>
     `;
 }

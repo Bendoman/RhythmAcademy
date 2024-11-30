@@ -1,12 +1,10 @@
 // #region ( Imports )
-import Hitzone from "./Hitzone.ts";
 import Lane from "./Lane.ts"
 import Note from "./Note.ts";
-import { resetLaneStats, findSortedIndex } from "./Utils.ts";
-import { COLORS, ZONE_NAMES, EDIT_MODES } from "./constants.ts";
 import AudioSprite from "./AudioSprite.ts";
+import { COLORS, EDIT_MODES } from "./constants.ts";
+import { resetLaneStats, findSortedIndex } from "./Utils.ts";
 import { getLaneEditingHTML, getPatternOptionHTML } from "./elements.ts";
-
 // #endregion
 
 // ( Midi Access Setup )
@@ -29,39 +27,27 @@ function midi_connection_failure() { console.log('Failed to connect MIDI device'
 function updateDevices(event: Event) { console.log(event); }
 
 function processMidiMessage(input: MIDIMessageEvent) {
-    // 153 is on 137 is off
     const inputData = input.data; 
     if(inputData == null)
       return; 
 
-    const command = inputData[0];
     const note = inputData[1];
     const velocity = inputData[2];
 
-    // console.log(command, note, velocity)
-
-    if(velocity > 0) { // See if this is always true
-        midiNoteOn(note, velocity)
-    } else {
-        midiNoteOff(note);
+    if(velocity > 0) {
+      midiNoteOn(note, velocity)
+    } else { 
+      // If velocity == 0 then it is an indication that the note has been released
+      midiNoteOff(note);
     }
 }
 
 // #region ( Global variables )
-let laneCount = 0; 
-let maxMeasureCount = 10; 
-const laneContainer = document.getElementById('lane_container') as HTMLElement | null; 
-// const lane_ctx_pairs: { [key: string]: [Lane, CanvasRenderingContext2D | null] } = {};
 const input_lane_pairs: { [key: string ]: Lane } = {};
 const canvas_lane_pairs: { [key: string ]: Lane } = {};
 
-// const lane_one_canvas = document.getElementById('lane_one_canvas') as HTMLCanvasElement | null;
-
-// if(lane_one_canvas != null) {
-//   const context = lane_one_canvas.getContext('2d');
-//   if(context)
-//     canvas_ctx_pairs[lane_one_canvas.id] = context;
-
+let laneCount = 0; 
+let maxMeasureCount = 100; 
 
 let ups = 0; 
 let translationAmount = 0; 
@@ -70,36 +56,34 @@ let paused = true;
 let editing = false;
 let editMode = EDIT_MODES.NOTE_MODE;
 
-let controlsPinned = false; 
-
-let container_width = laneContainer?.clientWidth;
-let container_height = laneContainer?.clientHeight;
 let audioSprite: AudioSprite;
 
-// DOM Elements
-const upsParagraph = document.getElementById('ups_paragraph') as HTMLElement;
-const enableAudioButton = document.getElementById('enable_audio') as HTMLElement;
-const runControls = document.getElementById('run_controls');
-
-// Buttons 
-const playButton = document.getElementById('play_button');
-const pauseButton = document.getElementById('pause_button');
-const stopButton = document.getElementById('stop_button');
-const editButton = document.getElementById('edit_button')
-const addLaneButton = document.getElementById('add_lane_button')
-const settingsButton = document.getElementById('settings_button');
-
-// Settings panel
-const workspaceMeasureCountInput = document.getElementById('workspace_measure_count');
+const laneContainer = document.getElementById('lane_container') as HTMLElement | null; 
+let container_width = laneContainer?.clientWidth;
+let container_height = laneContainer?.clientHeight;
 
 // Pattern creation 
 let patternInCreationNotes: Note[] = []; 
 let patternInCreationPositions: number[] = []; 
 let newPatternMeasures = 1; 
 
-// const lockButton = document.getElementById('lock_button');
+// DOM Elements
+const upsParagraph = document.getElementById('ups_paragraph') as HTMLElement;
 
+// Buttons 
+const editButton = document.getElementById('edit_button')
+const playButton = document.getElementById('play_button');
+const stopButton = document.getElementById('stop_button');
+const pauseButton = document.getElementById('pause_button');
+
+const addLaneButton = document.getElementById('add_lane_button')
+const settingsButton = document.getElementById('settings_button');
+
+// Settings panel
+const workspaceMeasureCountInput = document.getElementById('workspace_measure_count');
 // #endregion
+
+
 function resetLanes() {
   for (let key in input_lane_pairs) {
     let lane = input_lane_pairs[key] as Lane;
@@ -112,10 +96,7 @@ function populateTestNotes(lane: Lane) {
   // Creates an 8th note swing pattern
   resetLaneStats(lane);
 
-
   let startY = lane.startY;
-
-  // TODO: Temporary
   let multiplier = 1;
   if(lane.hitsound == 'kick') {
     multiplier = .5;
@@ -128,10 +109,6 @@ function populateTestNotes(lane: Lane) {
     multiplier = 2;
 
   for(let y = startY; y > lane.topOfLane; y -= lane.noteGap/multiplier) {
-   
-    // TODO:???? Ask Sean about this
-    // lane.timeSignature[0]: Number of below notes per bar
-    // lane.timeSignature[1]: Fractional note, number of these per bar given above
     let height = lane.noteGap/(lane.timeSignature[1] * lane.timeSignature[0])
 
     if(height < 5)
@@ -142,9 +119,10 @@ function populateTestNotes(lane: Lane) {
   }
   console.log(lane.notes);
 }
+
 function updateLaneWidth(lane: Lane, multiplier: number) {
-  if(container_width)
-    lane.canvas.width = (container_width / 4) * multiplier;
+  if(laneContainer)
+    lane.canvas.width = (laneContainer.clientWidth / 4) * multiplier;
 }
 
 function updateAllLaneWidths() {
@@ -161,16 +139,13 @@ function updateAllLaneWidths() {
       break;
   }
 
-  // canvases.forEach(canvas => {
-  //   if(container_width)
-  //     canvas.width = (container_width / 4) * multiplier;
-  // });
-
   for (let key in input_lane_pairs) {
     let lane = input_lane_pairs[key];
-    if(container_width) {
-      lane.canvas.width = (container_width / 4) * multiplier;
+    if(laneContainer) {
+      lane.canvas.width = (laneContainer.clientWidth / 4) * multiplier;
       drawSingleLane(lane)
+    } else {
+      console.error('Lane container undefined');
     }
   }
 }
@@ -218,7 +193,6 @@ function createNewLane(
   populateTestNotes(new_lane);
 
   const canvasContainer = document.createElement('div');
-  // canvasContainer.style.padding = '0 1em 0 1em';
   canvasContainer.classList.add('canvas_container');
   canvasContainer.appendChild(newCanvas);
 
@@ -233,41 +207,38 @@ function createNewLane(
   laneContainer?.appendChild(canvasContainer);
 
   // TODO: Put all this in its own function
-  document.getElementById(`${newCanvas.id}_bpm_input`)?.addEventListener('change', bpmInputChange);
-  document.getElementById(`${newCanvas.id}_measure_count_input`)?.addEventListener('change', measureCountChange);
-  document.getElementById(`${newCanvas.id}_loop_button`)?.addEventListener('click', loopButtonClick);
-  document.getElementById(`${newCanvas.id}_time_signature_select`)?.addEventListener('change', timeSignatureChange);
-  document.getElementById(`${newCanvas.id}_metronome_button`)?.addEventListener('click', metronomeButtonClick);
-  document.getElementById(`${newCanvas.id}_back_to_start`)?.addEventListener('click', backToStartClick);
-  document.getElementById(`${newCanvas.id}_close`)?.addEventListener('click', closeClick);
-  document.getElementById(`${newCanvas.id}_clear_notes_button`)?.addEventListener('click', clearNotesClick);
-
-  document.getElementById(`${newCanvas.id}_hitsound_select`)?.addEventListener('change', hitsoundSelectChange);
-  document.getElementById(`${newCanvas.id}_metronome_select`)?.addEventListener('change', metronomeSelectChange);
-  document.getElementById(`${newCanvas.id}_precision_select`)?.addEventListener('change', precisionSelectChange);
-
-  document.getElementById(`${newCanvas.id}_load_pattern_button`)?.addEventListener('click', loadPatternClick);
-  document.getElementById(`${newCanvas.id}_create_pattern_button`)?.addEventListener('click', createPatternClick);
-  document.getElementById(`${newCanvas.id}_new_pattern_measures`)?.addEventListener('change', newPatternMeasuresChange);
-  document.getElementById(`${newCanvas.id}_loaded_pattern_measures`)?.addEventListener('change', loadedPatternMeasuresChange);
-  document.getElementById(`${newCanvas.id}_save_pattern_button`)?.addEventListener('click', savePatternClick);
-  document.getElementById(`${newCanvas.id}_close_pattern_button`)?.addEventListener('click', closePatternClick);
-
-
-  document.getElementById(`${newCanvas.id}_load_pattern_select`)?.addEventListener('change', patternSelectChange);
+  document.getElementById(`${newCanvas.id}`)?.addEventListener('mousemove', canvasMouseOver);
+  document.getElementById(`${newCanvas.id}`)?.addEventListener('wheel', canvasMouseWheel);
 
   document.getElementById(`${newCanvas.id}_pattern_mode`)?.addEventListener('click', patternModeClick);
   document.getElementById(`${newCanvas.id}_note_mode`)?.addEventListener('click', noteModeClick);
 
+  document.getElementById(`${newCanvas.id}_bpm_input`)?.addEventListener('change', bpmInputChange);
+  document.getElementById(`${newCanvas.id}_measure_count_input`)?.addEventListener('change', measureCountChange);
+  document.getElementById(`${newCanvas.id}_time_signature_select`)?.addEventListener('change', timeSignatureChange);
+  document.getElementById(`${newCanvas.id}_precision_select`)?.addEventListener('change', precisionSelectChange);
 
-  document.getElementById(`${newCanvas.id}`)?.addEventListener('mousemove', canvasMouseOver);
-  document.getElementById(`${newCanvas.id}`)?.addEventListener('wheel', canvaseMouseWheel);
- 
+  document.getElementById(`${newCanvas.id}_metronome_button`)?.addEventListener('click', metronomeButtonClick);
+  document.getElementById(`${newCanvas.id}_loop_button`)?.addEventListener('click', loopButtonClick);
+
+  document.getElementById(`${newCanvas.id}_clear_notes_button`)?.addEventListener('click', clearNotesClick);
+  document.getElementById(`${newCanvas.id}_back_to_start`)?.addEventListener('click', backToStartClick);
   
-  // TODO: Revist this to make it more robust (Put in own function)
+  document.getElementById(`${newCanvas.id}_hitsound_select`)?.addEventListener('change', hitsoundSelectChange);
+  document.getElementById(`${newCanvas.id}_metronome_select`)?.addEventListener('change', metronomeSelectChange);
+  
+  document.getElementById(`${newCanvas.id}_load_pattern_select`)?.addEventListener('change', patternSelectChange);  
+  document.getElementById(`${newCanvas.id}_load_pattern_button`)?.addEventListener('click', loadPatternClick);
+  document.getElementById(`${newCanvas.id}_loaded_pattern_measures`)?.addEventListener('change', loadedPatternMeasuresChange);
+  document.getElementById(`${newCanvas.id}_create_pattern_button`)?.addEventListener('click', createPatternClick);
+  document.getElementById(`${newCanvas.id}_new_pattern_measures`)?.addEventListener('change', newPatternMeasuresChange);
+  document.getElementById(`${newCanvas.id}_save_pattern_button`)?.addEventListener('click', savePatternClick);
+  document.getElementById(`${newCanvas.id}_close_pattern_button`)?.addEventListener('click', closePatternClick);
+  
+  document.getElementById(`${newCanvas.id}_close`)?.addEventListener('click', closeClick);
+  document.getElementById(`${newCanvas.id}_delete`)?.addEventListener('click', deleteButtonClick);
   // Dynamically updates lane widths based on the number of lanes
   updateAllLaneWidths();
-
 }
 
 function findLaneFromEvent(event: Event): Lane {
@@ -283,6 +254,27 @@ function findLaneFromEvent(event: Event): Lane {
 // TODO: Add listener for esc key
 function closeClick(event: MouseEvent) {
   offsetY = -10;
+  patternInCreationNotes = [];
+  patternInCreationPositions = [];
+  editMode = EDIT_MODES.NOTE_MODE;
+
+  let target = event.target as HTMLElement;
+  let patternContainer = target.closest('.lane_editing')?.querySelector('.pattern_loading_container'); 
+  console.log(patternContainer);
+  let loadPatternButton = patternContainer?.querySelector('.load_pattern');
+  let measuresContainer = patternContainer?.querySelector('.new_pattern_measures_container');
+  let nameInput = patternContainer?.querySelector('.pattern_name');
+  let saveButton = patternContainer?.querySelector('.save_pattern');
+  let closeButton = patternContainer?.querySelector('.close_pattern');
+  console.log(loadPatternButton);
+
+  loadPatternButton?.removeAttribute('disabled');
+  measuresContainer?.classList.remove('visible');
+  nameInput?.classList.remove('visible');
+  saveButton?.classList.remove('visible');
+  closeButton?.classList.remove('visible');
+  console.log('close clicked');
+
   for (let key in input_lane_pairs) {
     let lane = input_lane_pairs[key];
     lane.canvas.classList.remove('editing');
@@ -400,6 +392,34 @@ function closePatternClick(event: Event) {
   lane.translationAmount = 0;
 
   drawSingleLane(lane); 
+}
+
+function deleteButtonClick(event: Event) {
+  let target = event.target as HTMLElement;
+  let associatedCanvas = target.closest('.canvas_container');
+  if(!associatedCanvas)
+    return; 
+
+  console.log(canvas_lane_pairs);
+  delete canvas_lane_pairs[associatedCanvas.id];
+  associatedCanvas.remove();
+  console.log(canvas_lane_pairs);
+
+  laneCount--; 
+  updateAllLaneWidths(); 
+  
+  for (let key in input_lane_pairs) {
+    let lane = input_lane_pairs[key];
+    lane.canvas.classList.remove('editing');
+    lane.canvas.parentElement?.classList.remove('background');
+
+    let laneEditingSection = lane.canvas.parentElement?.querySelector('.lane_editing');
+    laneEditingSection?.classList.remove('activated')
+
+    resetLanes();
+    updateAllLaneWidths();
+    drawSingleLane(lane);
+  }
 }
 
 function savePatternClick(event: Event) {
@@ -548,8 +568,6 @@ function bpmInputChange(event: Event) {
   let newBPM = target.value; 
   
   findLaneFromEvent(event).bpm = parseInt(newBPM); 
-
- 
   console.log(target.value);
 }
 
@@ -595,7 +613,7 @@ function loopButtonClick(event: Event) {
     target.classList.remove('selected');
     drawSingleLane(lane); 
     console.log(lane.notes);
-  // TODO: Logic around resetting height and such
+    // TODO: Logic around resetting height and such
     return; 
   }
   target.classList.add('selected');
@@ -649,23 +667,10 @@ function metronomeButtonClick(event: MouseEvent) {
 
 
 // Have a max number of measures. 
-// For this prototype max number of lanes will be 4. Further optimisation will be needed for more. turns out it was the shadows.
-createNewLane(100, 3, 200, 'kick', 3, [], [4, 4], '40', 16);
-createNewLane(100, 200, 200, 'snare', 3, [], [4, 4], '41', 16);
-createNewLane(100, 200, 200, 'closed-hihat', 3, [], [4, 4], '42', 16);
-// createNewLane(100, 2000, 200, 'kick', 3, [], [4, 4], 'd'); 
-// createNewLane(100, 2000, 200, 'kick', 3, [], [4, 4], 'a');
-// createNewLane(100, 2000, 200, 'kick', 3, [], [4, 4], 's');
-// createNewLane(100, 2000, 200, 'kick', 3, [], [4, 4], 'd');
-// createNewLane(100, 2000, 200, 'kick', 3, [], [4, 4], 'f');
-// createNewLane();
-// createNewLane();
-// createNewLane();
-// createNewLane();
-// createNewLane();
-// console.log(lane_ctx_pairs);
+createNewLane(60, 200, 200, 'kick', 3, [], [4, 4], 'a', 16);
+// createNewLane(60, 200, 200, 'snare', 3, [], [4, 4], 's', 16);
+// createNewLane(60, 200, 200, 'closed-hihat', 3, [], [4, 4], 'd', 16);
 
-// TODO: Move this?
 // #region ( Event listeners )
 
 window.addEventListener('resize', () => {
@@ -773,7 +778,6 @@ function enableAudio() {
     }
   });
 
-  // TODO: Fix this horribleness
   for (let key in input_lane_pairs) {
     let lane = input_lane_pairs[key];
     lane.audioSprite = audioSprite;
@@ -781,27 +785,7 @@ function enableAudio() {
   }
 }
 
-
-// TODO: Come back to this
-// let mouseOverTime;
-// runControls?.addEventListener('mouseover', () => {
-//   console.log('mouse over')
-//   runControls.classList.add('expanded')
-
-//   mouseOverTime = performance.now();
-// });
-// runControls?.addEventListener('mouseout', (event) => {
-    
-//   const target = event.relatedTarget as HTMLElement;
-//   if(!target || !runControls.contains(target)) {
-//     runControls.classList.remove('expanded')
-//     console.log('mouse out')
-
-//   }
-
-// });
 const newLaneInput = document.getElementById('new_lane_input') as HTMLInputElement;
-
 addLaneButton?.addEventListener('click', () => {
   let input = newLaneInput.value;
   console.log(laneCount);
@@ -861,8 +845,7 @@ stopButton?.addEventListener('click', () => {
 
     lane.drawHitzone();
     lane.drawMeasureIndicators();
-    // lane.updateNotes(ups, 0);
-    lane.drawNotes(editing, ups, 0);
+    lane.updateAndDrawNotes(editing, ups, 0);
     lane.drawInputVisual();
   }
 
@@ -870,7 +853,6 @@ stopButton?.addEventListener('click', () => {
   playButton?.classList.remove('selected');
   pauseButton?.classList.remove('selected');
   editButton?.classList.remove('selected');
-  // TODO: reset run
 });
 
 editButton?.addEventListener('click', () => {
@@ -887,7 +869,7 @@ editButton?.addEventListener('click', () => {
     lane.drawHitzone();
     lane.drawMeasureIndicators();
     // lane.updateNotes(ups, 0);
-    lane.drawNotes(editing, ups, 0);
+    lane.updateAndDrawNotes(editing, ups, 0);
     lane.drawInputVisual();
   }
 
@@ -941,25 +923,23 @@ workspaceMeasureCountInput?.addEventListener('change', (event) => {
   let target = event.target as HTMLSelectElement;
   console.log(target.value); 
   maxMeasureCount = parseInt(target.value); 
+
+  for (let key in input_lane_pairs) {
+    let lane = input_lane_pairs[key];
+    lane.maxMeasureCount = maxMeasureCount; 
+    lane.effectiveHeight = lane.calculateHeight(true); 
+  }
 })
 
-
-
-function canvaseMouseWheel(event: WheelEvent) {
+function canvasMouseWheel(event: WheelEvent) {
   let canvas = event.target as HTMLCanvasElement;
   if(!editing || !canvas.classList.contains('editing'))
     return; 
 
-  console.log(findLaneFromEvent(event));
   let lane = findLaneFromEvent(event);
-
-  // TODO: Clean this up
   if(lane.translationAmount - event.deltaY/2.5 > 0)
     lane.translationAmount -= event.deltaY/2.5; 
-
-  // TODO: Put this in own function 
   drawSingleLane(lane);
-
 
   if(event.deltaY > 0) {
       console.log('scroll down in edit mode');    
@@ -968,7 +948,6 @@ function canvaseMouseWheel(event: WheelEvent) {
   }
 }
 
-
 let offsetY = 0; 
 function canvasMouseOver(event: MouseEvent) {
   let canvas = event.target as HTMLCanvasElement;
@@ -976,10 +955,8 @@ function canvasMouseOver(event: MouseEvent) {
     return; 
 
   offsetY = event.offsetY;
-  
   let lane = findLaneFromEvent(event);
   drawSingleLane(lane);
-  // console.log(event.offsetX, event.offsetY, canvas.id);
 }
 
 document.addEventListener('contextmenu', (event) => {
@@ -1002,7 +979,6 @@ function handleCanvasClick(event: MouseEvent) {
 
   if(canvas.classList.contains('editing')) {
     // click while in edit mote     
-    // console.log(event.offsetX, event.offsetY, newNoteY);
     let lane = findLaneFromEvent(event); 
     let sortedIndex;
     
@@ -1056,8 +1032,6 @@ function handleCanvasClick(event: MouseEvent) {
 
       drawSingleLane(lane); 
     }
-
-
     return;
   }
 
@@ -1092,25 +1066,6 @@ function handleCanvasClick(event: MouseEvent) {
   }
 }
 
-// TODO: Come back to this
-// lockButton?.addEventListener('click', () => { 
-//   controlsPinned = !controlsPinned; 
-//   if(controlsPinned && runControls)
-//     runControls.classList.add('pinned')
-//   else if(runControls)
-//     runControls.classList.remove('pinned')
-// });
-
-// window.addEventListener('focus', () => {});
-// window.addEventListener('blur', () => {paused = true});
-// #endregion
-
-
-// #region ( Initial setup ) 
-// let lane_one_hitzone = new Hitzone(10, 10, 10, 10, 10, 10); 
-// let lane_one = new Lane(bpm, 10, 150, lane_one_hitzone, 'kick', 3, [], [4, 4]);
-// #endregion
-
 // TODO: Reword this and rework it too, split it into seperate functions
 let newNoteY = -1; 
 function drawSingleLane(lane: Lane) {
@@ -1124,9 +1079,9 @@ function drawSingleLane(lane: Lane) {
   // lane.updateNotes(ups, 0);
 
   if(editMode == EDIT_MODES.CREATE_PATTERN_MODE)
-    lane.drawNotes(editing, ups, 0, patternInCreationNotes); 
+    lane.updateAndDrawNotes(editing, ups, 0, patternInCreationNotes); 
   else
-    lane.drawNotes(editing, ups, 0); 
+    lane.updateAndDrawNotes(editing, ups, 0); 
 
   lane.drawInputVisual();
 
@@ -1140,7 +1095,6 @@ function drawSingleLane(lane: Lane) {
     if(editMode == EDIT_MODES.CREATE_PATTERN_MODE)
         topeOfLane = lane.calcualteTopOfMeasuresN(newPatternMeasures); 
 
-    let oddLoop = false;
     for(let y = lane.startY; y > topeOfLane; y -= height) {
       let effectiveY = y + lane.translationAmount; 
       if(effectiveY > lane.canvas.height)
@@ -1177,8 +1131,7 @@ function drawLanes() {
 
     lane.drawHitzone();
     lane.drawMeasureIndicators();
-    // lane.updateNotes(ups, 0);
-    lane.drawNotes(editing, ups, 0); 
+    lane.updateAndDrawNotes(editing, ups, 0); 
     lane.drawInputVisual();
   }
 }
@@ -1189,7 +1142,6 @@ let updateTime = 0;
 let filterStrength = 20; 
 // TODO: Pause updating when the window is out of focus. 
 function gameLoop(timeStamp: number) {
-
   // Calculating the number of updates per second
   // Relevant for determining the time it will take for notes to reach the hitzone 
   let interval = timeStamp - lastLoop; 
@@ -1197,9 +1149,8 @@ function gameLoop(timeStamp: number) {
   ups = (1000/updateTime); 
   upsParagraph.innerText = ups.toString().substring(0, 6); 
   lastLoop = timeStamp;
-  
+
   for (let key in input_lane_pairs) {
-    // TODO: Review if this is the best way
     let lane = input_lane_pairs[key];
 
     if(paused) {
@@ -1216,16 +1167,12 @@ function gameLoop(timeStamp: number) {
     //   lane.resetLane();
     // }
     
-    
     lane.ctx.clearRect(0, 0, lane.canvas.width, lane.canvas.height - lane.inputAreaHeight);
     lane.drawHitzone();
     lane.drawMeasureIndicators();
-    // lane.updateNotes(ups, translationSpeed);
-    lane.drawNotes(editing, ups, translationSpeed);
+    lane.updateAndDrawNotes(editing, ups, translationSpeed);
     lane.drawInputVisual();
   }
-
-
   window.requestAnimationFrame(gameLoop);
 }
 window.requestAnimationFrame(gameLoop);
