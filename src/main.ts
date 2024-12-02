@@ -395,15 +395,22 @@ function closePatternClick(event: Event) {
 }
 
 function deleteButtonClick(event: Event) {
+
+
   let target = event.target as HTMLElement;
-  let associatedCanvas = target.closest('.canvas_container');
-  if(!associatedCanvas)
+  let associatedCanvasContainer = target.closest('.canvas_container');
+  let associatedCanvas = associatedCanvasContainer?.querySelector('canvas')!;
+  let associatedLane = findLaneFromEvent(event);
+  if(!associatedCanvasContainer)
     return; 
 
-  console.log(canvas_lane_pairs);
+  delete input_lane_pairs[associatedLane.inputKey];
   delete canvas_lane_pairs[associatedCanvas.id];
-  associatedCanvas.remove();
+  
   console.log(canvas_lane_pairs);
+  console.log(input_lane_pairs);
+
+  associatedCanvasContainer.remove();
 
   laneCount--; 
   updateAllLaneWidths(); 
@@ -1176,7 +1183,6 @@ function gameLoop(timeStamp: number) {
     lane.updateAndDrawNotes(editing, ups, translationSpeed);
     lane.drawInputVisual();
   }
-
   window.requestAnimationFrame(gameLoop);
 }
 window.requestAnimationFrame(gameLoop);
