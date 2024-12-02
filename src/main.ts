@@ -667,7 +667,7 @@ function metronomeButtonClick(event: MouseEvent) {
 
 
 // Have a max number of measures. 
-createNewLane(60, 200, 200, 'kick', 3, [], [4, 4], 'a', 16);
+createNewLane(60, 1, 200, 'kick', 3, [], [4, 4], 'a', 16);
 // createNewLane(60, 200, 200, 'snare', 3, [], [4, 4], 's', 16);
 // createNewLane(60, 200, 200, 'closed-hihat', 3, [], [4, 4], 'd', 16);
 
@@ -1162,10 +1162,13 @@ function gameLoop(timeStamp: number) {
     let translationSpeed = (interval / (60000/lane.bpm)) * lane.noteGap;
     lane.translationAmount += translationSpeed;
     
-    // // TODO: Need a much more robust way of looping
-    // if(lane.translationAmount > (lane.canvas.height - lane.startY) + lane.height) {
-    //   lane.resetLane();
-    // }
+    // TODO: Need a much more robust way of looping
+    if(!lane.fullyScrolled && lane.translationAmount > (lane.canvas.height - lane.startY) + lane.height) {
+      lane.fullyScrolled = true;
+      console.log(`${lane.canvas.id}_lane stats:\nTotal Notes: ${lane.notes.length}\nNotes hit: ${lane.notesHit.length}\nNotes missed: ${lane.notesMissed.length}`);
+      console.log(lane.notesHit);
+      console.log(lane.notesMissed);
+    }
     
     lane.ctx.clearRect(0, 0, lane.canvas.width, lane.canvas.height - lane.inputAreaHeight);
     lane.drawHitzone();
@@ -1173,6 +1176,7 @@ function gameLoop(timeStamp: number) {
     lane.updateAndDrawNotes(editing, ups, translationSpeed);
     lane.drawInputVisual();
   }
+
   window.requestAnimationFrame(gameLoop);
 }
 window.requestAnimationFrame(gameLoop);

@@ -59,6 +59,8 @@ export default class Lane {
     public hitPrecision: number; 
     public patternStartMeasure: number; 
 
+    public fullyScrolled: boolean;
+
     constructor(
         bpm: number, 
         measureCount: number, 
@@ -121,6 +123,8 @@ export default class Lane {
 
         this.metronomeSound = 'metronome1';
         this.patternStartMeasure = 0; 
+
+        this.fullyScrolled = false; 
     }
 
     public setNotes(notes: Note[]): void { this.notes = notes; }
@@ -134,6 +138,7 @@ export default class Lane {
 
     // TODO: Give this better name and have one that also removes all notes 
     public resetLane() { 
+        this.fullyScrolled = false;
         this.translationAmount = 0; 
         this.notesHit = [];
         this.notesMissed = [];
@@ -155,6 +160,11 @@ export default class Lane {
         let nextNote;
         nextNote = this.notes[this.nextNoteIndex];
 
+        let noteCopy = new Note(nextNote.y);
+        noteCopy.currentZone = nextNote.currentZone;
+        noteCopy.hitStatus = nextNote.hitStatus;
+        noteCopy.timeToZone = nextNote.timeToZone; 
+
         switch(nextNote.currentZone) {
             case ZONE_NAMES.EARLY_ZONE:
                 console.log(`Wrong note:\nTime to zone: ${nextNote.timeToZone}\nZone: ${nextNote.currentZone}`);
@@ -163,8 +173,9 @@ export default class Lane {
                 console.log(`Early hit:\nTime to zone: ${nextNote.timeToZone}\nZone: ${nextNote.currentZone}`);
                 if(this.audioSprite)
                     this.audioSprite.play(this.hitsound);
-                // TODO: Temporary, replace with const
                 nextNote.hitStatus = 'hit';
+                noteCopy.hitStatus = 'hit';
+                this.notesHit.push(noteCopy);
                 this.nextNoteIndex++;
                 break;
             case ZONE_NAMES.PERFECT_HIT_ZONE:
@@ -172,6 +183,8 @@ export default class Lane {
                 if(this.audioSprite)
                     this.audioSprite.play(this.hitsound);
                 nextNote.hitStatus = 'hit';
+                noteCopy.hitStatus = 'hit';
+                this.notesHit.push(noteCopy);
                 this.nextNoteIndex++;
                 break;
             case ZONE_NAMES.LATE_HIT_ZONE:
@@ -179,6 +192,8 @@ export default class Lane {
                 if(this.audioSprite)
                     this.audioSprite.play(this.hitsound);
                 nextNote.hitStatus = 'hit';
+                noteCopy.hitStatus = 'hit';
+                this.notesHit.push(noteCopy);
                 this.nextNoteIndex++;
                 break;
         }
@@ -246,15 +261,16 @@ export default class Lane {
         this.ctx.roundRect(x, y - (height/2), width, height, 20);
         this.ctx.fill();
 
-        // this.ctx.fillStyle = 'white';
-        // this.ctx.font = "12px sans-serif"
-        // this.ctx.fillText(`${note.timeToZone.toFixed(1)}ms to zone`, x, y + 3)
+        this.ctx.fillStyle = 'white';
+        this.ctx.font = "12px sans-serif"
+        this.ctx.fillText(`${note.timeToZone.toFixed(1)}ms to zone`, x, y + 3)
     }
 
     // Updates the hitzone and hitstatus of a specific note
     public updateNote(note: Note, y: number, ups: number, translationSpeed: number) {
         let distanceToPerfectHitzone = ((this.hitzone.perfect_hit_y - this.translationAmount) - note.y)
-        note.timeToZone = ((distanceToPerfectHitzone/translationSpeed)/ups)*1000;
+        if(note.hitStatus == 'unhit')
+            note.timeToZone = ((distanceToPerfectHitzone/translationSpeed)/ups)*1000;
 
         if(y > this.hitzone.early_hit_y && note.currentZone == ZONE_NAMES.EARLY_ZONE) 
             note.currentZone = ZONE_NAMES.EARLY_HIT_ZONE;
@@ -267,8 +283,14 @@ export default class Lane {
             note.currentZone = ZONE_NAMES.LATE_HIT_ZONE;
         else if(y > this.hitzone.late_hit_y + this.hitzone.late_hit_height && note.currentZone == ZONE_NAMES.LATE_HIT_ZONE) {
             note.currentZone = ZONE_NAMES.MISS_ZONE;
-            if(this.notes.indexOf(note) == this.nextNoteIndex)
+            if(this.notes.indexOf(note) == this.nextNoteIndex) {
+                note.hitStatus = 'missed';
                 this.nextNoteIndex++;
+                let noteCopy = new Note(note.y);
+                noteCopy.currentZone = note.currentZone;
+                noteCopy.hitStatus = note.hitStatus;
+                this.notesMissed.push(noteCopy); 
+            }
         }
     }
 
