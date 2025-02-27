@@ -428,10 +428,16 @@
     text-decoration: none;
     color: white;
     margin: 0 .5em 0 .5em;
+    padding: .15em; 
 }
 
 .session_info a:hover {
     background-color: grey;
+    cursor: pointer;
+}
+
+.supabase-auth-ui_ui-container input{
+  color: white;
 }
 
 #debug_text {

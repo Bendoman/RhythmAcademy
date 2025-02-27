@@ -1,10 +1,13 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import './styles/oldHomepage.css';
 import { useContext } from "react";
 import { UserContext } from "./App.tsx";
 import { supabase } from '../scripts/supa-client.ts';
 import { Link, Navigate, redirect, Route } from 'react-router-dom'
 import { startLoop } from '../scripts/main.ts';
+import { Auth } from '@supabase/auth-ui-react';
+import { ThemeSupa } from "@supabase/auth-ui-shared";
+
 
 const Homepage = () => {
     const { session } = useContext(UserContext);
@@ -12,17 +15,74 @@ const Homepage = () => {
         startLoop();
     }, []);
 
+    const [signupDisplay, setSignupDisplay] = useState('none'); 
+    const [loginDisplay, setLoginDisplay] = useState('none'); 
+
     return (<>
         { session?.user &&
         <div className='session_info'>
             <p>User {session?.user.email} logged in</p>
+            <p>User ID = {session?.user.id}</p>
             <button onClick={() => { supabase.auth.signOut(); }}>Signout</button>
         </div> }
 
         { !session?.user &&
         <div className='session_info'>
-            <Link to='login'>Login</Link>
-            <Link to='signup'>Signup</Link>
+            {/* <Link to='login'>Login</Link> */}
+            <a onClick={() => {
+                setLoginDisplay(loginDisplay == 'none' ? 'block' : 'none');  
+                if(signupDisplay == 'block')
+                    setSignupDisplay('none');             
+            }}>Login</a>
+
+            {/* <Link to='signup'>Signup</Link> */}
+            <a onClick={() => {
+                setSignupDisplay(signupDisplay == 'none' ? 'block' : 'none');     
+                if(loginDisplay == 'block')
+                    setLoginDisplay('none');          
+                }}>Signup</a>
+            <div className="signup" style={{display: signupDisplay}}>
+            <Auth
+                supabaseClient={supabase}
+                appearance={{
+                    theme: ThemeSupa,
+                    className: {
+                    container: "signup-form-container",
+                    label: "signup-form-label",
+                    button: "signup-form-button",
+                    input: "signup-form-input",
+                    },
+                }}
+                providers={[]}
+                view={'sign_up'}
+                showLinks={false}
+            />
+          </div>
+          <div className="login" style={{display: loginDisplay}}>
+                <Auth
+                    supabaseClient={supabase}
+                    appearance={{
+                        theme: ThemeSupa,
+                        className: {
+                        container: "signup-form-container",
+                        label: "signup-form-label",
+                        button: "signup-form-button",
+                        input: "signup-form-input",
+                        },
+                        variables: {
+                        default: {
+                            colors: {
+                            brand: 'blue',
+                            brandAccent: 'var(--primary-light)',
+                            },
+                        },
+                        },
+                    }}
+                    providers={[]}
+                    view={'sign_in'}
+                    showLinks={false}
+                />
+            </div>  
         </div> }
         
         <div id="debug_text">

@@ -650,6 +650,23 @@ async function loadLaneClick(event: Event) {
   })
   lane.hitzone = lane.calculateHitzone(); 
   lane.recalculateHeight(); 
+
+  console.log(`${lane.canvas.id}_bpm_input}`);
+  let bpmInput = document.getElementById(`${lane.canvas.id}_bpm_input`) as HTMLInputElement;
+  bpmInput.value = lane.bpm.toString(); 
+
+  let measureInput = document.getElementById(`${lane.canvas.id}_measure_count_input`) as HTMLInputElement;
+  measureInput.value = lane.measureCount.toString(); 
+
+  let hitPrecisionInput = document.getElementById(`${lane.canvas.id}_precision_select`) as HTMLInputElement;
+  hitPrecisionInput.value = lane.hitPrecision.toString(); 
+
+  let timeSignatureInput = document.getElementById(`${lane.canvas.id}_time_signature_select`) as HTMLInputElement;
+  timeSignatureInput.value = `${lane.timeSignature[0].toString()}/${lane.timeSignature[1].toString()}`; 
+
+  let laneSoundInput = document.getElementById(`${lane.canvas.id}_hitsound_select`) as HTMLInputElement;
+  laneSoundInput.value = lane.hitsound; 
+
   drawSingleLane(lane); 
 }
 
@@ -1202,7 +1219,7 @@ async function handleCanvasClick(event: MouseEvent) {
       sortedIndex = findSortedIndex(patternInCreationNotes, newNoteY);
     else 
       sortedIndex = findSortedIndex(lane.notes, newNoteY);
-    console.log(sortedIndex);
+    console.log(sortedIndex);   
     
     if(sortedIndex[1] == 1 && editMode != EDIT_MODES.PATTERN_MODE) {
       if(event.button == 2) {
