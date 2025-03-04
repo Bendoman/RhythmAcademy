@@ -52,7 +52,7 @@ const input_lane_pairs: { [key: string ]: Lane } = {};
 const canvas_lane_pairs: { [key: string ]: Lane } = {};
 
 let laneCount = 0; 
-let maxMeasureCount = 10000; 
+let maxMeasureCount = 400; 
 
 let ups = 0; 
 let translationAmount = 0; 
@@ -147,6 +147,15 @@ function retrieveElements() {
         if(lane)
           handleCanvasClick(event); 
       })
+
+    window.addEventListener('resize', (event) => {
+      updateAllLaneWidths();
+      for (let key in input_lane_pairs) {
+        let lane = input_lane_pairs[key];
+        lane.handleResize();
+        drawSingleLane(lane);
+      }
+    })
 
       
 
@@ -295,7 +304,7 @@ function retrieveElements() {
         for (let key in input_lane_pairs) {
           let lane = input_lane_pairs[key];
           lane.maxMeasureCount = maxMeasureCount; 
-          lane.effectiveHeight = lane.calculateHeight(true); 
+          lane.loopedHeight = lane.calculateHeight(true); 
         }
       })
 }
@@ -342,6 +351,7 @@ function updateLaneWidth(lane: Lane, multiplier: number) {
     lane.canvas.width = (laneContainer.clientWidth / 4) * multiplier;
 }
 
+// TODO: Rename this to function that includes heights
 function updateAllLaneWidths() {
   let multiplier = 1; 
   switch(laneCount) {
@@ -360,12 +370,15 @@ function updateAllLaneWidths() {
     let lane = input_lane_pairs[key];
     if(laneContainer) {
       lane.canvas.width = (laneContainer.clientWidth / 4) * multiplier;
+      lane.canvas.height = laneContainer.clientHeight;
       drawSingleLane(lane)
     } else {
       console.error('Lane container undefined');
     }
   }
 }
+
+
 
 function createNewLane(        
   bpm: number, 
@@ -389,6 +402,7 @@ function createNewLane(
     return;
   }
 
+  // Ensuring that lane doesn't have more measures than workspace
   if(measureCount > maxMeasureCount)
     measureCount = maxMeasureCount;
   
@@ -646,7 +660,8 @@ async function loadLaneClick(event: Event) {
   lane.notes = []; 
   // TODO: Optimize this for lower load times
   newLane.notes.forEach((note) => {
-    lane.notes.push(new Note(note.y));   
+    // TODO Change to new note with index constructor
+    lane.notes.push(new Note(note.index));   
   })
   lane.hitzone = lane.calculateHitzone(); 
   lane.recalculateHeight(); 
@@ -987,7 +1002,8 @@ function loopButtonClick(event: Event) {
     lane.notes.splice(lane.notes.length - lane.loopedNotes, lane.loopedNotes);
     lane.looped = false; 
     lane.loopedNotes = 0; 
-    lane.effectiveHeight = lane.calculateHeight(false);
+    // TODO: DETERMINE IF THIS IS NECESSARY. TEST CASES OF LOOPING BEING TURNED OFF
+    // lane.loopedHeight = lane.calculateHeight(false);
     target.classList.remove('selected');
     drawSingleLane(lane); 
     console.log(lane.notes);
@@ -1003,7 +1019,7 @@ function loopButtonClick(event: Event) {
   if(lane.notes.length > 0)
     lane.loopNotes(loops); 
   
-  lane.effectiveHeight = lane.calculateHeight(true); 
+  lane.loopedHeight = lane.calculateHeight(true); 
   lane.topOfLane = lane.calculateTopOfLane(true);
   drawSingleLane(lane); 
 
@@ -1216,9 +1232,9 @@ async function handleCanvasClick(event: MouseEvent) {
     let sortedIndex;
     
     if(editMode == EDIT_MODES.CREATE_PATTERN_MODE)
-      sortedIndex = findSortedIndex(patternInCreationNotes, newNoteY);
+      sortedIndex = findSortedIndex(patternInCreationNotes, newNoteIndex, lane);
     else 
-      sortedIndex = findSortedIndex(lane.notes, newNoteY);
+      sortedIndex = findSortedIndex(lane.notes, newNoteIndex, lane);   
     console.log(sortedIndex);   
     
     if(sortedIndex[1] == 1 && editMode != EDIT_MODES.PATTERN_MODE) {
@@ -1241,14 +1257,17 @@ async function handleCanvasClick(event: MouseEvent) {
       }
       return;
     } else if(event.button != 2 && editMode != EDIT_MODES.PATTERN_MODE) {
-      let newNote = new Note(newNoteY);
+      let newNote = new Note(newNoteIndex);
 
       if(editMode == EDIT_MODES.CREATE_PATTERN_MODE) {
         patternInCreationNotes.splice(sortedIndex[0], 0, newNote);
 
         let divider = 16/lane.timeSignature[1]; 
         let height = lane.noteGap/divider; 
-        let dif = (patternInCreationNotes[sortedIndex[0]].y - lane.startY) / height;
+        
+        // TODO: GET Y FROM INDEX.
+        let y = patternInCreationNotes[sortedIndex[0]].getY(lane.noteGap, lane.timeSignature[1], lane.startY); 
+        let dif = (y - lane.startY) / height;
         patternInCreationPositions.splice(sortedIndex[0], 0, dif);
         
         console.log(patternInCreationPositions);
@@ -1315,6 +1334,7 @@ async function handleCanvasClick(event: MouseEvent) {
 
 // TODO: Reword this and rework it too, split it into seperate functions
 let newNoteY = -1; 
+let newNoteIndex = -1;
 function drawSingleLane(lane: Lane) {
   lane.ctx.clearRect(0, 0, lane.canvas.width, lane.canvas.height - lane.inputAreaHeight);
   lane.drawHitzone();
@@ -1361,6 +1381,12 @@ function drawSingleLane(lane: Lane) {
       let effectiveOffsetY = offsetY - translationAmount;
       if(effectiveOffsetY > (effectiveY - (height/2)) && effectiveOffsetY <= (effectiveY - (height/2)) + height) {
         newNoteY = y; 
+        newNoteIndex = (lane.startY - newNoteY) / (lane.noteGap/lane.timeSignature[1]);
+        // let inverse = ((newNoteIndex * (lane.noteGap/lane.timeSignature[1])) - lane.startY) * -1;
+        // console.log(newNoteY, " : ", newNoteIndex, " : ", inverse);
+
+        
+
         // console.log(newNoteY);
         // console.log(lane.notes);
         let width = lane.canvas.width/2; 
@@ -1425,17 +1451,20 @@ function gameLoop(timeStamp: number) {
   window.requestAnimationFrame(gameLoop);
 }
 
-
-const { data: user, error: userError } = await supabase.auth.getUser();
+let user; 
 export async function startLoop() {
+    const { data: supaUser, error: userError } = await supabase.auth.getUser();
+
+
     // if (userError || !user?.user) {
     //   console.error("User not authenticated", userError);
     //   return;
     // }
     // TODO: Add error checking for user authentication
-    if(user.user)
-      console.log(`Here as ${user.user.id}`);
-    
+    if(supaUser.user)
+      console.log(`Here as ${supaUser.user.id}`);
+    user = supaUser; 
+
     retrieveElements();
 
     window.requestAnimationFrame(gameLoop);

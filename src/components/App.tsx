@@ -10,7 +10,6 @@ import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
 const App = () => {
   const userInfo = useSession();
   return (
-    <React.StrictMode>
     <>
       <Router>
         <UserContext.Provider value={(userInfo)}>
@@ -24,7 +23,8 @@ const App = () => {
         </UserContext.Provider>
       </Router>
     </>
-    </React.StrictMode>
+    // <React.StrictMode>
+    // </React.StrictMode>
   )
 }
 

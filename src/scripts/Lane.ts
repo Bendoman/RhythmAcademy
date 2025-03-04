@@ -25,7 +25,7 @@ export default class Lane {
     public startY: number; 
     public height: number; 
     // TODO: come back to this
-    public effectiveHeight: number; 
+    public loopedHeight: number; 
     
     public notes: Note[];
     public looped: boolean;
@@ -39,8 +39,8 @@ export default class Lane {
     public maxWrongNotes: number; 
 
     // TODO: Remove 
-    public canvasWidth: number; 
-    public canvasHeight: number; 
+    // public canvasWidth: number; 
+    // public canvasHeight: number; 
 
     public topOfLane: number; 
     public topOfInputVisual: number;
@@ -92,8 +92,8 @@ export default class Lane {
         this.canvas = canvas; 
         this.ctx = this.canvas.getContext('2d')!; 
 
-        this.canvasWidth = this.canvas.width;
-        this.canvasHeight = this.canvas.height;
+        // this.canvasWidth = this.canvas.width;
+        // this.canvas.height = this.canvas.height;
         
         this.hitPrecision = hitPrecision;
         this.hitzone = this.calculateHitzone(); 
@@ -106,16 +106,16 @@ export default class Lane {
         // this.topOfLane = this.startY - this.height; 
         
         this.height = this.calculateHeight(false);
-        this.effectiveHeight = this.calculateHeight(true);
+        this.loopedHeight = this.calculateHeight(true);
 
         // this.effectiveHeight = this.calculateHeight(true); 
         this.topOfLane = this.calculateTopOfLane(false); 
 
-        this.topOfInputVisual = this.canvasHeight - 70;
+        this.topOfInputVisual = this.canvas.height - 70;
         this.nextNoteIndex = 0; 
 
         this.inputKey = inputKey;
-        this.inputAreaHeight = this.canvasHeight - this.topOfInputVisual;
+        this.inputAreaHeight = this.canvas.height - this.topOfInputVisual;
 
         this.translationAmount = 0; 
         this.pressed = false;
@@ -160,7 +160,7 @@ export default class Lane {
         let nextNote;
         nextNote = this.notes[this.nextNoteIndex];
 
-        let noteCopy = new Note(nextNote.y);
+        let noteCopy = new Note(nextNote.index);
         noteCopy.currentZone = nextNote.currentZone;
         noteCopy.hitStatus = nextNote.hitStatus;
         noteCopy.timeToZone = nextNote.timeToZone; 
@@ -213,6 +213,9 @@ export default class Lane {
         this.ctx.fillText(this.inputKey.toUpperCase(), this.canvas.width/2 - 20, this.topOfInputVisual + 50); 
     }
 
+        
+    // let inverse = ((newNoteIndex * (lane.noteGap/lane.timeSignature[1])) - lane.startY) * -1;
+
     // Draws all notes and looped notes to the screen
     public updateAndDrawNotes(editMode: boolean, ups: number, translationSpeed: number, noteOverride?: Note[]) {
         let notesArray;
@@ -227,8 +230,9 @@ export default class Lane {
                 note = noteOverride[i]; 
             else
                 note = this.notes[i]; 
-
-            let effectiveY = note.y + this.translationAmount;
+            
+            // TODO: Change for new note object
+            let effectiveY = note.getY(this.noteGap, this.timeSignature[1], this.startY) + this.translationAmount;
             // Reduces time spent drawing notes that have scrolled passed the bottom of the screen
             if(effectiveY > this.canvas.height)
                 continue;
@@ -239,8 +243,9 @@ export default class Lane {
             
             if(!editMode) 
                 this.updateNote(note, effectiveY, ups, translationSpeed);
-            this.drawNote(note, effectiveY);
 
+
+            this.drawNote(note, effectiveY);
         }
     }
 
@@ -268,7 +273,13 @@ export default class Lane {
 
     // Updates the hitzone and hitstatus of a specific note
     public updateNote(note: Note, y: number, ups: number, translationSpeed: number) {
-        let distanceToPerfectHitzone = ((this.hitzone.perfect_hit_y - this.translationAmount) - note.y)
+
+        // TODO: Change for new note object
+        let distanceToPerfectHitzone = ((this.hitzone.perfect_hit_y - this.translationAmount) - note.getY(this.noteGap, this.timeSignature[1], this.startY))
+
+        // TODO: this is disgustingly ugly
+
+
         if(note.hitStatus == 'unhit')
             note.timeToZone = ((distanceToPerfectHitzone/translationSpeed)/ups)*1000;
 
@@ -286,7 +297,7 @@ export default class Lane {
             if(this.notes.indexOf(note) == this.nextNoteIndex) {
                 note.hitStatus = 'missed';
                 this.nextNoteIndex++;
-                let noteCopy = new Note(note.y);
+                let noteCopy = new Note(note.index);
                 noteCopy.currentZone = note.currentZone;
                 noteCopy.hitStatus = note.hitStatus;
                 this.notesMissed.push(noteCopy); 
@@ -313,7 +324,7 @@ export default class Lane {
             
         for(let y = this.startY; y > topOfLane; y -= this.noteGap) {
             // Optimisation so that only the measure lines actually visible on the page need to be drawn
-            if(y + this.translationAmount > this.canvasHeight) {
+            if(y + this.translationAmount > this.canvas.height) {
                 noteCount++;
                 // Resets the note count back to 1 after reaching the maximum defined by the time signature
                 if(noteCount > this.timeSignature[0]) 
@@ -350,7 +361,7 @@ export default class Lane {
     }
 
     private calculatePerfectHitY() {
-        return this.canvasHeight - (this.canvasHeight * 0.25); 
+        return this.canvas.height - (this.canvas.height * 0.25); 
     }
 
     public calculateHitzone(): Hitzone {
@@ -358,7 +369,7 @@ export default class Lane {
         let nonPerfectHitArea = (this.noteGap / ((this.hitPrecision*2)/this.timeSignature[1]))/2; //TODO: Write justifcation for this
         let perfectHitArea = (this.noteGap / (32/this.timeSignature[1]))/2;
 
-        // let early_hit_y = this.canvasHeight - (this.canvasHeight * 0.25); 
+        // let early_hit_y = this.canvas.height - (this.canvas.height * 0.25); 
         let perfect_hit_y = this.calculatePerfectHitY();
 
         // let perfect_hit_y = early_hit_y + nonPerfectHitArea; 
@@ -375,7 +386,18 @@ export default class Lane {
         this.loopedNotes = 0; 
         for(let l = 1; l < loops; l++) {
             for(let i = 0; i < length; i++) {
-                let newNote = new Note(this.notes[i].y - (this.height * l));
+                
+                
+                let newNoteY = this.notes[i].getY(this.noteGap, this.timeSignature[1], this.startY) - (this.height * l)
+                let newNoteIndex = (this.startY - newNoteY) / (this.noteGap/this.timeSignature[1]);
+
+
+                let newNote = new Note(newNoteIndex);
+                // TODO: Calculate y, then calculate index based on it. 
+                // newNoteIndex = (lane.startY - newNoteY) / (lane.noteGap/lane.timeSignature[1]);
+
+
+
                 this.notes.push(newNote); // Change this to looped notes 
                 this.loopedNotes++; 
                 console.log('pushing new note');
@@ -395,7 +417,7 @@ export default class Lane {
     
     public calculateTopOfLane(looped: boolean) {
         if(looped)
-            return this.startY - this.effectiveHeight; 
+            return this.startY - this.loopedHeight; 
         return this.startY - this.height; 
     }   
 
@@ -427,10 +449,32 @@ export default class Lane {
                 let y = patternStartY - (height * -notePositions[x])
                 if(y <= this.calculateTopOfLane(false))
                     return; // So that notes in patterns longer than the lane's measure length won't overfill it
-                this.notes.push(new Note(y)); 
+                let newNoteIndex = (this.startY - y) / (this.noteGap/this.timeSignature[1]);
+
+                this.notes.push(new Note(newNoteIndex)); 
             }
             this.patternStartMeasure += 1; 
         }
         console.log(this.notes);
     }    
+
+    public handleResize() {
+        console.log("Handling resize");
+        /*
+            Reset: 
+            startY,
+            height, 
+            effectiveHeight,
+            topOfLane,
+            topOfInputVisual,
+            inputAreaHeight,
+        */
+        this.startY = this.calculatePerfectHitY() - this.noteGap;
+        this.height = this.calculateHeight(false);
+        this.loopedHeight = this.calculateHeight(true);
+        this.topOfLane = this.calculateTopOfLane(this.looped); 
+        this.topOfInputVisual = this.canvas.height - 70;
+        this.inputAreaHeight = this.canvas.height - this.topOfInputVisual;
+        this.hitzone = this.calculateHitzone(); 
+    }
 }
