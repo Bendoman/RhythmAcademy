@@ -682,6 +682,9 @@ async function loadLaneClick(event: Event) {
   let laneSoundInput = document.getElementById(`${lane.canvas.id}_hitsound_select`) as HTMLInputElement;
   laneSoundInput.value = lane.hitsound; 
 
+  // TODO: Add loading of metronome setting. 
+  updateAllLaneWidths();
+  lane.handleResize();
   drawSingleLane(lane); 
 }
 
@@ -1470,3 +1473,99 @@ export async function startLoop() {
     window.requestAnimationFrame(gameLoop);
 }
 // #endregion
+
+
+
+// #section ( Run Controls Event Handlers ) 
+// TODO: Look into single lane playing while in edit mode
+export function onPlayButtonClick() {
+  console.log("On play button click");
+  if(editing) // Should never be true due to React logic, but here just incase
+    return;
+  
+  if(!audioSprite) 
+    enableAudio(); // Required to be triggerd by user action
+
+  paused = false; 
+}
+
+export function onPauseButtonClick() {
+  console.log("On paused button click");
+  if(editing) // Should never be true due to React logic, but here just incase
+    return;
+
+  paused = true 
+}
+
+export function onStopButtonClick() {
+  console.log("On stop button click");
+  if(editing) // Should never be true due to React logic, but here just incase
+    return;
+  
+  paused = true 
+
+  // TODO: Put this in own function
+  for (let key in input_lane_pairs) {
+    let lane = input_lane_pairs[key];
+    console.log(`${lane.canvas.id}_lane stats:\nTotal Notes: ${lane.notes.length}\nNotes hit: ${lane.notesHit.length}\nNotes missed: ${lane.notesMissed.length}`);
+    console.log(lane.notesHit);
+    console.log(lane.notesMissed);
+  }
+
+  resetLanes();
+  // TODO: Put this in own function
+  for (let key in input_lane_pairs) {
+    let lane = input_lane_pairs[key];
+    lane.ctx.clearRect(0, 0, lane.canvas.width, lane.canvas.height - lane.inputAreaHeight);
+
+    lane.drawHitzone();
+    lane.drawMeasureIndicators();
+    lane.updateAndDrawNotes(editing, ups, 0);
+    lane.drawInputVisual();
+  }
+}
+
+export function onEditButtonClick() {
+  console.log("On edit button click");
+
+  console.log('edit')
+  paused = true;
+  editing = !editing;
+  offsetY = null;
+  
+  resetLanes();
+  // TODO: Put this in own function
+  for (let key in input_lane_pairs) {
+    let lane = input_lane_pairs[key];
+    lane.ctx.clearRect(0, 0, lane.canvas.width, lane.canvas.height - lane.inputAreaHeight);
+
+    lane.drawHitzone();
+    lane.drawMeasureIndicators();
+    // lane.updateNotes(ups, 0);
+    lane.updateAndDrawNotes(editing, ups, 0);
+    lane.drawInputVisual();
+  }
+
+  if(editing) {
+    laneContainer?.classList.add('editing');
+  } else {
+    laneContainer?.classList.remove('editing');
+
+    for (let key in input_lane_pairs) {
+      let lane = input_lane_pairs[key];
+      lane.canvas.classList.remove('editing');
+      lane.canvas.parentElement?.classList.remove('background');
+
+      let laneEditingSection = lane.canvas.parentElement?.querySelector('.lane_editing');
+      laneEditingSection?.classList.remove('activated')
+    }
+  
+    // TODO: Dynamic
+    resetLanes();
+    updateAllLaneWidths();
+    drawLanes();
+  }
+}
+
+
+// #endsection
