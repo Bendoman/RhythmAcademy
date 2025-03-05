@@ -13,11 +13,9 @@ import PauseButton from './run_controls/PauseButton.tsx';
 import StopButton from './run_controls/StopButton.tsx';
 import EditButton from './run_controls/EditButton.tsx';
 
-
-
 // Custom scripts and styles
 import './styles/oldHomepage.css';
-import { startLoop } from '../scripts/main.ts';
+import { startLoop, onAddLaneButtonClick } from '../scripts/main.ts';
 
 const Homepage = () => {
     const { session } = useContext(UserContext);
@@ -118,6 +116,7 @@ const Homepage = () => {
         {/* className */}
         <div id="run_controls" className="">
             <div id="button_container">
+                {/* Should these be their own components? */}
                 <PlayButton 
                 isPlaying={isPlaying}
                 onComponentClick={() => {
@@ -163,11 +162,18 @@ const Homepage = () => {
                     } else return false;
                 }}></EditButton>
 
+                {/* 
+                Should this be a component?
+                Yes, return canvas container and new Lane obejct from create new lane function. 
+                return canvas container and new Lane object from add button click function. 
+                within add lane button component, createRoot(canvasContainer), root.render <Editing component>.
+                import Lane to add lane button so that it can take the lane return value and populate editing component accordingly using interface props. 
+                 */}
                 <button id="add_lane_button">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="lucide lucide-circle-plus"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>
                 </button>
-                
                 <input id="new_lane_input" type="text" maxLength={3}/>
+
                 <button id="settings_button">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="lucide lucide-settings"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
                 </button>

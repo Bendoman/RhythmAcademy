@@ -478,6 +478,8 @@ function createNewLane(
   document.getElementById(`${newCanvas.id}_delete`)?.addEventListener('click', deleteButtonClick);
   // Dynamically updates lane widths based on the number of lanes
   updateAllLaneWidths();
+
+  return canvasContainer;
 }
 
 function findLaneFromEvent(event: Event): Lane {
@@ -1567,5 +1569,10 @@ export function onEditButtonClick() {
   }
 }
 
+export function onAddLaneButtonClick() {
+  if(!paused)
+    return; 
 
+  console.log("Add button click");
+}
 // #endsection
