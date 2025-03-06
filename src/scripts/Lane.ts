@@ -152,6 +152,7 @@ export default class Lane {
 
     // TODO: Update note colours based on hitzone at time of hit
     public handleInputOn(paused: boolean) { 
+        console.log("Handling on");
         this.pressed = true; 
         // Sets pressed so that input modes can be tested, but returns after so that notes can't be hit
         if(paused)

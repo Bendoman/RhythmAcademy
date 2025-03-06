@@ -47,4 +47,4 @@ export const EDIT_MODES = {
     NOTE_MODE: "NOTE_MODE",
     PATTERN_MODE: "PATTERN_MODE",
     CREATE_PATTERN_MODE: "CREATE_PATTERN_MODE"
-};
+} as const;

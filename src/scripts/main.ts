@@ -48,7 +48,10 @@ function processMidiMessage(input: MIDIMessageEvent) {
 }
 
 // #region ( Global variables )
-const input_lane_pairs: { [key: string ]: Lane } = {};
+let lanes: Lane[] = []; 
+// Associates an inputkey string with the index of its associated lane within the lanes list
+const input_lane_pairs: { [key: string ]: number } = {}; 
+// Associates a canvas' ID with its lane
 const canvas_lane_pairs: { [key: string ]: Lane } = {};
 
 let laneCount = 0; 
@@ -59,7 +62,7 @@ let translationAmount = 0;
 
 let paused = true; 
 let editing = false;
-let editMode = EDIT_MODES.NOTE_MODE;
+let editMode: EditMode = EDIT_MODES.NOTE_MODE;
 
 let audioSprite: AudioSprite;
 
@@ -92,6 +95,7 @@ let settingsPanel: HTMLElement | null;
 let settingsCloseButton: HTMLElement | null;
 
 
+// TODO: Move all of these somewhere more appropriate
 function retrieveElements() {
     settingsPanel = document.getElementById('settings_panel');
 
@@ -115,12 +119,12 @@ function retrieveElements() {
       });
 
     newLaneInput = document.getElementById('new_lane_input') as HTMLInputElement;
-
+    
     window.addEventListener('keydown', (event) => {
         if(keyHeld[event.key] == true)
           return;
       
-        let associatedLane = input_lane_pairs[event.key];
+        let associatedLane = lanes[input_lane_pairs[event.key]];
         if(associatedLane != null)
           associatedLane.handleInputOn(paused); 
       
@@ -129,7 +133,7 @@ function retrieveElements() {
     })
 
     window.addEventListener('keyup', (event) => {
-        let associatedLane = input_lane_pairs[event.key];
+        let associatedLane = lanes[input_lane_pairs[event.key]];
         if(associatedLane != null)
           associatedLane.handleInputOff(); 
       
@@ -148,14 +152,7 @@ function retrieveElements() {
           handleCanvasClick(event); 
       })
 
-    window.addEventListener('resize', (event) => {
-      updateAllLaneWidths();
-      for (let key in input_lane_pairs) {
-        let lane = input_lane_pairs[key];
-        lane.handleResize();
-        drawSingleLane(lane);
-      }
-    })
+    window.addEventListener('resize', () => { updateAllLaneSizes(); });
 
       
 
@@ -172,8 +169,7 @@ function retrieveElements() {
         
         resetLanes();
         // TODO: Put this in own function
-        for (let key in input_lane_pairs) {
-          let lane = input_lane_pairs[key];
+        lanes.forEach(lane => {
           lane.ctx.clearRect(0, 0, lane.canvas.width, lane.canvas.height - lane.inputAreaHeight);
       
           lane.drawHitzone();
@@ -181,7 +177,8 @@ function retrieveElements() {
           // lane.updateNotes(ups, 0);
           lane.updateAndDrawNotes(editing, ups, 0);
           lane.drawInputVisual();
-        }
+        })
+        
       
         if(editing) {
           editButton.classList.add('selected');
@@ -192,19 +189,18 @@ function retrieveElements() {
         } else {
           editButton.classList.remove('selected');
           laneContainer?.classList.remove('editing');
-      
-          for (let key in input_lane_pairs) {
-            let lane = input_lane_pairs[key];
+          
+          lanes.forEach(lane => {
             lane.canvas.classList.remove('editing');
             lane.canvas.parentElement?.classList.remove('background');
       
             let laneEditingSection = lane.canvas.parentElement?.querySelector('.lane_editing');
             laneEditingSection?.classList.remove('activated')
-          }
-        
+          })
+
           // TODO: Dynamic
           resetLanes();
-          updateAllLaneWidths();
+          updateAllLaneSizes();
           drawLanes();
         }
       });
@@ -235,25 +231,24 @@ function retrieveElements() {
           return;
         
         paused = true 
-      
-        for (let key in input_lane_pairs) {
-          let lane = input_lane_pairs[key];
+
+        lanes.forEach(lane => {
           console.log(`${lane.canvas.id}_lane stats:\nTotal Notes: ${lane.notes.length}\nNotes hit: ${lane.notesHit.length}\nNotes missed: ${lane.notesMissed.length}`);
           console.log(lane.notesHit);
           console.log(lane.notesMissed);
-        }
+        });
+
       
         resetLanes();
         // TODO: Put this in own function
-        for (let key in input_lane_pairs) {
-          let lane = input_lane_pairs[key];
+        lanes.forEach(lane => {
           lane.ctx.clearRect(0, 0, lane.canvas.width, lane.canvas.height - lane.inputAreaHeight);
       
           lane.drawHitzone();
           lane.drawMeasureIndicators();
           lane.updateAndDrawNotes(editing, ups, 0);
           lane.drawInputVisual();
-        }
+        });
       
         stopButton.classList.add('selected');
         playButton?.classList.remove('selected');
@@ -285,7 +280,7 @@ function retrieveElements() {
         paused = true; 
         createNewLane(80, 1, 200, 'kick', 3, [], [4, 4], input, 16);
       
-        updateAllLaneWidths();
+        updateAllLaneSizes();
         resetLanes();
         drawLanes();
         
@@ -301,21 +296,18 @@ function retrieveElements() {
         console.log(target.value); 
         maxMeasureCount = parseInt(target.value); 
       
-        for (let key in input_lane_pairs) {
-          let lane = input_lane_pairs[key];
+        lanes.forEach(lane => {
           lane.maxMeasureCount = maxMeasureCount; 
           lane.loopedHeight = lane.calculateHeight(true); 
-        }
+        })
       })
 }
 
 
 function resetLanes() {
-  for (let key in input_lane_pairs) {
-    let lane = input_lane_pairs[key] as Lane;
-
-    lane.resetLane();
-  }
+    lanes.forEach(lane => {
+      lane.resetLane();
+    })
 }
 
 function populateTestNotes(lane: Lane) {
@@ -351,8 +343,8 @@ function updateLaneWidth(lane: Lane, multiplier: number) {
     lane.canvas.width = (laneContainer.clientWidth / 4) * multiplier;
 }
 
-// TODO: Rename this to function that includes heights
-function updateAllLaneWidths() {
+function updateAllLaneSizes() {
+  // TODO: Change this to be more dynamic
   let multiplier = 1; 
   switch(laneCount) {
     case 4:
@@ -365,17 +357,18 @@ function updateAllLaneWidths() {
       multiplier = (0.5);
       break;
   }
-
-  for (let key in input_lane_pairs) {
-    let lane = input_lane_pairs[key];
+  
+  lanes.forEach(lane => {
+    // TODO: Include this part in the handleResize method too
     if(laneContainer) {
       lane.canvas.width = (laneContainer.clientWidth / 4) * multiplier;
       lane.canvas.height = laneContainer.clientHeight;
-      drawSingleLane(lane)
     } else {
       console.error('Lane container undefined');
     }
-  }
+    lane.handleResize();
+    drawSingleLane(lane)
+  });
 }
 
 
@@ -397,7 +390,7 @@ function createNewLane(
     return;
   }
 
-  if(Object.keys(input_lane_pairs).includes(inputKey)) {
+  if(Object.keys(input_lane_pairs).includes(inputKey) && inputKey != '(?)') {
     console.error('Input key already in use');
     return;
   }
@@ -418,7 +411,10 @@ function createNewLane(
   const new_lane = new Lane(bpm, measureCount, maxMeasureCount, noteGap, hitsound, maxWrongNotes, notes, timeSignature, inputKey, newCanvas, hitPrecision);
 
   // TODO: Review if these can be unified
-  input_lane_pairs[new_lane.inputKey] = new_lane;
+  lanes.push(new_lane); 
+  // console.log(`Adding new lane: to lanes`); 
+  // console.log(new_lane)
+  input_lane_pairs[new_lane.inputKey] = lanes.length - 1;
   canvas_lane_pairs[newCanvas.id] = new_lane;
 
   new_lane.drawInputVisual();
@@ -429,7 +425,7 @@ function createNewLane(
   canvasContainer.appendChild(newCanvas);
 
   const laneEditingSection = document.createElement('div') as HTMLElement;
-  laneEditingSection.innerHTML = getLaneEditingHTML(newCanvas.id, bpm, measureCount, hitsound, "metronome1", '1/16', maxMeasureCount);
+  // laneEditingSection.innerHTML = getLaneEditingHTML(newCanvas.id, bpm, measureCount, hitsound, "metronome1", '1/16', maxMeasureCount);
   canvasContainer.appendChild(laneEditingSection);
 
   if(audioSprite)
@@ -442,7 +438,8 @@ function createNewLane(
   document.getElementById(`${newCanvas.id}`)?.addEventListener('mousemove', canvasMouseOver);
   document.getElementById(`${newCanvas.id}`)?.addEventListener('mouseout', canvasMouseOut);
   document.getElementById(`${newCanvas.id}`)?.addEventListener('wheel', canvasMouseWheel);
-
+  
+  // #region (old event listeners)
   document.getElementById(`${newCanvas.id}_pattern_mode`)?.addEventListener('click', patternModeClick);
   document.getElementById(`${newCanvas.id}_note_mode`)?.addEventListener('click', noteModeClick);
 
@@ -476,10 +473,12 @@ function createNewLane(
 
   document.getElementById(`${newCanvas.id}_close`)?.addEventListener('click', closeClick);
   document.getElementById(`${newCanvas.id}_delete`)?.addEventListener('click', deleteButtonClick);
-  // Dynamically updates lane widths based on the number of lanes
-  updateAllLaneWidths();
+  // #endregion
 
-  return canvasContainer;
+  // Dynamically updates lane widths based on the number of lanes
+  updateAllLaneSizes();
+
+  return laneEditingSection;
 }
 
 function findLaneFromEvent(event: Event): Lane {
@@ -518,8 +517,7 @@ function closeClick(event: MouseEvent) {
 
   offsetY = null; 
 
-  for (let key in input_lane_pairs) {
-    let lane = input_lane_pairs[key];
+  lanes.forEach(lane => {
     lane.canvas.classList.remove('editing');
     lane.canvas.parentElement?.classList.remove('background');
 
@@ -527,9 +525,9 @@ function closeClick(event: MouseEvent) {
     laneEditingSection?.classList.remove('activated')
 
     resetLanes();
-    updateAllLaneWidths();
+    updateAllLaneSizes();
     drawSingleLane(lane);
-  }
+  })
 }
 
 function backToStartClick(event: MouseEvent) {
@@ -562,7 +560,7 @@ function precisionSelectChange(event: Event) {
   console.log(lane.hitPrecision)
 }
 
-async function retrieveBucketList(bucket: string) {
+export async function retrieveBucketList(bucket: string) {
   const { data, error } = await supabase.storage.from(bucket).list(user.user.id); 
   
   if(!error)
@@ -685,7 +683,7 @@ async function loadLaneClick(event: Event) {
   laneSoundInput.value = lane.hitsound; 
 
   // TODO: Add loading of metronome setting. 
-  updateAllLaneWidths();
+  updateAllLaneSizes();
   lane.handleResize();
   drawSingleLane(lane); 
 }
@@ -754,6 +752,9 @@ function deleteButtonClick(event: Event) {
     return; 
 
   delete input_lane_pairs[associatedLane.inputKey];
+  console.log(lanes);
+  lanes.splice(lanes.indexOf(associatedLane));
+  console.log(lanes);
   delete canvas_lane_pairs[associatedCanvas.id];
   
   console.log(canvas_lane_pairs);
@@ -762,22 +763,20 @@ function deleteButtonClick(event: Event) {
   associatedCanvasContainer.remove();
 
   laneCount--; 
-  updateAllLaneWidths(); 
   
-  for (let key in input_lane_pairs) {
-    let lane = input_lane_pairs[key];
+  lanes.forEach(lane => {
     lane.canvas.classList.remove('editing');
     lane.canvas.parentElement?.classList.remove('background');
-
+    
     let laneEditingSection = lane.canvas.parentElement?.querySelector('.lane_editing');
     laneEditingSection?.classList.remove('activated')
-
+    
     resetLanes();
-    updateAllLaneWidths();
-    drawSingleLane(lane);
-  }
+  })
+  updateAllLaneSizes(); 
 }
 
+// TODO: Put this in utils
 async function uploadToBucket(bucket: string, filePath: string, fileName: string, content: string) {
   const jsonBlob = new Blob([content], {type: "application/json"});
   const jsonFile = new File([jsonBlob], fileName, {type: "application/json"});
@@ -903,7 +902,11 @@ function noteModeClick(event: Event) {
   drawSingleLane(lane);
 }
 
-async function patternModeClick(event: Event) {
+type EditMode = keyof typeof EDIT_MODES;
+export function changeEditMode(newEditMode: EditMode) { editMode = newEditMode; }
+
+export async function patternModeClick(event: Event) {
+  console.log("HERE")
   let target = event.target as HTMLSelectElement;
   let lane = findLaneFromEvent(event);
 
@@ -1077,13 +1080,13 @@ window.addEventListener('resize', () => {
 });
 
 function midiNoteOn(note: number, velocity: number) {
-  let associatedLane = input_lane_pairs[note.toString()];
+  let associatedLane = lanes[input_lane_pairs[note.toString()]];
   if(associatedLane != null)
     associatedLane.handleInputOn(paused); 
 }
 
 function midiNoteOff(note: number) {
-  let associatedLane = input_lane_pairs[note.toString()];
+  let associatedLane = lanes[input_lane_pairs[note.toString()]];
   if(associatedLane != null)
     associatedLane.handleInputOff(); 
 }
@@ -1161,11 +1164,10 @@ function enableAudio() {
   //   }
   // });
 
-  for (let key in input_lane_pairs) {
-    let lane = input_lane_pairs[key];
+  lanes.forEach(lane => {
     lane.audioSprite = audioSprite;
     // lane.metronomeSprite = metronomeSprite;
-  }
+  })
 }
 
 
@@ -1310,8 +1312,7 @@ async function handleCanvasClick(event: MouseEvent) {
     editMode = EDIT_MODES.PATTERN_MODE;
   console.log(editMode, noteModeButton, patternModeButton);
 
-  for (let key in input_lane_pairs) {
-    let lane = input_lane_pairs[key];
+  lanes.forEach(lane => {
     if(lane.canvas != canvas) {
       lane.canvas.classList.remove('editing');
       lane.canvas.parentElement?.classList.add('background');
@@ -1320,7 +1321,7 @@ async function handleCanvasClick(event: MouseEvent) {
       resetLanes();
       drawSingleLane(lane);
     }
-  }
+  })
 
   let laneSelect = laneEditingSection?.querySelector('.load_lane_select');
   let laneSelectInnerHTML = '';
@@ -1340,7 +1341,7 @@ async function handleCanvasClick(event: MouseEvent) {
 // TODO: Reword this and rework it too, split it into seperate functions
 let newNoteY = -1; 
 let newNoteIndex = -1;
-function drawSingleLane(lane: Lane) {
+export function drawSingleLane(lane: Lane) {
   lane.ctx.clearRect(0, 0, lane.canvas.width, lane.canvas.height - lane.inputAreaHeight);
   lane.drawHitzone();
   
@@ -1407,14 +1408,13 @@ function drawSingleLane(lane: Lane) {
 }
 
 function drawLanes() {
-  for (let key in input_lane_pairs) {
-    let lane = input_lane_pairs[key];
+  lanes.forEach(lane => {
 
     lane.drawHitzone();
     lane.drawMeasureIndicators();
     lane.updateAndDrawNotes(editing, ups, 0); 
     lane.drawInputVisual();
-  }
+  })
 }
 
 // #region ( Main game loop )
@@ -1433,12 +1433,10 @@ function gameLoop(timeStamp: number) {
   upsParagraph.innerText = ups.toString().substring(0, 6); 
   lastLoop = timeStamp;
 
-  for (let key in input_lane_pairs) {
-    let lane = input_lane_pairs[key];
-
+  lanes.forEach(lane => {
     if(paused) {
       lane.drawInputVisual(); // So that when paused an in edit mode you can verify that your input mode works
-      continue;
+      return;
     }
     
     // Determining the speed of translation for each lane based on the current loop interval
@@ -1451,7 +1449,7 @@ function gameLoop(timeStamp: number) {
     lane.updateAndDrawNotes(editing, ups, translationSpeed);
     lane.drawInputVisual();
 
-  }
+  })
   // console.log(test); 
   window.requestAnimationFrame(gameLoop);
 }
@@ -1507,24 +1505,22 @@ export function onStopButtonClick() {
   paused = true 
 
   // TODO: Put this in own function
-  for (let key in input_lane_pairs) {
-    let lane = input_lane_pairs[key];
+  lanes.forEach(lane => {
     console.log(`${lane.canvas.id}_lane stats:\nTotal Notes: ${lane.notes.length}\nNotes hit: ${lane.notesHit.length}\nNotes missed: ${lane.notesMissed.length}`);
     console.log(lane.notesHit);
     console.log(lane.notesMissed);
-  }
+  })
 
   resetLanes();
   // TODO: Put this in own function
-  for (let key in input_lane_pairs) {
-    let lane = input_lane_pairs[key];
+  lanes.forEach(lane => {
     lane.ctx.clearRect(0, 0, lane.canvas.width, lane.canvas.height - lane.inputAreaHeight);
 
     lane.drawHitzone();
     lane.drawMeasureIndicators();
     lane.updateAndDrawNotes(editing, ups, 0);
     lane.drawInputVisual();
-  }
+  })
 }
 
 export function onEditButtonClick() {
@@ -1537,8 +1533,7 @@ export function onEditButtonClick() {
   
   resetLanes();
   // TODO: Put this in own function
-  for (let key in input_lane_pairs) {
-    let lane = input_lane_pairs[key];
+  lanes.forEach(lane => {
     lane.ctx.clearRect(0, 0, lane.canvas.width, lane.canvas.height - lane.inputAreaHeight);
 
     lane.drawHitzone();
@@ -1546,33 +1541,50 @@ export function onEditButtonClick() {
     // lane.updateNotes(ups, 0);
     lane.updateAndDrawNotes(editing, ups, 0);
     lane.drawInputVisual();
-  }
+  })
 
   if(editing) {
     laneContainer?.classList.add('editing');
   } else {
     laneContainer?.classList.remove('editing');
 
-    for (let key in input_lane_pairs) {
-      let lane = input_lane_pairs[key];
+    lanes.forEach(lane => {
       lane.canvas.classList.remove('editing');
       lane.canvas.parentElement?.classList.remove('background');
 
       let laneEditingSection = lane.canvas.parentElement?.querySelector('.lane_editing');
       laneEditingSection?.classList.remove('activated')
-    }
+    })
   
     // TODO: Dynamic
     resetLanes();
-    updateAllLaneWidths();
+    updateAllLaneSizes();
     drawLanes();
   }
 }
 
-export function onAddLaneButtonClick() {
+export function onAddLaneButtonClick(inputKey: string) {
   if(!paused)
     return; 
 
-  console.log("Add button click");
+  console.log("Add button click: ", inputKey);
+  // let input = newLaneInput.value;
+  console.log(laneCount);
+  if(laneCount >= 6)
+    return;
+
+  paused = true; 
+  // TODO: Add input updating after lane creation
+  let laneEditingSection = createNewLane(80, 1, 200, 'kick', 3, [], [4, 4], inputKey ? inputKey : "(?)", 16);
+
+  resetLanes();
+  drawLanes();
+  
+  return laneEditingSection; 
 }
 // #endsection
+
+
+export function findLaneFromCanvas(canvas: HTMLCanvasElement) {
+  return canvas_lane_pairs[canvas.id];
+}
