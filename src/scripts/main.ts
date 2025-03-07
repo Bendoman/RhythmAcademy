@@ -13,31 +13,32 @@ import { UserContext } from "../components/App.tsx";
 // #endregion
 
 // ( Midi Access Setup )
-if(navigator.requestMIDIAccess) { // Ensures that MIDI access is enabled in the current browser
-  navigator.requestMIDIAccess().then(midi_connection_success, midi_connection_failure);
-}
+// if(navigator.requestMIDIAccess) { // Ensures that MIDI access is enabled in the current browser
+//   navigator.requestMIDIAccess().then(midi_connection_success, midi_connection_failure);
+// }
 
 // TODO: Will need redo this so that it runs by default. Will need to remove existing event listeners.
-function midi_connection_success(midiAccess: MIDIAccess) {
-  midiAccess.onstatechange = updateDevices;
-  const inputs = midiAccess.inputs;
-
-  inputs.forEach(input => { input.onmidimessage = processMidiMessage;});
-}
-// TODO: Alert the user in input selection menu of the failure
-function midi_connection_failure() { console.log('Failed to connect MIDI device'); }
+// function midi_connection_success(midiAccess: MIDIAccess) {
+//   midiAccess.onstatechange = updateDevices;
+//   const inputs = midiAccess.inputs;
+  
+//   inputs.forEach(input => { input.onmidimessage = processMidiMessage;});
+// }
+// // TODO: Alert the user in input selection menu of the failure
+// function midi_connection_failure() { console.log("Failed to connect midi device"); }
 
 // MIDI related
 // TODO: Dynamically update list of available midi inputs 
-function updateDevices(event: Event) { console.log(event); }
+// function updateDevices(event: Event) { console.log(event); }
 
-function processMidiMessage(input: MIDIMessageEvent) {
+export function handleMIDIMessage(input: MIDIMessageEvent) {
     const inputData = input.data; 
     if(inputData == null)
       return; 
 
     const note = inputData[1];
     const velocity = inputData[2];
+    console.log(note);
 
     if(velocity > 0) {
       midiNoteOn(note, velocity)
@@ -1564,6 +1565,8 @@ export function onEditButtonClick() {
 }
 
 export function onAddLaneButtonClick(inputKey: string) {
+  console.log(inputKey)
+  
   if(!paused)
     return; 
 

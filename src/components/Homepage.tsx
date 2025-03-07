@@ -1,7 +1,7 @@
 // Obsolete?
 // import { Link, Navigate, redirect, Route } from 'react-router-dom'
 // React
-import React, { useEffect, useState, useContext } from 'react';
+import React, { useEffect, useState, useContext, useRef } from 'react';
 // Supabase
 import { Auth } from '@supabase/auth-ui-react';
 import { supabase } from '../scripts/supa-client.ts';
@@ -12,13 +12,50 @@ import PlayButton from './run_controls/PlayButton.tsx';
 import PauseButton from './run_controls/PauseButton.tsx';
 import StopButton from './run_controls/StopButton.tsx';
 import EditButton from './run_controls/EditButton.tsx';
-import AddLaneButton from './run_controls/AddLaneButton.tsx';
+import AddLaneButton, { AddLaneButtonRef } from './run_controls/AddLaneButton.tsx';
 
 // Custom scripts and styles
 import './styles/oldHomepage.css';
-import { startLoop, onAddLaneButtonClick } from '../scripts/main.ts';
+import { startLoop, handleMIDIMessage } from '../scripts/main.ts';
+
 
 const Homepage = () => {
+    const addLaneButtonRef = useRef<AddLaneButtonRef | null>(null);
+
+    const updateDevices = (event: Event) => { console.log(event) } // Does not work in FireFox
+    
+    const processMidiMessage = (input: MIDIMessageEvent) => {
+        if(addLaneButtonRef.current)
+            addLaneButtonRef.current.processMidiMessage(input);
+        handleMIDIMessage(input)
+    }
+    
+    const midi_connection_success = (midiAccess: MIDIAccess) => {
+        midiAccess.onstatechange = updateDevices;
+
+        const inputs = midiAccess.inputs; 
+        inputs.forEach(input => { input.onmidimessage = processMidiMessage})
+    }
+
+    const midi_connection_failure = (error: Error) => {
+        console.error("MIDI Connection failure: ", error);
+    }
+
+    useEffect(() => {
+        if(addLaneButtonRef.current)
+            window.addEventListener("keydown", addLaneButtonRef.current.handleKeyDown)
+
+        if(navigator.requestMIDIAccess) // Ensures that MIDI access is enabled in the current browser
+            navigator.requestMIDIAccess().then(midi_connection_success, midi_connection_failure);
+        else
+            console.log("MIDI Access not supported on current browser");
+
+        return () => { 
+            if(addLaneButtonRef.current) 
+                window.removeEventListener("keydown", addLaneButtonRef.current.handleKeyDown) 
+        }
+    }, []);
+
     const { session } = useContext(UserContext);
     useEffect(() => {
         startLoop();
@@ -163,17 +200,7 @@ const Homepage = () => {
                     } else return false;
                 }}></EditButton>
 
-                {/* 
-                Should this be a component?
-                Yes, return canvas container and new Lane obejct from create new lane function. 
-                return canvas container and new Lane object from add button click function. 
-                within add lane button component, createRoot(canvasContainer), root.render <Editing component>.
-                import Lane to add lane button so that it can take the lane return value and populate editing component accordingly using interface props. 
-                 */}
-                {/* <button id="add_lane_button">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="lucide lucide-circle-plus"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>
-                </button> */}
-                <AddLaneButton></AddLaneButton>
+                <AddLaneButton ref={addLaneButtonRef}></AddLaneButton>
 
 
                 <button id="settings_button">

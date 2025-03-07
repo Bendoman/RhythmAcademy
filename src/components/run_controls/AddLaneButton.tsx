@@ -1,26 +1,47 @@
-import React, { useEffect, useState } from 'react'
+import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react'
 import LaneEditingPanel from '../LaneEditingPanel.tsx'
 import { onAddLaneButtonClick } from '../../scripts/main.ts'
 import { createRoot } from 'react-dom/client';
 
-const AddLaneButton = () => {
-  const [listening, setListening] = useState(false);
-  const [inputValue, setInputValue] = useState("Input key...");
+export interface AddLaneButtonRef {
+  processMidiMessage: (input: MIDIMessageEvent) => void; 
+}
 
-  const handleKeyDown = (event: KeyboardEvent) => {
-    // TODO: Potentially move this higher up
+const AddLaneButton = forwardRef<AddLaneButtonRef, {}>((_, ref) => {
+  const [listening, setListening] = useState(false);
+  const listeningRef = useRef(false);
+
+  const [inputValue, setInputValue] = useState("Input key...");
+  const inputValueRef = useRef("Input key...");
+
+  const inputElementRef = useRef<HTMLInputElement>(null);
+
+  const processMidiMessage = (input: MIDIMessageEvent) => {    
+    if(!listening) return; 
+
+    const inputData = input.data; 
+    if(inputData == null) return; 
+
+    const note = inputData[1];
+    setInputValue(note.toString());
+    setListening(false);
+  }; useImperativeHandle(ref, () => ({ processMidiMessage, }));
+
+  const handleKeyDown = useRef((event: KeyboardEvent) => {    
     if(event.key == 'space' || event.key == ' ')
       event.preventDefault(); 
 
-    if(!listening) 
+    if(!listeningRef.current) 
       return; 
+
     setInputValue(event.key);
     setListening(false);
     console.log(event); 
-  }
+  })
 
   const handleOnClick = () => {
     let key = ""; 
+    console.log(inputValue)
     if(inputValue != "Listening..." && inputValue != "Input key..."){ key = inputValue; }
     const laneEditingSection = onAddLaneButtonClick(key);
     console.log(laneEditingSection)
@@ -33,9 +54,25 @@ const AddLaneButton = () => {
   }
 
   useEffect(() => {
-    window.addEventListener("keydown", handleKeyDown)
-    return () => { window.removeEventListener("keydown", handleKeyDown) }
-  })
+    console.log("updating listening")
+    listeningRef.current = listening;
+
+    if(!listening && inputElementRef.current)
+      inputElementRef.current.blur();
+
+  }, [listening]);
+
+  useEffect(() => {
+    inputValueRef.current = inputValue;
+  }, [inputValueRef]);
+
+  useEffect(() => {
+    // Handler and references used so that event listener 
+    // only has to be mounted once, not on ever state chagne
+    const keyDownHandler = (event: KeyboardEvent) => handleKeyDown.current(event); 
+    window.addEventListener("keydown", keyDownHandler)
+    return () => { window.removeEventListener("keydown", keyDownHandler) }
+  }, [])
 
   return (<>
         <button
@@ -45,6 +82,7 @@ const AddLaneButton = () => {
         </button>
 
         <input 
+          ref={inputElementRef}
           readOnly id="new_lane_input" 
           type="text" 
           value={inputValue == " " ? "space" : inputValue} 
@@ -53,14 +91,14 @@ const AddLaneButton = () => {
             setListening(true);
           }}
           onBlur={() => {
-            if(listening) {
-              console.log("here");
+            if(listeningRef.current) {
               setInputValue("Input key...")
               setListening(false);
+              console.log(listening)
             }
           }}  
         />
         </>)
-}
+})
 
 export default AddLaneButton
