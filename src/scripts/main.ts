@@ -9,6 +9,7 @@ import { getLaneEditingHTML, getPatternOptionHTML } from "./elements.ts";
 import { supabase } from '../scripts/supa-client.ts';
 import { useContext } from "react";
 import { UserContext } from "../components/App.tsx";
+import { StatsObject } from "./types.ts";
 
 // #endregion
 
@@ -56,7 +57,7 @@ const input_lane_pairs: { [key: string ]: number } = {};
 const canvas_lane_pairs: { [key: string ]: Lane } = {};
 
 let laneCount = 0; 
-let maxMeasureCount = 400; 
+export let maxMeasureCount = 400; 
 
 let ups = 0; 
 let translationAmount = 0; 
@@ -72,8 +73,13 @@ let container_width:number | undefined;
 let container_height:number | undefined;
 
 // Pattern creation 
-let patternInCreationNotes: Note[] = []; 
-let patternInCreationPositions: number[] = []; 
+export let patternInCreationNotes: Note[] = []; 
+export let patternInCreationPositions: number[] = []; 
+
+export function resetPatternInCreation() {
+  patternInCreationNotes = [];
+  patternInCreationPositions = [];
+}
 let newPatternMeasures = 1; 
 
 // DOM Elements
@@ -102,6 +108,7 @@ function retrieveElements() {
 
     settingsButton = document.getElementById('settings_button');
     settingsButton?.addEventListener('click', () => {
+      // console.log("in here")
         // paused = true; 
         // pauseButton?.classList.add('selected');
         // playButton?.classList.remove('selected');
@@ -344,7 +351,7 @@ function updateLaneWidth(lane: Lane, multiplier: number) {
     lane.canvas.width = (laneContainer.clientWidth / 4) * multiplier;
 }
 
-function updateAllLaneSizes() {
+export function updateAllLaneSizes() {
   // TODO: Change this to be more dynamic
   let multiplier = 1; 
   switch(laneCount) {
@@ -461,6 +468,7 @@ function createNewLane(
   document.getElementById(`${newCanvas.id}_load_pattern_select`)?.addEventListener('change', patternSelectChange);  
   document.getElementById(`${newCanvas.id}_load_pattern_button`)?.addEventListener('click', loadPatternClick);
   document.getElementById(`${newCanvas.id}_loaded_pattern_measures`)?.addEventListener('change', loadedPatternMeasuresChange);
+
   document.getElementById(`${newCanvas.id}_create_pattern_button`)?.addEventListener('click', createPatternClick);
   document.getElementById(`${newCanvas.id}_new_pattern_measures`)?.addEventListener('change', newPatternMeasuresChange);
   document.getElementById(`${newCanvas.id}_save_pattern_button`)?.addEventListener('click', savePatternClick);
@@ -490,6 +498,26 @@ function findLaneFromEvent(event: Event): Lane {
 
   let associatedLane = canvas_lane_pairs[associatedCanvas?.id];
   return associatedLane;
+}
+
+
+export function resetLanesEditingStatus() {
+  offsetY = null; 
+  patternInCreationNotes = [];
+  patternInCreationPositions = [];
+  editMode = EDIT_MODES.NOTE_MODE;
+
+  lanes.forEach(lane => {
+    lane.canvas.classList.remove('editing');
+    lane.canvas.parentElement?.classList.remove('background');
+
+    let laneEditingSection = lane.canvas.parentElement?.querySelector('.lane_editing');
+    laneEditingSection?.classList.remove('activated')
+
+    resetLanes();
+    updateAllLaneSizes();
+    drawSingleLane(lane);
+  })
 }
 
 // TODO: Add listener for esc key
@@ -575,7 +603,7 @@ async function retrievePatternList() {
       return data; 
 }
 
-async function retrieveBucketData(bucket: string, path: string) {
+export async function retrieveBucketData(bucket: string, path: string) {
   const { data, error } = await supabase
   .storage
   .from(bucket)
@@ -742,6 +770,37 @@ function closePatternClick(event: Event) {
   drawSingleLane(lane); 
 }
 
+export function deleteLane(lane: Lane, canvas: HTMLCanvasElement) {
+  let associatedCanvasContainer = canvas.closest('.canvas_container');
+  if(!associatedCanvasContainer)
+    return; 
+  
+  delete input_lane_pairs[lane.inputKey];
+  console.log(lanes);
+  lanes.splice(lanes.indexOf(lane));
+  console.log(lanes);
+  delete canvas_lane_pairs[canvas.id];
+  
+  console.log(canvas_lane_pairs);
+  console.log(input_lane_pairs);
+
+  associatedCanvasContainer.remove();
+
+  laneCount--; 
+  
+  lanes.forEach(lane => {
+    lane.canvas.classList.remove('editing');
+    lane.canvas.parentElement?.classList.remove('background');
+    
+    let laneEditingSection = lane.canvas.parentElement?.querySelector('.lane_editing');
+    laneEditingSection?.classList.remove('activated')
+    
+    resetLanes();
+  })
+  updateAllLaneSizes(); 
+}
+
+
 function deleteButtonClick(event: Event) {
 
 
@@ -778,7 +837,7 @@ function deleteButtonClick(event: Event) {
 }
 
 // TODO: Put this in utils
-async function uploadToBucket(bucket: string, filePath: string, fileName: string, content: string) {
+export async function uploadToBucket(bucket: string, filePath: string, fileName: string, content: string) {
   const jsonBlob = new Blob([content], {type: "application/json"});
   const jsonFile = new File([jsonBlob], fileName, {type: "application/json"});
   
@@ -1498,30 +1557,32 @@ export function onPauseButtonClick() {
   paused = true 
 }
 
-export function onStopButtonClick() {
+export function onStopButtonClick(): StatsObject[] {
   console.log("On stop button click");
   if(editing) // Should never be true due to React logic, but here just incase
-    return;
+    return [];
   
   paused = true 
+
+  let stats: StatsObject[] = [];
 
   // TODO: Put this in own function
   lanes.forEach(lane => {
     console.log(`${lane.canvas.id}_lane stats:\nTotal Notes: ${lane.notes.length}\nNotes hit: ${lane.notesHit.length}\nNotes missed: ${lane.notesMissed.length}`);
     console.log(lane.notesHit);
     console.log(lane.notesMissed);
+
+    stats[stats.length] = {
+      lane: lane.inputKey, totalNotes: lane.notes.length, 
+      notesHit: lane.notesHit, notesMissed: lane.notesMissed 
+    };
   })
+
+  console.log(stats); 
 
   resetLanes();
-  // TODO: Put this in own function
-  lanes.forEach(lane => {
-    lane.ctx.clearRect(0, 0, lane.canvas.width, lane.canvas.height - lane.inputAreaHeight);
-
-    lane.drawHitzone();
-    lane.drawMeasureIndicators();
-    lane.updateAndDrawNotes(editing, ups, 0);
-    lane.drawInputVisual();
-  })
+  lanes.forEach(lane => { drawSingleLane(lane); });
+  return stats;
 }
 
 export function onEditButtonClick() {
@@ -1590,4 +1651,9 @@ export function onAddLaneButtonClick(inputKey: string) {
 
 export function findLaneFromCanvas(canvas: HTMLCanvasElement) {
   return canvas_lane_pairs[canvas.id];
+}
+
+// TODO: Change this implementation
+export function setNewPatternMeasures(measures: number) {
+  newPatternMeasures = measures
 }

@@ -113,7 +113,8 @@
     border-radius: 15px;
     background-color: #ecdfcc69;
   
-    padding-top: 10%;
+    /* TODO: Make this more solid with run controls */
+    padding-top: 5em;
     padding-bottom: 5%;
     padding-left: 45px;
     padding-right: 20px;
@@ -127,10 +128,13 @@
     flex-direction: column;
     /* align-items: center; */
     justify-content: center;  
+    /* background-color: red; */
     /* transition: left .65s ease; */
   
     gap: 1em;
     color: #ECDFCC;
+
+    overflow: scroll;
   }
   
   .lane_editing input{
@@ -156,7 +160,7 @@
   
   .delete_button {
     margin-top: auto;
-    top: 0;
+    /* top: 0; */
   }
   
   
@@ -256,31 +260,57 @@
   }
   
   #run_controls {
+    z-index: 1;
+    border: 2px solid var(--site_background);
     box-sizing: border-box;
     color: white;
     /* height: 2.5em; */
-    /* border-radius: 50%; */
     position: absolute;
     top: .5em;
-    left: 1em;
-  
+    left: .5em;
+    /* left: 50%; */
+    /* transform: translateX(-50%); */
+    
     background-color: var(--lane_background);
-    align-content: center;
-  
-    display: flex;
-    flex-direction: column;
-    padding: .5em;
-    gap: .5em;
+    /* align-content: center; */
+    
+    /* display: flex;
+    flex-direction: column; */
+    padding: 0;
+    /* gap: .5em; */
+    
     border-radius: 10px;
-  
-    /* transition: height .5s; */
+    width: 1vw;
+    height: 1.5vh;
+    overflow: hidden;
+    transition: width 0.5s ease, height 0.5s ease, padding 0.3s ease;
   }
+
   
+  #run_controls:hover, #run_controls.active {
+    width: auto;
+    padding: .5em;
+    height: fit-content;
+  }
+
+  #run_controls:hover #button_container, #button_container.active {
+    width: 100%;
+    opacity: 1;
+    pointer-events: all;
+    height: fit-content;
+  }
+
   #button_container {
+    pointer-events: none;
+    opacity: 0;
+    height: 0vh;
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
+    justify-content: center;
     gap: 0.5em;
+    transition: height 0.3s;
   }
+
   
   #button_container button {
     border: none;
@@ -301,17 +331,7 @@
     background-color: green;
   }
   
-  #run_controls.expanded {
-    height: 25%;
-    border-radius: 15px;
-    justify-content: center;
-    transition: border-radius 1s;
-  }
-  
-  #run_controls.expanded #button_container {
-    opacity: 100%;
-  }
-  
+
   /* .lane_canvas:hover {
     background-color: red; 
    } */
@@ -488,4 +508,74 @@
 .edit_mode_container {
   display: flex;
   gap: .25em;
+}
+
+.statsScreen {
+  position: absolute;
+  top: 2em; 
+  left: 50%; 
+  
+  width: 50vw;
+  height: 60vh;
+
+  border-radius: 15px;
+  border: 3px solid #ECDFCC;
+  background-color: var(--site_background);
+
+  transform: translateX(-50%);
+
+  z-index: 1;
+
+  color: var(--lane_background);
+}
+
+.closeContainer:hover {
+  background-color: red;
+}
+
+.closeContainer {
+  display: flex;
+  padding: .25em;
+  border-radius: 15px;
+  position: absolute;
+  top: .5em;
+  right: .5em;
+  color: var(--lane_background);
+}
+
+.tabs {
+  padding-top: 2em;
+  padding-left: 1em;
+  align-items: center;
+  display: flex;
+  gap: .5em;
+  /* height: 3em; */
+  border-bottom: 1px solid var(--lane_background);
+}
+
+.tab:hover {
+  cursor: pointer;
+}
+
+.tab {
+  text-align: center;
+  width: 3em;
+  /* color: #131B23; */
+  color: #ECDFCC;
+  background-color: #ecdfcc62;
+  border-top-right-radius: 12px;
+  border-top-left-radius: 3px;
+}
+
+.tab.selected {
+  background-color: #ECDFCC;
+  color: #131B23;
+}
+
+.statContent {
+  padding: 2.25em;
+}
+
+.statsScreen {
+  overflow: scroll;
 }

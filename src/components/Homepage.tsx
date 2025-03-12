@@ -8,25 +8,24 @@ import { supabase } from '../scripts/supa-client.ts';
 import { ThemeSupa } from "@supabase/auth-ui-shared";
 // Custom components
 import { UserContext } from "./App.tsx";
-import PlayButton from './run_controls/PlayButton.tsx';
-import PauseButton from './run_controls/PauseButton.tsx';
-import StopButton from './run_controls/StopButton.tsx';
-import EditButton from './run_controls/EditButton.tsx';
+import RunControls, { RunControlsRef } from './run_controls/RunControls.tsx';
 import AddLaneButton, { AddLaneButtonRef } from './run_controls/AddLaneButton.tsx';
 
 // Custom scripts and styles
 import './styles/oldHomepage.css';
 import { startLoop, handleMIDIMessage } from '../scripts/main.ts';
+import StatsScreen from './StatsScreen.tsx';
+import { StatsObject } from '../scripts/types.ts';
 
 
 const Homepage = () => {
-    const addLaneButtonRef = useRef<AddLaneButtonRef | null>(null);
+    const runControlsRef = useRef<RunControlsRef | null>(null);
 
     const updateDevices = (event: Event) => { console.log(event) } // Does not work in FireFox
     
     const processMidiMessage = (input: MIDIMessageEvent) => {
-        if(addLaneButtonRef.current)
-            addLaneButtonRef.current.processMidiMessage(input);
+        if(runControlsRef.current) 
+            runControlsRef.current.processMidiMessage(input);
         handleMIDIMessage(input)
     }
     
@@ -42,32 +41,23 @@ const Homepage = () => {
     }
 
     useEffect(() => {
-        if(addLaneButtonRef.current)
-            window.addEventListener("keydown", addLaneButtonRef.current.handleKeyDown)
-
         if(navigator.requestMIDIAccess) // Ensures that MIDI access is enabled in the current browser
             navigator.requestMIDIAccess().then(midi_connection_success, midi_connection_failure);
         else
             console.log("MIDI Access not supported on current browser");
-
-        return () => { 
-            if(addLaneButtonRef.current) 
-                window.removeEventListener("keydown", addLaneButtonRef.current.handleKeyDown) 
-        }
     }, []);
 
     const { session } = useContext(UserContext);
     useEffect(() => {
+        // TODO: UPDATE THIS SO THAT ACCOUNT CHANGES MID SESSION ARE HANDLED
         startLoop();
     }, []);
 
     const [signupDisplay, setSignupDisplay] = useState('none'); 
     const [loginDisplay, setLoginDisplay] = useState('none'); 
 
-    const [isPaused, setIsPaused] = useState(true); 
-    const [isPlaying, setIsPlaying] = useState(false);
-    const [isStopped, setIsStopped] = useState(false);
-    const [isEditing, setIsEditing] = useState(false);
+    const [showStats, setShowStats] = useState(false); 
+    const [stats, setStats] = useState<StatsObject[]>([]);
 
     return (<>
         { session?.user &&
@@ -150,66 +140,10 @@ const Homepage = () => {
         </div>
 
         <section id='content'>
-        
-        {/* className */}
-        <div id="run_controls" className="">
-            <div id="button_container">
-                {/* Should these be their own components? */}
-                <PlayButton 
-                isPlaying={isPlaying}
-                onComponentClick={() => {
-                    if(!isEditing && !isPlaying) { 
-                        setIsPlaying(true); 
-                        setIsPaused(false);
-                        setIsStopped(false);
-                        return true; 
-                    } else return false; 
-                }}></PlayButton>
-
-                <PauseButton 
-                isPaused={isPaused}
-                onComponentClick={() => {
-                    if(!isEditing && !isPaused) {
-                        setIsPaused(true);
-                        setIsPlaying(false);
-                        setIsStopped(false);
-                        return true;
-                    } else return false;
-                }}></PauseButton>
-
-                <StopButton 
-                isStopped={isStopped}
-                onComponentClick={() => {
-                    if(!isEditing && !isStopped) {
-                        setIsStopped(true);
-                        setIsPlaying(false);
-                        setIsPaused(false);
-                        return true;
-                    } else return false;
-                }}></StopButton>
-
-                <EditButton 
-                isEditing={isEditing}
-                onComponentClick={() => {
-                    if(!isPlaying) {
-                        setIsEditing(!isEditing);
-                        setIsPlaying(false);
-                        setIsStopped(false);
-                        setIsPaused(false);
-                        return true;
-                    } else return false;
-                }}></EditButton>
-
-                <AddLaneButton ref={addLaneButtonRef}></AddLaneButton>
-
-
-                <button id="settings_button">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="lucide lucide-settings"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
-                </button>
+            <RunControls ref={runControlsRef} setStats={setStats} setShowStats={setShowStats}></RunControls>
+            { showStats && <StatsScreen stats={stats} setShowStats={setShowStats}/> }
+            <div id="lane_container">
             </div>
-        </div>
-        <div id="lane_container">
-        </div>
         </section>
     </>)
 }

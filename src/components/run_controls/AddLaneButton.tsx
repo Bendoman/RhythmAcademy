@@ -17,6 +17,7 @@ const AddLaneButton = forwardRef<AddLaneButtonRef, {}>((_, ref) => {
   const inputElementRef = useRef<HTMLInputElement>(null);
 
   const processMidiMessage = (input: MIDIMessageEvent) => {    
+    console.log("From in here");
     if(!listening) return; 
 
     const inputData = input.data; 
@@ -50,7 +51,8 @@ const AddLaneButton = forwardRef<AddLaneButtonRef, {}>((_, ref) => {
       return; 
 
     const root = createRoot(laneEditingSection);
-    root.render(<LaneEditingPanel canvas={laneEditingSection.previousSibling as HTMLCanvasElement}/>);
+    const unmount=()=>{console.log("unmounting"); root.unmount()};
+    root.render(<LaneEditingPanel unmount={unmount} canvas={laneEditingSection.previousSibling as HTMLCanvasElement}/>);
   }
 
   useEffect(() => {
