@@ -12,7 +12,9 @@ import RunControls, { RunControlsRef } from './run_controls/RunControls.tsx';
 import AddLaneButton, { AddLaneButtonRef } from './run_controls/AddLaneButton.tsx';
 
 // Custom scripts and styles
+import './styles/homepage.css';
 import './styles/oldHomepage.css';
+
 import { startLoop, handleMIDIMessage } from '../scripts/main.ts';
 import StatsScreen from './StatsScreen.tsx';
 import { StatsObject } from '../scripts/types.ts';

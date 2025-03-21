@@ -2,6 +2,7 @@ import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } f
 import LaneEditingPanel from '../LaneEditingPanel.tsx'
 import { onAddLaneButtonClick } from '../../scripts/main.ts'
 import { createRoot } from 'react-dom/client';
+import ChangeLaneKey from './ChangeLaneKey.tsx';
 
 export interface AddLaneButtonRef {
   processMidiMessage: (input: MIDIMessageEvent) => void; 
@@ -44,15 +45,35 @@ const AddLaneButton = forwardRef<AddLaneButtonRef, {}>((_, ref) => {
     let key = ""; 
     console.log(inputValue)
     if(inputValue != "Listening..." && inputValue != "Input key..."){ key = inputValue; }
-    const laneEditingSection = onAddLaneButtonClick(key);
-    console.log(laneEditingSection)
+    // TODO: Refactor this name
+    const canvasContainer = onAddLaneButtonClick(key);
+  
+    if(!canvasContainer)
+      return; 
+  
+    const laneEditingSection = canvasContainer.querySelector(".lane_editing_section")
 
     if(!laneEditingSection)
-      return; 
+      return;
 
+    // TODO: Rename these
     const root = createRoot(laneEditingSection);
-    const unmount=()=>{console.log("unmounting"); root.unmount()};
-    root.render(<LaneEditingPanel unmount={unmount} canvas={laneEditingSection.previousSibling as HTMLCanvasElement}/>);
+    const laneContent = document.createElement('div');
+    const contentRoot = createRoot(laneContent);
+
+    const unmount=()=>{console.log("unmounting"); 
+      root.unmount(); contentRoot.unmount()
+    };
+    
+    root.render(<LaneEditingPanel unmount={unmount} canvas={canvasContainer.querySelector('canvas') as HTMLCanvasElement}/>);
+
+    // TODO: Refactor name
+    laneContent.classList.add('lane_content');
+    laneContent.innerText = "testing";
+    contentRoot.render(<ChangeLaneKey/>)
+  
+    canvasContainer.appendChild(laneContent);
+
   }
 
   useEffect(() => {

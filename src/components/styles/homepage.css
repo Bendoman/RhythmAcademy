@@ -1,113 +1,92 @@
-/* #region ( CSS Variables ) */
-/* TODO: Put this in index and have to addressable by all css files */
+/* #region ( global ) */
 :root {
     --site_background: #131B23;
     --lane_background: #ECDFCC;
-  }
+}
+  
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif; 
+}
+
+body {      
+    overflow-y: hidden;
+    background-color: var(--site_background);
+}
 /* #endregion */
 
-* {
-    /* background-color: blue; */
+/* #region ( session info & debug text ) */
+.session_info {
+    top: 0;
+    right: 0;
+    padding: .5em; 
+    position: absolute;
+    
+    color: white; 
+    background-color: black;
 }
+
+.session_info a {
+    color: white;
+    padding: .15em; 
+    margin: 0 .5em 0 .5em;
+    text-decoration: none;
+}
+
+.session_info a:hover {
+    cursor: pointer;
+    background-color: grey;
+}
+
+.supabase-auth-ui_ui-container input{
+  color: white;
+}
+
+#debug_text {
+    left: 1em;
+    bottom: .5em;
+    padding: .5em;
+    position: absolute;
+
+    color: black; 
+    border-radius: 15px;
+    background-color: var(--lane_background); 
+}
+/* #endregion */
+
+/* TODO: Move to settings panel css if converted to own component */
+/* #region ( settings panel ) */
+#settings_panel {
+    display: none;
+}
+
+#settings_panel.visible {
+    top: 25vh;
+    left: 25vw;
+    width: 50vw;
+    height: 50vh;
+    position: absolute;
+    
+    gap: 1em;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+    justify-content: center;
+
+    border-radius: 15px;
+    background-color: teal;
+}
+/* #endregion */
+
 
 #content {
     width: 100vw;
     height: 100vh;
-    background-color: var(--site_background);
-}
-
-/* #region ( Debug )*/
-.session_info {
-    background-color: black;
-    color: white; 
-    
-    position: absolute;
-    top: 0;
-    right: 0;
-
-    padding: .5em; 
-}
-
-.session_info a {
-    text-decoration: none;
-    color: white;
-    margin: 0 .5em 0 .5em;
-}
-
-.session_info a:hover {
-    background-color: grey;
-}
-
-#debug_text {
-    padding: .5em;
-    color: black; 
-    background-color: var(--lane_background); 
-    border-radius: 15px;
-    
-    position: absolute;
-    left: 1em;
-    bottom: .5em;
-}
-/* #endregion */
-
-/* #region ( Settings Panel ) */
-#settings_panel {
-    display: none;
-}
   
-#settings_panel.visible {
-display: flex;
-flex-direction: column;
-align-items: center;
-justify-content: center;
-
-background-color: teal;
-border-radius: 15px;
-
-position: absolute;
-left: 25vw;
-width: 50vw;
-
-top: 25vh;
-height: 50vh;
-z-index: 2;
-
-gap: 1em;
-}
-/* #endregion */
-
-/* #region ( Lanes ) */
-#lane_container {
-    width: 100%;
-    height: 100%;
-
     display: flex;
-    gap: 3em;
-    justify-content: center;
 }
-
-.lane_canvas {
-    background-color: var(--lane_background);
-    border-radius: 15px;
-    z-index: 2;
-}
-
-.lane_canvas.editing {
-    /* background-color: blue;  */
-    color: #14141410;
-}
-/* #endregion */
-
-
-/* #region (Sidebar) */
-
-
-
-/* #endregion */
-
-
-
-/* #region () */
-/* #endregion */
 
 

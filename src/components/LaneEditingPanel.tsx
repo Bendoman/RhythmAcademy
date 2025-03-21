@@ -14,6 +14,7 @@ interface ILaneEditingPanelProps {
   unmount: () => void; 
 }
 
+// TODO: See if unmount is necessary
 const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas, unmount }) => { 
   const lane: Lane = findLaneFromCanvas(canvas);
   // TODO: Improve these names

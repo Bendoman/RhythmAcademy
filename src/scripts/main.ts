@@ -433,6 +433,7 @@ function createNewLane(
   canvasContainer.appendChild(newCanvas);
 
   const laneEditingSection = document.createElement('div') as HTMLElement;
+  laneEditingSection.classList.add('lane_editing_section');
   // laneEditingSection.innerHTML = getLaneEditingHTML(newCanvas.id, bpm, measureCount, hitsound, "metronome1", '1/16', maxMeasureCount);
   canvasContainer.appendChild(laneEditingSection);
 
@@ -487,7 +488,8 @@ function createNewLane(
   // Dynamically updates lane widths based on the number of lanes
   updateAllLaneSizes();
 
-  return laneEditingSection;
+  // return laneEditingSection;
+  return canvasContainer; 
 }
 
 function findLaneFromEvent(event: Event): Lane {
@@ -771,6 +773,8 @@ function closePatternClick(event: Event) {
 }
 
 export function deleteLane(lane: Lane, canvas: HTMLCanvasElement) {
+  resetLanesEditingStatus();
+  
   let associatedCanvasContainer = canvas.closest('.canvas_container');
   if(!associatedCanvasContainer)
     return; 
@@ -797,6 +801,7 @@ export function deleteLane(lane: Lane, canvas: HTMLCanvasElement) {
     
     resetLanes();
   })
+
   updateAllLaneSizes(); 
 }
 
@@ -1639,12 +1644,14 @@ export function onAddLaneButtonClick(inputKey: string) {
 
   paused = true; 
   // TODO: Add input updating after lane creation
-  let laneEditingSection = createNewLane(80, 1, 200, 'kick', 3, [], [4, 4], inputKey ? inputKey : "(?)", 16);
+  // let laneEditingSection = createNewLane(80, 1, 200, 'kick', 3, [], [4, 4], inputKey ? inputKey : "(?)", 16);
+  let canvasContainer = createNewLane(80, 1, 200, 'kick', 3, [], [4, 4], inputKey ? inputKey : "(?)", 16);
 
   resetLanes();
   drawLanes();
   
-  return laneEditingSection; 
+  // return laneEditingSection; 
+  return canvasContainer; 
 }
 // #endsection
 

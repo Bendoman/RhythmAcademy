@@ -7,6 +7,8 @@ import AddLaneButton, { AddLaneButtonRef } from './AddLaneButton.tsx';
 import Note from '../../scripts/Note.ts';
 import { StatsObject } from '../../scripts/types.ts';
 
+import '../styles/runControls.css';
+
 export interface RunControlsRef {
     processMidiMessage: (input: MIDIMessageEvent) => void; 
 }
@@ -16,6 +18,7 @@ interface RunControlsProps {
     setStats: React.Dispatch<React.SetStateAction<StatsObject[]>>;
 }
 
+// TODO: Refactor this name
 const RunControls = forwardRef<RunControlsRef, RunControlsProps>(({ setShowStats, setStats }, ref) => {
     const addLaneButtonRef = useRef<AddLaneButtonRef | null>(null);
 
@@ -29,7 +32,8 @@ const RunControls = forwardRef<RunControlsRef, RunControlsProps>(({ setShowStats
     const [isPlaying, setIsPlaying] = useState(false);
     const [isStopped, setIsStopped] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
-    const [menuHover, setMenuHover] = useState(true);
+    // TODO: Refactor this name
+    const [menuHover, setMenuHover] = useState(false);
 
     return (
     <>
@@ -60,6 +64,7 @@ const RunControls = forwardRef<RunControlsRef, RunControlsProps>(({ setShowStats
                     setIsPaused(true);
                     setIsPlaying(false);
                     setIsStopped(false);
+                    setShowStats(false);
                     return true;
                 } else return false;
             }}></PauseButton>
@@ -86,6 +91,7 @@ const RunControls = forwardRef<RunControlsRef, RunControlsProps>(({ setShowStats
                     setIsPlaying(false);
                     setIsStopped(false);
                     setIsPaused(false);
+                    setShowStats(false);
                     return true;
                 } else return false;
             }}></EditButton>
@@ -96,6 +102,7 @@ const RunControls = forwardRef<RunControlsRef, RunControlsProps>(({ setShowStats
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="lucide lucide-settings"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
             </button>
             
+            {/* TODO: Refactor this name and change how the toggle works*/}
             <button id="lock_button"
             className={menuHover ? 'selected' : ''}
             onClick={() => {setMenuHover(!menuHover)}}>

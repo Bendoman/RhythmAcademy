@@ -1,27 +1,5 @@
-/* #region ( CSS Variables ) */
-:root {
-    --site_background: #131B23;
-    --lane_background: #ECDFCC;
-  }
-  /* #endregion */
-  
-  * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-    font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif; 
-  }
-  
-  body {
-    overflow-y: hidden;
-  }
-  
-  #content {
-    width: 100vw;
-    height: 100vh;
-  
-    background-color: var(--site_background);
-  }
+ 
+
   
   /* #region ( Sidebar ) */
   /* 
@@ -104,10 +82,14 @@
     transition: left .65s ease-in-out;
   
     margin-right: -25px;
+    opacity: 1;
+
+    pointer-events: all;
   }
   
   
   .lane_editing {
+    pointer-events: none;
     /* width: 10vw; */
     height: 100%;
     border-radius: 15px;
@@ -119,9 +101,11 @@
     padding-left: 45px;
     padding-right: 20px;
     
+
     left: -100%;
     
     position: absolute;
+    opacity: 0;
   
     z-index: 1;
     display: flex;
@@ -232,6 +216,7 @@
   
   .canvas_container {
     z-index: 0;
+    position: relative;
     display: flex;
     border: 1px dashed #eccccc00;
     transition: border .1s linear, background-color .5s ease;
@@ -248,88 +233,11 @@
     background-color: #ecdfcc33;
   }
   
-  #debug_text {
-    padding: .5em;
-    color: black; 
-    background-color: var(--lane_background); 
-    border-radius: 15px;
-    
-    position: absolute;
-    left: 1em;
-    bottom: .5em;
-  }
-  
-  #run_controls {
-    z-index: 1;
-    border: 2px solid var(--site_background);
-    box-sizing: border-box;
-    color: white;
-    /* height: 2.5em; */
-    position: absolute;
-    top: .5em;
-    left: .5em;
-    /* left: 50%; */
-    /* transform: translateX(-50%); */
-    
-    background-color: var(--lane_background);
-    /* align-content: center; */
-    
-    /* display: flex;
-    flex-direction: column; */
-    padding: 0;
-    /* gap: .5em; */
-    
-    border-radius: 10px;
-    width: 1vw;
-    height: 1.5vh;
-    overflow: hidden;
-    transition: width 0.5s ease, height 0.5s ease, padding 0.3s ease;
-  }
+
+
 
   
-  #run_controls:hover, #run_controls.active {
-    width: auto;
-    padding: .5em;
-    height: fit-content;
-  }
 
-  #run_controls:hover #button_container, #button_container.active {
-    width: 100%;
-    opacity: 1;
-    pointer-events: all;
-    height: fit-content;
-  }
-
-  #button_container {
-    pointer-events: none;
-    opacity: 0;
-    height: 0vh;
-    display: flex;
-    flex-direction: row;
-    justify-content: center;
-    gap: 0.5em;
-    transition: height 0.3s;
-  }
-
-  
-  #button_container button {
-    border: none;
-    text-decoration: none;
-    padding: 0.25em;
-    border-radius: 5px;
-  
-    /* color: white; */
-    background-color: gray;
-  }
-  
-  /* TEMP COLOURS */
-  #button_container button.selected {
-    background-color: orange;
-  }
-  
-  #button_container button:hover {
-    background-color: green;
-  }
   
 
   /* .lane_canvas:hover {
@@ -342,29 +250,7 @@
   }
   
   
-  #settings_panel {
-    display: none;
-  }
-  
-  #settings_panel.visible {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    
-    background-color: teal;
-    border-radius: 15px;
-    
-    position: absolute;
-    left: 25vw;
-    width: 50vw;
-    
-    top: 25vh;
-    height: 50vh;
-    z-index: 2;
-  
-    gap: 1em;
-  }
+
   
   #workspace_measure_count_container {
     display: flex;
@@ -466,43 +352,9 @@
   .load_pattern[disabled] { background-color: #ecdfcc5e; }
   .load_pattern[disabled]:hover { background-color: #ecdfcc5e; color: #131B23;}
 
-  .session_info {
-    background-color: black;
-    color: white; 
-    
-    position: absolute;
-    top: 0;
-    right: 0;
 
-    padding: .5em; 
-}
 
-.session_info a {
-    text-decoration: none;
-    color: white;
-    margin: 0 .5em 0 .5em;
-    padding: .15em; 
-}
 
-.session_info a:hover {
-    background-color: grey;
-    cursor: pointer;
-}
-
-.supabase-auth-ui_ui-container input{
-  color: white;
-}
-
-#debug_text {
-    padding: .5em;
-    color: black; 
-    background-color: var(--lane_background); 
-    border-radius: 15px;
-    
-    position: absolute;
-    left: 1em;
-    bottom: .5em;
-}
 
 /* TODO Make these styles DYNAMIC */
 .edit_mode_container {
@@ -579,3 +431,5 @@
 .statsScreen {
   overflow: scroll;
 }
+
+

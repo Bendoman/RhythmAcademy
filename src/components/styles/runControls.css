@@ -1,0 +1,51 @@
+#run_controls {
+  padding: .25em .5em;
+  background-color: var(--lane_background);
+
+  transition: transform 0.5s ease;
+}
+
+#run_controls.active {
+  /* left: -10em; */
+  /* position: absolute; */
+  transform: translateX(-5em);
+}
+
+#button_container {
+  gap: .25em;
+  display: flex;
+  flex-direction: column;
+}
+
+#button_container input {
+  max-width: 1.5em;
+}
+
+
+/* #region ( buttons )  */
+#button_container button {
+  border: none;
+  text-decoration: none;
+  padding: 0.25em;
+  border-radius: 5px;
+
+
+  background-color: gray;
+}
+
+#button_container button.selected {
+  background-color: orange;
+}
+
+#button_container button:hover {
+  background-color: green;
+}
+
+
+#lock_button.selected {
+  background-color: var(--lane_background) !important;
+  top: .25em;
+  right: -5.5em;
+  position: absolute;
+}
+/* #endregion */
