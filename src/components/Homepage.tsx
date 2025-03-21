@@ -18,6 +18,8 @@ import './styles/oldHomepage.css';
 import { startLoop, handleMIDIMessage } from '../scripts/main.ts';
 import StatsScreen from './StatsScreen.tsx';
 import { StatsObject } from '../scripts/types.ts';
+import SessionLoadScreen from './SessionLoadScreen.tsx';
+import SessionSaveScreen from './SessionSaveScreen.tsx';
 
 
 const Homepage = () => {
@@ -60,6 +62,9 @@ const Homepage = () => {
 
     const [showStats, setShowStats] = useState(false); 
     const [stats, setStats] = useState<StatsObject[]>([]);
+
+    const [showSessionLoadScreen, setSessionLoadScreen] = useState(false); 
+    const [showSessionSaveScreen, setSessionSaveScreen] = useState(false); 
 
     return (<>
         { session?.user &&
@@ -142,8 +147,12 @@ const Homepage = () => {
         </div>
 
         <section id='content'>
-            <RunControls ref={runControlsRef} setStats={setStats} setShowStats={setShowStats}></RunControls>
+            <RunControls ref={runControlsRef} setStats={setStats} setShowStats={setShowStats} setSessionLoadScreen={setSessionLoadScreen} setSessionSaveScreen={setSessionSaveScreen}
+            showSessionLoadScreen={showSessionLoadScreen} showSessionSaveScreen={showSessionSaveScreen}
+            ></RunControls>
             { showStats && <StatsScreen stats={stats} setShowStats={setShowStats}/> }
+            { showSessionLoadScreen && <SessionLoadScreen setSessionLoadScreen={setSessionLoadScreen}/>}
+            { showSessionSaveScreen && <SessionSaveScreen setSessionSaveScreen={setSessionSaveScreen}/>}
             <div id="lane_container">
             </div>
         </section>

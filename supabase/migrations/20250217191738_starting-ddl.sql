@@ -14,7 +14,7 @@ values
 insert into storage.buckets
   (id, name, public)
 values
-  ('workspaces', 'workspaces', false);
+  ('sessions', 'sessions', false);
 
 -- RLS 
 -- Patterns bucket rules 
@@ -36,12 +36,12 @@ with check (
   (storage.foldername(name))[1] = (select auth.uid()::text)
 );
 
-create policy "Allow authenticated uploads for workspaces bucket"
+create policy "Allow authenticated uploads for sessions bucket"
 on storage.objects
 for insert
 to authenticated
 with check (
-  bucket_id = 'workspaces' and
+  bucket_id = 'sessions' and
   (storage.foldername(name))[1] = (select auth.uid()::text)
 );
 

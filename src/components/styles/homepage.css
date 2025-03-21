@@ -45,7 +45,7 @@ body {
 }
 
 #debug_text {
-    left: 1em;
+    right: 1em;
     bottom: .5em;
     padding: .5em;
     position: absolute;
@@ -88,5 +88,3 @@ body {
   
     display: flex;
 }
-
-

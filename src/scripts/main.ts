@@ -50,7 +50,7 @@ export function handleMIDIMessage(input: MIDIMessageEvent) {
 }
 
 // #region ( Global variables )
-let lanes: Lane[] = []; 
+export let lanes: Lane[] = []; 
 // Associates an inputkey string with the index of its associated lane within the lanes list
 const input_lane_pairs: { [key: string ]: number } = {}; 
 // Associates a canvas' ID with its lane
@@ -807,8 +807,6 @@ export function deleteLane(lane: Lane, canvas: HTMLCanvasElement) {
 
 
 function deleteButtonClick(event: Event) {
-
-
   let target = event.target as HTMLElement;
   let associatedCanvasContainer = target.closest('.canvas_container');
   let associatedCanvas = associatedCanvasContainer?.querySelector('canvas')!;
@@ -1664,3 +1662,22 @@ export function findLaneFromCanvas(canvas: HTMLCanvasElement) {
 export function setNewPatternMeasures(measures: number) {
   newPatternMeasures = measures
 }
+
+export function saveSession(name: string) {
+  console.log(name);
+
+  return 'saved!'; 
+}
+
+export function loadSession(name: string) {
+
+}
+
+
+
+export function setLanes(newLanes: Lane[]) {
+  lanes = newLanes; 
+}
+
+
+

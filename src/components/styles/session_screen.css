@@ -1,0 +1,35 @@
+.session_load_screen, .session_save_screen {
+    position: absolute;
+
+    top: 2em; 
+    left: 50%; 
+    
+    width: 50vw;
+    height: 60vh;
+  
+    border-radius: 15px;
+    border: 3px solid #ECDFCC;
+    background-color: var(--site_background);
+  
+    transform: translateX(-50%);
+  
+    z-index: 1;
+  
+    color: var(--lane_background);
+
+    padding: 2.25em;
+    
+}
+
+.save_content, .load_content {
+    height: 100%;
+    width: 100%;
+    background-color: #ecdfcc7c;
+    border-radius: 10px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: .25em;
+    
+}

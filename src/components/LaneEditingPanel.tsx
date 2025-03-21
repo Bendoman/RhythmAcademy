@@ -52,7 +52,7 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas, unmount })
     let data = await retrieveBucketList('lanes');
     let patternSelectInnerHTML = '';
     data?.forEach((lane) => {
-      patternSelectInnerHTML += `<option value="${lane.name}" ${saveLaneNameRef.current?.value == lane.name ? 'selected' : ''}>${lane.name}</>`;
+      patternSelectInnerHTML += `<option value="${lane.name}" ${saveLaneNameRef.current?.value == lane.name ? 'selected' : ''}>${lane.name}</option>`;
     });
 
     loadLaneSelectRef.current.innerHTML = patternSelectInnerHTML;
