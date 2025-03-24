@@ -12,7 +12,6 @@
     width: 2vw;
     height: 100vh;
     background-color: white;
-    
     transition: width .25s;
     transition-timing-function: ease-in-out;
   }

@@ -10,27 +10,7 @@ import { supabase } from '../scripts/supa-client.ts';
 import { useContext } from "react";
 import { UserContext } from "../components/App.tsx";
 import { StatsObject } from "./types.ts";
-
 // #endregion
-
-// ( Midi Access Setup )
-// if(navigator.requestMIDIAccess) { // Ensures that MIDI access is enabled in the current browser
-//   navigator.requestMIDIAccess().then(midi_connection_success, midi_connection_failure);
-// }
-
-// TODO: Will need redo this so that it runs by default. Will need to remove existing event listeners.
-// function midi_connection_success(midiAccess: MIDIAccess) {
-//   midiAccess.onstatechange = updateDevices;
-//   const inputs = midiAccess.inputs;
-  
-//   inputs.forEach(input => { input.onmidimessage = processMidiMessage;});
-// }
-// // TODO: Alert the user in input selection menu of the failure
-// function midi_connection_failure() { console.log("Failed to connect midi device"); }
-
-// MIDI related
-// TODO: Dynamically update list of available midi inputs 
-// function updateDevices(event: Event) { console.log(event); }
 
 export function handleMIDIMessage(input: MIDIMessageEvent) {
     const inputData = input.data; 
@@ -95,11 +75,12 @@ let settingsButton: HTMLElement | null;
 
 // Settings panel
 let workspaceMeasureCountInput: HTMLElement | null;
-// #endregion
 
 let newLaneInput: HTMLElement | null;
 let settingsPanel: HTMLElement | null;
 let settingsCloseButton: HTMLElement | null;
+// #endregion
+
 
 
 // TODO: Move all of these somewhere more appropriate
@@ -131,8 +112,14 @@ function retrieveElements() {
     window.addEventListener('keydown', (event) => {
         if(keyHeld[event.key] == true)
           return;
-      
-        let associatedLane = lanes[input_lane_pairs[event.key]];
+        
+        if(editing && event.key == "Escape") {
+          resetLanesEditingStatus();
+          return; 
+        }
+
+
+        let associatedLane = lanes[input_lane_pairs[event.key.toUpperCase()]];
         if(associatedLane != null)
           associatedLane.handleInputOn(paused); 
       
@@ -141,7 +128,7 @@ function retrieveElements() {
     })
 
     window.addEventListener('keyup', (event) => {
-        let associatedLane = lanes[input_lane_pairs[event.key]];
+        let associatedLane = lanes[input_lane_pairs[event.key.toUpperCase()]];
         if(associatedLane != null)
           associatedLane.handleInputOff(); 
       
@@ -218,6 +205,7 @@ function retrieveElements() {
     playButton = document.getElementById('play_button');
     playButton?.addEventListener('click', () => { 
         // TODO: Look into single lane playing while in edit mode
+        console.log("TEST HERE");
         if(editing)
           return;
         
@@ -422,7 +410,7 @@ function createNewLane(
   lanes.push(new_lane); 
   // console.log(`Adding new lane: to lanes`); 
   // console.log(new_lane)
-  input_lane_pairs[new_lane.inputKey] = lanes.length - 1;
+  input_lane_pairs[new_lane.inputKey.toUpperCase()] = lanes.length - 1;
   canvas_lane_pairs[newCanvas.id] = new_lane;
 
   new_lane.drawInputVisual();
@@ -1681,3 +1669,15 @@ export function setLanes(newLanes: Lane[]) {
 
 
 
+export function assignLaneInput(lane: Lane, inputKey: string) {
+  if(Object.keys(input_lane_pairs).includes(inputKey)) {
+    console.error('Input key already in use');
+    return;
+  }
+
+  delete input_lane_pairs[lane.inputKey.toUpperCase()];
+
+  lane.inputKey = inputKey; 
+  input_lane_pairs[inputKey.toUpperCase()] = lanes.indexOf(lane); 
+  drawSingleLane(lane); 
+}

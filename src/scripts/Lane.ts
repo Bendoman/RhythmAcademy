@@ -211,7 +211,10 @@ export default class Lane {
 
         this.ctx.fillStyle = this.pressed ? COLORS.INPUT_KEY_PRESSED : COLORS.INPUT_KEY_UNPRESSED;
         this.ctx.font = "italic 50px Inria-serif"
-        this.ctx.fillText(this.inputKey.toUpperCase(), this.canvas.width/2 - 20, this.topOfInputVisual + 50); 
+        let displayedInput = this.inputKey == ' ' ? 'Space' : this.inputKey.toUpperCase(); 
+        let textWidth = this.ctx.measureText(displayedInput).width;
+
+        this.ctx.fillText(displayedInput, this.canvas.width/2 - (textWidth / 2), this.topOfInputVisual + 50); 
     }
 
         

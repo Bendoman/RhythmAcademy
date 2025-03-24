@@ -12,6 +12,7 @@ const AddLaneButton = forwardRef<AddLaneButtonRef, {}>((_, ref) => {
   const [listening, setListening] = useState(false);
   const listeningRef = useRef(false);
 
+  // TODO: Handle this in same way as change lane key
   const [inputValue, setInputValue] = useState("Input key...");
   const inputValueRef = useRef("Input key...");
 
@@ -65,15 +66,16 @@ const AddLaneButton = forwardRef<AddLaneButtonRef, {}>((_, ref) => {
       root.unmount(); contentRoot.unmount()
     };
     
-    root.render(<LaneEditingPanel unmount={unmount} canvas={canvasContainer.querySelector('canvas') as HTMLCanvasElement}/>);
+    const laneCanvas = canvasContainer.querySelector('canvas') as HTMLCanvasElement
+
+    root.render(<LaneEditingPanel unmount={unmount} canvas={laneCanvas}/>);
 
     // TODO: Refactor name
     laneContent.classList.add('lane_content');
     laneContent.innerText = "testing";
-    contentRoot.render(<ChangeLaneKey/>)
+    contentRoot.render(<ChangeLaneKey canvas={laneCanvas}/>)
   
     canvasContainer.appendChild(laneContent);
-
   }
 
   useEffect(() => {

@@ -1,8 +1,29 @@
 .change_lane_key {
-    left: 1em;
-    bottom: 1em;
+    left: 1.25em;
+    bottom: 1.25em;
     position: absolute;
-    background-color: red;
-    padding: 1em;
+
     z-index: 2;
+
+    display: flex;
+    gap: .25em;
+}
+
+.change_lane_key button {
+  border: none;
+  padding: 0.25em;
+  border-radius: 5px;
+  text-decoration: none;
+
+  color: #ECDFCC;
+  background-color: #131B23;
+}
+
+.change_lane_key button:hover {
+    cursor: pointer;
+    background-color: orange;
+}
+
+.change_lane_key button:focus {
+    background-color: green;
 }
