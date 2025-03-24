@@ -12,12 +12,16 @@ test.describe("Layout functions", () => {
   })
 
   test('collapse run controls', async ({ page }) => {
+      await page.screenshot({ path: 'screenshots/before-click.png' });
+
       await page.click('#lock_button');
 
       await page.waitForTimeout(200); 
 
       const classList = await page.locator('#run_controls').getAttribute('class');
       expect(classList).toContain('active');
+
+      await page.screenshot({ path: 'screenshots/after-click.png' });
   });
 });
 
