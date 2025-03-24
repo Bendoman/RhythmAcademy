@@ -410,7 +410,8 @@
 
 .tab {
   text-align: center;
-  width: 3em;
+  min-width: 3em;
+
   /* color: #131B23; */
   color: #ECDFCC;
   background-color: #ecdfcc62;

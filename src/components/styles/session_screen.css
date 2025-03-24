@@ -17,19 +17,23 @@
   
     color: var(--lane_background);
 
-    padding: 2.25em;
     
 }
 
 .save_content, .load_content {
-    height: 100%;
-    width: 100%;
-    background-color: #ecdfcc7c;
+    /* height: 100%;
+    width: 100%; */
+    /* background-color: #ecdfcc7c; */
     border-radius: 10px;
 
     display: flex;
     align-items: center;
-    justify-content: center;
+    /* justify-content: center; */
     gap: .25em;
-    
+
+    padding: 2.25em;
+}
+
+.session_load_screen .tab {
+    padding: 0 0.25em 0 0.25em;
 }

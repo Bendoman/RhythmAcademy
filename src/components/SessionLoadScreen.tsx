@@ -32,12 +32,14 @@ const createNewLane = (inputKey: string) => {
         root.unmount(); contentRoot.unmount()
     };
     
-    root.render(<LaneEditingPanel unmount={unmount} canvas={canvasContainer.querySelector('canvas') as HTMLCanvasElement}/>);
+    const canvas = canvasContainer.querySelector('canvas') as HTMLCanvasElement
+
+    root.render(<LaneEditingPanel unmount={unmount} canvas={canvas}/>);
 
     // TODO: Refactor name
     laneContent.classList.add('lane_content');
     laneContent.innerText = "testing";
-    contentRoot.render(<ChangeLaneKey/>)
+    contentRoot.render(<ChangeLaneKey canvas={canvas}/>)
     
     canvasContainer.appendChild(laneContent);
 }
@@ -48,6 +50,7 @@ const SessionLoadScreen: React.FC<ISessionLoadScreenProps>
     const [loadStatus, setLoadStatus] = useState(''); 
     const loadSessionSelectRef = useRef<HTMLSelectElement | null>(null);
 
+    const [selectedTab, setSelectedTab] = useState('private');
     const onLoadSessionClick = async (sessionName: string) => {
         const { data, error } = await supabase.auth.getUser();
 
@@ -66,7 +69,7 @@ const SessionLoadScreen: React.FC<ISessionLoadScreenProps>
         }
         console.log(sessionName);
 
-        let sessionData = await retrieveBucketData('sessions', `${data.user.id}/${sessionName}`);
+        let sessionData = await retrieveBucketData(`${selectedTab}_sessions`, `${data.user.id}/${sessionName}`);
         let newLanes = sessionData.lanes as Lane[];
         
         newLanes.forEach(newLane => {
@@ -103,7 +106,7 @@ const SessionLoadScreen: React.FC<ISessionLoadScreenProps>
         if(!loadSessionSelectRef || !loadSessionSelectRef.current)
             return; 
 
-        let data = await retrieveBucketList('sessions');
+        let data = await retrieveBucketList(`${selectedTab}_sessions`);
         let sessionSelectInnerHTML = ''; 
         data?.forEach(session => {
             sessionSelectInnerHTML += `<option value="${session.name}">${session.name}</option>`;
@@ -114,13 +117,22 @@ const SessionLoadScreen: React.FC<ISessionLoadScreenProps>
 
     useEffect(() => {
         getSavedSessions();
-    }, []);
+    }, [selectedTab]);
 
     return (<>
     <div className="session_load_screen">
         <div className="closeContainer"
             onClick={()=> { setSessionLoadScreen(false); }}>
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="lucide lucide-circle-x"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>
+        </div>
+
+        <div className="tabs">
+            <div className={`tab ${selectedTab == 'private' ? 'selected' : ''}`} 
+            onClick={()=>{setSelectedTab('private')}}><p>Public</p></div>
+            <div className={`tab ${selectedTab == 'public' ? 'selected' : ''}`} 
+            onClick={()=>{setSelectedTab('public')}}>Private</div>
+            <div className={`tab ${selectedTab == 'friend' ? 'selected' : ''}`} 
+            onClick={()=>{setSelectedTab('friend')}}>Friend's</div>
         </div>
 
         <div className="load_content">
@@ -133,6 +145,8 @@ const SessionLoadScreen: React.FC<ISessionLoadScreenProps>
             }}>load</button>
 
             { loadStatus && <p>{loadStatus}</p>}
+
+
         </div>
     </div>
     </>)

@@ -13,12 +13,14 @@ interface ISessionSaveScreenProps {
 const SessionSaveScreen: React.FC<ISessionSaveScreenProps> 
 = ({ setSessionSaveScreen }) => {
     let sessionName = useRef<string>('');
+    let save_bucket_ref = useRef<HTMLSelectElement>(null); 
+
     const [savedStatus, setSavedStatus] = useState(''); 
     
     const onSaveSessionClick = async (sessionName: string) => {
         const { data, error } = await supabase.auth.getUser();
 
-        if(!data || !data.user){
+        if(!data || !data.user || !save_bucket_ref.current){
             setSavedStatus('Error getting user info');
             return;  
         }
@@ -36,7 +38,7 @@ const SessionSaveScreen: React.FC<ISessionSaveScreenProps>
 
         console.log(sessionObject.lanes);
         let content = JSON.stringify(sessionObject);
-        await uploadToBucket('sessions', `${data.user.id}/${sessionName}`, sessionName,content);
+        await uploadToBucket(`${save_bucket_ref.current.value}_sessions`, `${data.user.id}/${sessionName}`, sessionName,content);
 
         setSavedStatus(`session: ${sessionName} saved!`);
     }
@@ -55,6 +57,12 @@ const SessionSaveScreen: React.FC<ISessionSaveScreenProps>
             <button id='save_session_button' onClick={() => {
                 onSaveSessionClick(sessionName.current);
             }}>Save</button>
+
+            <select ref={save_bucket_ref} name="bucket" id="save_bucket">
+                <option value="public">public</option>
+                <option value="private">private</option>
+                <option value="friend">friend</option>
+            </select>
 
             { savedStatus && <p>{savedStatus}</p>}
         </div>
