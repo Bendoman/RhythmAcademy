@@ -86,13 +86,14 @@
     pointer-events: all;
   }
   
-  
   .lane_editing {
+    
     pointer-events: none;
     /* width: 10vw; */
     height: 100%;
     border-radius: 15px;
     background-color: #ecdfcc69;
+    
   
     /* TODO: Make this more solid with run controls */
     padding-top: 5em;
@@ -117,7 +118,7 @@
     gap: 1em;
     color: #ECDFCC;
 
-    overflow: scroll;
+    overflow: auto;
   }
   
   .lane_editing input{
@@ -429,7 +430,7 @@
 }
 
 .statsScreen {
-  overflow: scroll;
+  overflow: auto;
 }
 
 

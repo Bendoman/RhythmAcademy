@@ -18,8 +18,6 @@ const ChangeLaneKey: React.FC<IChangeLaneKeyProps> = ({ canvas }) => {
     
 
     const handleKeyDown = useRef((event: KeyboardEvent) => {   
-        console.log(event); 
-
         if(event.key == 'space' || event.key == ' ')
             event.preventDefault(); 
 

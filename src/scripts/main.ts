@@ -1238,6 +1238,8 @@ function enableAudio() {
 
 
 function canvasMouseWheel(event: WheelEvent) {
+  console.log(event); 
+  
   let canvas = event.target as HTMLCanvasElement;
   if(!editing || !canvas.classList.contains('editing'))
     return; 

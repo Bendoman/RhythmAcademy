@@ -37,6 +37,23 @@ const StatsScreen: React.FC<IStatsScreenProps> = ({ setShowStats, stats }) => {
         setNotesPlayed(notesHitRef.current + notesMissedRef.current)
     }, []);
 
+    // TODO: Change this from mean to some form of medium
+    const getAverageDeviation = () => {
+        let average = 0; 
+        if(selectedTab < 0) {
+            stats.forEach(statObject => {
+                let hits = statObject.notesHit;
+                average += hits.length > 0 ? hits.reduce((sum, note) => sum + note.timeToZone, 0) / hits.length : 0; 
+            });
+            average = average/stats.length; 
+        } else {
+            let hits = stats[selectedTab].notesHit;
+            average = hits.length > 0 ? hits.reduce((sum, note) => sum + note.timeToZone, 0) / hits.length : 0; 
+        }
+        
+        return average > 0 ? `${Math.abs(average).toFixed(2)}ms early` : `${Math.abs(average).toFixed(2)}ms late`; 
+    }
+
     return (
     <>
     <div className="statsScreen">
@@ -59,6 +76,7 @@ const StatsScreen: React.FC<IStatsScreenProps> = ({ setShowStats, stats }) => {
         </div>
 
         <div className="statContent">
+            {/* TODO: Change the percentages to be relative to notes played not total notes */}
             <p>Total notes:  {selectedTab < 0 ? totalNotes : stats[selectedTab].totalNotes}</p>
             <p>Notes played: {selectedTab < 0 ? notesPlayed : stats[selectedTab].notesHit.length + stats[selectedTab].notesMissed.length}</p><br/>
 
@@ -68,7 +86,11 @@ const StatsScreen: React.FC<IStatsScreenProps> = ({ setShowStats, stats }) => {
 
             <p>Notes missed: {selectedTab < 0 ? notesMissed : stats[selectedTab].notesMissed.length}</p>
             <p>Missed percentage: {selectedTab < 0 ? ((notesMissed/totalNotes) * 100).toFixed(2) : 
-            ((stats[selectedTab].notesMissed.length/stats[selectedTab].totalNotes)*100).toFixed(2)}%</p>
+            ((stats[selectedTab].notesMissed.length/stats[selectedTab].totalNotes)*100).toFixed(2)}%</p><br/>
+
+            <p>Hits mean deviation: { getAverageDeviation() }</p>
+            <p>Hits median deviation: {  }</p>
+            <p>Hits mean average deviation: {  }</p>
         </div>
     </div>
 
