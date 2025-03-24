@@ -26,13 +26,13 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps
 
-      - name: Start Vite dev server
-        run: npm run dev &
-        env:
-          NODE_ENV: test
+      # - name: Start Vite dev server
+      #   run: npm run dev &
+      #   env:
+      #     NODE_ENV: test
 
-      - name: Wait for Vite to be ready
-        run: npx wait-on http://localhost:5050
+      # - name: Wait for Vite to be ready
+      #   run: npx wait-on http://localhost:5050
 
       - name: Run Playwright tests
         run: npx playwright test
