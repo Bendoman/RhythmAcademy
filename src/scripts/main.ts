@@ -497,6 +497,7 @@ export function resetLanesEditingStatus() {
   patternInCreationPositions = [];
   editMode = EDIT_MODES.NOTE_MODE;
 
+  console.log(lanes);
   lanes.forEach(lane => {
     lane.canvas.classList.remove('editing');
     lane.canvas.parentElement?.classList.remove('background');
@@ -769,7 +770,7 @@ export function deleteLane(lane: Lane, canvas: HTMLCanvasElement) {
   
   delete input_lane_pairs[lane.inputKey];
   console.log(lanes);
-  lanes.splice(lanes.indexOf(lane));
+  lanes.splice(lanes.indexOf(lane), 1);
   console.log(lanes);
   delete canvas_lane_pairs[canvas.id];
   

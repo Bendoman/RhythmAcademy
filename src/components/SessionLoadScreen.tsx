@@ -7,6 +7,7 @@ import LaneEditingPanel from './LaneEditingPanel';
 import { createRoot } from 'react-dom/client';
 import ChangeLaneKey from './run_controls/ChangeLaneKey';
 import Note from '../scripts/Note';
+import { newRetrieveBucketList, retrieveFriendBucketList } from '../scripts/SupaUtils';
 
 interface ISessionLoadScreenProps {
     setSessionLoadScreen: React.Dispatch<React.SetStateAction<boolean>>;
@@ -50,7 +51,7 @@ const SessionLoadScreen: React.FC<ISessionLoadScreenProps>
     const [loadStatus, setLoadStatus] = useState(''); 
     const loadSessionSelectRef = useRef<HTMLSelectElement | null>(null);
 
-    const [selectedTab, setSelectedTab] = useState('private');
+    const [selectedTab, setSelectedTab] = useState('public');
     const onLoadSessionClick = async (sessionName: string) => {
         const { data, error } = await supabase.auth.getUser();
 
@@ -69,7 +70,7 @@ const SessionLoadScreen: React.FC<ISessionLoadScreenProps>
         }
         console.log(sessionName);
 
-        let sessionData = await retrieveBucketData(`${selectedTab}_sessions`, `${data.user.id}/${sessionName}`);
+        let sessionData = await retrieveBucketData(`${selectedTab}_sessions`, `${sessionName}`);
         let newLanes = sessionData.lanes as Lane[];
         
         newLanes.forEach(newLane => {
@@ -106,10 +107,18 @@ const SessionLoadScreen: React.FC<ISessionLoadScreenProps>
         if(!loadSessionSelectRef || !loadSessionSelectRef.current)
             return; 
 
-        let data = await retrieveBucketList(`${selectedTab}_sessions`);
+        let data;
         let sessionSelectInnerHTML = ''; 
-        data?.forEach(session => {
-            sessionSelectInnerHTML += `<option value="${session.name}">${session.name}</option>`;
+
+        if(selectedTab == 'friend')
+            data = await retrieveFriendBucketList(`${selectedTab}_sessions`);
+        else
+            data = await newRetrieveBucketList(`${selectedTab}_sessions`);
+
+        data?.forEach(folder => {
+            folder?.data.forEach(session => {
+                sessionSelectInnerHTML += `<option value="${folder.ownerid}/${session.name}">${session.name}</option>`;
+            });
         });
 
         loadSessionSelectRef.current.innerHTML = sessionSelectInnerHTML; 
@@ -127,10 +136,10 @@ const SessionLoadScreen: React.FC<ISessionLoadScreenProps>
         </div>
 
         <div className="tabs">
-            <div className={`tab ${selectedTab == 'private' ? 'selected' : ''}`} 
-            onClick={()=>{setSelectedTab('private')}}><p>Public</p></div>
             <div className={`tab ${selectedTab == 'public' ? 'selected' : ''}`} 
-            onClick={()=>{setSelectedTab('public')}}>Private</div>
+            onClick={()=>{setSelectedTab('public')}}><p>Public</p></div>
+            <div className={`tab ${selectedTab == 'private' ? 'selected' : ''}`} 
+            onClick={()=>{setSelectedTab('private')}}>Private</div>
             <div className={`tab ${selectedTab == 'friend' ? 'selected' : ''}`} 
             onClick={()=>{setSelectedTab('friend')}}>Friend's</div>
         </div>
@@ -146,6 +155,7 @@ const SessionLoadScreen: React.FC<ISessionLoadScreenProps>
 
             { loadStatus && <p>{loadStatus}</p>}
 
+            {/* <button onClick={newRetrieveBucketList}>test</button> */}
 
         </div>
     </div>

@@ -20,6 +20,7 @@ import StatsScreen from './StatsScreen.tsx';
 import { StatsObject } from '../scripts/types.ts';
 import SessionLoadScreen from './SessionLoadScreen.tsx';
 import SessionSaveScreen from './SessionSaveScreen.tsx';
+import { sendFriendRequest } from '../scripts/SupaUtils.ts';
 
 
 const Homepage = () => {
@@ -51,6 +52,11 @@ const Homepage = () => {
             console.log("MIDI Access not supported on current browser");
     }, []);
 
+    const friendEmailRef = useRef<HTMLInputElement | null>(null);
+
+
+
+
     const { session } = useContext(UserContext);
     useEffect(() => {
         // TODO: UPDATE THIS SO THAT ACCOUNT CHANGES MID SESSION ARE HANDLED
@@ -72,6 +78,11 @@ const Homepage = () => {
             <p>User {session?.user.email} logged in</p>
             <p>User ID = {session?.user.id}</p>
             <button onClick={() => { supabase.auth.signOut(); }}>Signout</button>
+            {/* <div>
+                <label htmlFor="friend_email_input">Friend request</label>
+                <input ref={friendEmailRef} id="friend_email_input" type="text" />
+                <button onClick={() => {if(friendEmailRef.current) sendFriendRequest(friendEmailRef.current.value)}}>send</button>
+            </div> */}
         </div> }
 
         { !session?.user &&

@@ -1,4 +1,43 @@
 -- Table definitions
+-- Table: friend_requests
+
+create table friend_requests (
+  id uuid primary key default gen_random_uuid(),
+  sender_id uuid not null references auth.users(id) on delete cascade,
+  receiver_id uuid not null references auth.users(id) on delete cascade,
+  status text not null default 'pending' check (status in ('pending', 'accepted', 'declined')),
+  created_at timestamp with time zone default now()
+);
+
+ALTER TABLE friend_requests ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Only sender or receiver can access and modify"
+ON friend_requests
+FOR ALL
+USING (
+  auth.uid() = sender_id OR auth.uid() = receiver_id
+)
+WITH CHECK (
+  auth.uid() = sender_id OR auth.uid() = receiver_id
+);
+
+-- Only allow owner or friends of owner to read files
+CREATE POLICY "Only owner or their friends can read"
+ON storage.objects
+FOR SELECT
+USING (
+  auth.uid() = owner
+  OR EXISTS (
+    SELECT 1
+    FROM friend_requests
+    WHERE status = 'accepted'
+      AND (
+        (sender_id = owner AND receiver_id = auth.uid())
+        OR
+        (receiver_id = owner AND sender_id = auth.uid())
+      )
+  )
+);
 
 -- Bucket definitions
 insert into storage.buckets
@@ -87,3 +126,5 @@ create policy "Individual user Update"
 on storage.objects for update
 to authenticated
 using ( (select auth.uid()) = owner_id::uuid );
+
+
