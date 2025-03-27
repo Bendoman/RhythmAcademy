@@ -2,31 +2,53 @@ import React, { useEffect, useRef, useState } from 'react'
 import '../styles/laneContent.css';
 import Lane from '../../scripts/Lane';
 import { assignLaneInput, drawSingleLane, findLaneFromCanvas } from '../../scripts/main';
+import { midiAccess } from '../Homepage';
 
 interface IChangeLaneKeyProps {
     canvas: HTMLCanvasElement;
 }
 
 const ChangeLaneKey: React.FC<IChangeLaneKeyProps> = ({ canvas }) => {
+    
+    const lane: Lane = findLaneFromCanvas(canvas);
     const [listening, setListening] = useState(false);
-    const listeningRef = useRef("not_listening");
-
-    const [inputValue, setInputValue] = useState("Input key...");
-    const inputValueRef = useRef("Input key...");
+    const listeningRef = useRef(false);
 
     const buttonRef = useRef<HTMLButtonElement>(null);
-    
+
+
+    const processMidiMessage = (input: MIDIMessageEvent) => {
+        if(!listeningRef.current) return; 
+
+        const inputData = input.data; 
+        if(inputData == null) return; 
+
+        const note = inputData[1];
+        assignLaneInput(lane, note.toString());
+
+        setListening(false);
+        listeningRef.current = false; 
+        
+        buttonRef.current?.blur(); 
+    }
+
+    if(midiAccess) {
+        const inputs = midiAccess.inputs; 
+        inputs.forEach(input => { 
+            input.addEventListener('midimessage', processMidiMessage) 
+        });
+    }
+
 
     const handleKeyDown = useRef((event: KeyboardEvent) => {   
         if(event.key == 'space' || event.key == ' ')
             event.preventDefault(); 
 
-        if(!listeningRef.current || listeningRef.current != "listening") 
+        if(!listeningRef.current) 
             return; 
 
-        setInputValue(event.key);
         setListening(false);
-        listeningRef.current = "not_listening";
+        listeningRef.current = false;
         buttonRef.current?.blur(); 
 
         console.log(event); 
@@ -39,12 +61,16 @@ const ChangeLaneKey: React.FC<IChangeLaneKeyProps> = ({ canvas }) => {
         // only has to be mounted once, not on ever state chagne
         const keyDownHandler = (event: KeyboardEvent) => handleKeyDown.current(event); 
         window.addEventListener("keydown", keyDownHandler)
-        return () => { window.removeEventListener("keydown", keyDownHandler) }
+        return () => { 
+            window.removeEventListener("keydown", keyDownHandler) 
+            if(midiAccess) {
+                midiAccess.inputs.forEach(input => {
+                    input.removeEventListener('midimessage', processMidiMessage);
+                });
+            }
+        }
     }, [])
     
-
-    const lane: Lane = findLaneFromCanvas(canvas);
-    console.log(lane); 
 
     return (<>
     <div className="change_lane_key">
@@ -52,15 +78,13 @@ const ChangeLaneKey: React.FC<IChangeLaneKeyProps> = ({ canvas }) => {
     <button title="Listen for input key"
         ref={buttonRef}
         onFocus={() => {
-            setInputValue("Listening...")
             setListening(true);
-            listeningRef.current = "listening"; 
+            listeningRef.current = true; 
         }}
         onBlur={() => {
-            if(listeningRef.current == "listening") {
-              setInputValue("Input key...");
+            if(listeningRef.current) {
               setListening(false);
-              listeningRef.current = "not_listening"; 
+              listeningRef.current = false; 
               console.log(listening)
             }
           }}  

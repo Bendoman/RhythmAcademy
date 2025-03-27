@@ -3,12 +3,10 @@ import LaneEditingPanel from '../LaneEditingPanel.tsx'
 import { onAddLaneButtonClick } from '../../scripts/main.ts'
 import { createRoot } from 'react-dom/client';
 import ChangeLaneKey from './ChangeLaneKey.tsx';
+import { midiAccess } from '../Homepage';
 
-export interface AddLaneButtonRef {
-  processMidiMessage: (input: MIDIMessageEvent) => void; 
-}
 
-const AddLaneButton = forwardRef<AddLaneButtonRef, {}>((_, ref) => {
+const AddLaneButton = () => {
   const [listening, setListening] = useState(false);
   const listeningRef = useRef(false);
 
@@ -18,17 +16,30 @@ const AddLaneButton = forwardRef<AddLaneButtonRef, {}>((_, ref) => {
 
   const inputElementRef = useRef<HTMLInputElement>(null);
 
-  const processMidiMessage = (input: MIDIMessageEvent) => {    
-    console.log("From in here");
-    if(!listening) return; 
 
-    const inputData = input.data; 
-    if(inputData == null) return; 
+    const processMidiMessage = (input: MIDIMessageEvent) => {    
+      if(!listeningRef.current) return; 
 
-    const note = inputData[1];
-    setInputValue(note.toString());
-    setListening(false);
-  }; useImperativeHandle(ref, () => ({ processMidiMessage, }));
+      const inputData = input.data; 
+      if(inputData == null) return; 
+
+      const note = inputData[1];
+      setInputValue(note.toString());
+      setListening(false);
+      listeningRef.current = false; 
+    }; 
+
+    if(midiAccess) {
+        const inputs = midiAccess.inputs; 
+        inputs.forEach(input => { 
+          input.addEventListener('midimessage', processMidiMessage) 
+        });
+    }
+
+
+
+
+
 
   const handleKeyDown = useRef((event: KeyboardEvent) => {    
     if(event.key == 'space' || event.key == ' ')
@@ -125,6 +136,6 @@ const AddLaneButton = forwardRef<AddLaneButtonRef, {}>((_, ref) => {
           }}  
         />
         </>)
-})
+}
 
 export default AddLaneButton

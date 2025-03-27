@@ -20,25 +20,26 @@ import StatsScreen from './StatsScreen.tsx';
 import { StatsObject } from '../scripts/types.ts';
 import SessionLoadScreen from './SessionLoadScreen.tsx';
 import SessionSaveScreen from './SessionSaveScreen.tsx';
-import { sendFriendRequest } from '../scripts/SupaUtils.ts';
+// import { sendFriendRequest } from '../scripts/SupaUtils.ts';
 
-
+export let midiAccess: MIDIAccess; 
 const Homepage = () => {
-    const runControlsRef = useRef<RunControlsRef | null>(null);
 
     const updateDevices = (event: Event) => { console.log(event) } // Does not work in FireFox
     
     const processMidiMessage = (input: MIDIMessageEvent) => {
-        if(runControlsRef.current) 
-            runControlsRef.current.processMidiMessage(input);
         handleMIDIMessage(input)
     }
     
-    const midi_connection_success = (midiAccess: MIDIAccess) => {
+    const midi_connection_success = (access: MIDIAccess) => {
+        midiAccess = access; 
+        console.log(midiAccess)
         midiAccess.onstatechange = updateDevices;
 
         const inputs = midiAccess.inputs; 
-        inputs.forEach(input => { input.onmidimessage = processMidiMessage})
+        inputs.forEach(input => { 
+            input.addEventListener('midimessage', processMidiMessage);
+        });
     }
 
     const midi_connection_failure = (error: Error) => {
@@ -158,7 +159,7 @@ const Homepage = () => {
         </div>
 
         <section id='content'>
-            <RunControls ref={runControlsRef} setStats={setStats} setShowStats={setShowStats} setSessionLoadScreen={setSessionLoadScreen} setSessionSaveScreen={setSessionSaveScreen}
+            <RunControls setStats={setStats} setShowStats={setShowStats} setSessionLoadScreen={setSessionLoadScreen} setSessionSaveScreen={setSessionSaveScreen}
             showSessionLoadScreen={showSessionLoadScreen} showSessionSaveScreen={showSessionSaveScreen}
             ></RunControls>
             { showStats && <StatsScreen stats={stats} setShowStats={setShowStats}/> }

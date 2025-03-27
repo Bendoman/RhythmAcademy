@@ -10,6 +10,7 @@ import { supabase } from '../scripts/supa-client.ts';
 import { useContext } from "react";
 import { UserContext } from "../components/App.tsx";
 import { StatsObject } from "./types.ts";
+import { copyFileSync } from "fs";
 // #endregion
 
 export function handleMIDIMessage(input: MIDIMessageEvent) {
@@ -1238,9 +1239,7 @@ function enableAudio() {
 
 
 
-function canvasMouseWheel(event: WheelEvent) {
-  console.log(event); 
-  
+function canvasMouseWheel(event: WheelEvent) { 
   let canvas = event.target as HTMLCanvasElement;
   if(!editing || !canvas.classList.contains('editing'))
     return; 
@@ -1673,6 +1672,7 @@ export function setLanes(newLanes: Lane[]) {
 
 
 export function assignLaneInput(lane: Lane, inputKey: string) {
+  console.log('in assign lane');
   if(Object.keys(input_lane_pairs).includes(inputKey)) {
     console.error('Input key already in use');
     return;

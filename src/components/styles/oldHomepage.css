@@ -85,6 +85,14 @@
 
     pointer-events: all;
   }
+
+  @media (max-width: 768px) {
+    .lane_editing.activated {
+      
+      transition: left 0s;
+
+    }
+  }
   
   .lane_editing {
     
