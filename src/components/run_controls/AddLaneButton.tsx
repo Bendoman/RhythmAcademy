@@ -36,11 +36,6 @@ const AddLaneButton = () => {
         });
     }
 
-
-
-
-
-
   const handleKeyDown = useRef((event: KeyboardEvent) => {    
     if(event.key == 'space' || event.key == ' ')
       event.preventDefault(); 

@@ -9,7 +9,7 @@ import { ThemeSupa } from "@supabase/auth-ui-shared";
 // Custom components
 import { UserContext } from "./App.tsx";
 import RunControls, { RunControlsRef } from './run_controls/RunControls.tsx';
-import AddLaneButton, { AddLaneButtonRef } from './run_controls/AddLaneButton.tsx';
+import AddLaneButton from './run_controls/AddLaneButton.tsx';
 
 // Custom scripts and styles
 import './styles/homepage.css';
@@ -20,7 +20,10 @@ import StatsScreen from './StatsScreen.tsx';
 import { StatsObject } from '../scripts/types.ts';
 import SessionLoadScreen from './SessionLoadScreen.tsx';
 import SessionSaveScreen from './SessionSaveScreen.tsx';
+import { acceptPendingFriendRequest, retrievePendingFriendReqeusts, sendFriendRequest } from '../scripts/SupaUtils.ts';
 // import { sendFriendRequest } from '../scripts/SupaUtils.ts';
+
+
 
 export let midiAccess: MIDIAccess; 
 const Homepage = () => {
@@ -46,11 +49,28 @@ const Homepage = () => {
         console.error("MIDI Connection failure: ", error);
     }
 
+    const fetchPendingFriendRequests = async () => {
+        let data = await retrievePendingFriendReqeusts();
+        if(data) {
+            let emailIDPairs: string[][] = []; 
+            data.forEach(request => {
+                console.log(request.sender.email);
+                emailIDPairs.push([request.sender_id, request.sender.email])    
+            });
+
+            setPendingFriendRequests(emailIDPairs);
+        }
+    }
+
+    const [pendingFriendRequests, setPendingFriendRequests] = useState<string[][]>([]);
+
     useEffect(() => {
         if(navigator.requestMIDIAccess) // Ensures that MIDI access is enabled in the current browser
             navigator.requestMIDIAccess().then(midi_connection_success, midi_connection_failure);
         else
             console.log("MIDI Access not supported on current browser");
+
+        fetchPendingFriendRequests();
     }, []);
 
     const friendEmailRef = useRef<HTMLInputElement | null>(null);
@@ -73,17 +93,41 @@ const Homepage = () => {
     const [showSessionLoadScreen, setSessionLoadScreen] = useState(false); 
     const [showSessionSaveScreen, setSessionSaveScreen] = useState(false); 
 
+    const [friendRequestStatus, setFriendRequestStatus] = useState(''); 
+
+    async function requestFriend() {
+        if(friendEmailRef.current && friendEmailRef.current.value != '') {
+            console.log(friendRequestStatus)
+            let status = await sendFriendRequest(friendEmailRef.current.value);
+            setFriendRequestStatus(status); 
+        } else {
+            setFriendRequestStatus('No email provided');
+        }
+    }
+
     return (<>
         { session?.user &&
         <div className='session_info'>
             <p>User {session?.user.email} logged in</p>
             <p>User ID = {session?.user.id}</p>
             <button onClick={() => { supabase.auth.signOut(); }}>Signout</button>
-            {/* <div>
+
+            <form onSubmit={(e) => {
+                e.preventDefault();
+                requestFriend();
+            }}>
                 <label htmlFor="friend_email_input">Friend request</label>
-                <input ref={friendEmailRef} id="friend_email_input" type="text" />
-                <button onClick={() => {if(friendEmailRef.current) sendFriendRequest(friendEmailRef.current.value)}}>send</button>
-            </div> */}
+                <input ref={friendEmailRef} id="friend_email_input" type="text" placeholder='Email'/>
+                <button type='submit'>send</button>
+                <p>{friendRequestStatus && friendRequestStatus}</p>
+            </form>
+
+            {pendingFriendRequests && pendingFriendRequests.map((requestArray, index) => (
+                <div key={index}>
+                    <p>{`${requestArray[1]}`}</p>
+                    <button onClick={() => {acceptPendingFriendRequest(requestArray[0])}}>Accept</button>
+                </div>
+            ))}
         </div> }
 
         { !session?.user &&

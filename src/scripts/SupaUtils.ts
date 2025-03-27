@@ -47,12 +47,89 @@ export async function retrieveFriendBucketList(bucket: string) {
     return allFiles; 
 }
 
-// export async function sendFriendRequest(email: string) {
-//     const userId = (await supabase.auth.getUser()).data.user?.id as string;
+export async function sendFriendRequest(email: string) {
+    const userId = (await supabase.auth.getUser()).data.user?.id as string;
 
-//     const { data, error } = await supabase
-//     .from('friend_requests')
-//     .insert([{ sender_id: userId, receiver_id: receiverId, status: 'pending' }]);
+    console.log(`Sending friend request to ${email}`);
 
-//     console.log(email);
-// }
+    // 1. Look up the receiver's user ID by email
+    const { data: profiles, error: profileError } = await supabase
+    .from('public_profiles')
+    .select('id')
+    .eq('email', email)
+    .single();
+
+    if (profileError || !profiles) 
+        return 'User not found';
+
+    const receiverId = profiles.id;
+
+    if(receiverId == userId)
+        return "You can't send a friend request to yourself";
+
+    // 3. Check if a friend request already exists in either direction
+    const { data: existing, error: checkError } = await supabase
+    .from('friend_requests')
+    .select('id, status')
+    .or(
+        `and(sender_id.eq.${userId},receiver_id.eq.${receiverId}),and(sender_id.eq.${receiverId},receiver_id.eq.${userId})`
+    );
+
+    if(checkError)
+        return `Check Error while requesting: ${checkError.message}`; 
+
+    if(existing && existing.length > 0) {
+        return existing[0].status == 'pending' ? 'Pending friend request already exists' : 'You are already friends with this user';
+    }
+        
+    // 4. Send the friend request
+    const { error: insertError } = await supabase
+        .from('friend_requests')
+        .insert([{
+            sender_id: userId,
+            receiver_id: receiverId
+        },
+    ]);
+    
+    if(insertError)
+        return `Insert Error while requesting: ${insertError.message}`; 
+
+    return `Friend request sent to ${userId}`;
+}
+
+
+export async function retrievePendingFriendReqeusts() {
+    const userId = (await supabase.auth.getUser()).data.user?.id as string;
+
+    const { data, error } = await supabase
+    .from('friend_requests')
+    .select(`
+      id,
+      status,
+      created_at,
+      sender_id,
+      sender:public_profiles (
+        email
+      )
+    `)
+    .eq('receiver_id', userId)
+    .eq('status', 'pending')
+    .order('created_at', { ascending: false });
+
+    return data; 
+}
+
+export async function acceptPendingFriendRequest(senderId: string) {
+    const userId = (await supabase.auth.getUser()).data.user?.id as string;
+
+    const { data, error } = await supabase
+        .from('friend_requests')
+        .update({ status: 'accepted' })
+        .match({
+        sender_id: senderId,
+        receiver_id: userId,
+        status: 'pending',
+    });
+
+    console.log(data);
+}

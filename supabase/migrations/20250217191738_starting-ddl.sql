@@ -9,17 +9,87 @@ create table friend_requests (
   created_at timestamp with time zone default now()
 );
 
+ALTER TABLE friend_requests
+ADD COLUMN friend_pair_key text GENERATED ALWAYS AS (
+  LEAST(sender_id, receiver_id) || ':' || GREATEST(sender_id, receiver_id)
+) STORED;
+
+CREATE UNIQUE INDEX unique_friend_pair ON friend_requests(friend_pair_key);
+
 ALTER TABLE friend_requests ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Only sender or receiver can access and modify"
-ON friend_requests
-FOR ALL
-USING (
-  auth.uid() = sender_id OR auth.uid() = receiver_id
-)
-WITH CHECK (
-  auth.uid() = sender_id OR auth.uid() = receiver_id
+CREATE POLICY "Sender or receiver can select"
+  ON friend_requests
+  FOR SELECT
+  USING (
+    auth.uid() = sender_id OR auth.uid() = receiver_id
 );
+
+CREATE POLICY "Only sender can insert"
+  ON friend_requests
+  FOR INSERT
+  WITH CHECK (
+    auth.uid() = sender_id
+  );
+
+CREATE POLICY "Sender or receiver can delete"
+  ON friend_requests
+  FOR DELETE
+  USING (
+    auth.uid() = sender_id OR auth.uid() = receiver_id
+);
+
+CREATE POLICY "Only receiver can update status"
+  ON friend_requests
+  FOR UPDATE
+  USING (
+    auth.uid() = receiver_id
+  )
+  WITH CHECK (
+    auth.uid() = receiver_id
+);
+
+create table public_profiles (
+  id uuid primary key references auth.users(id) on delete cascade,
+  email text not null unique
+);
+
+ALTER TABLE friend_requests
+ADD CONSTRAINT fk_sender_profile
+FOREIGN KEY (sender_id) REFERENCES public_profiles(id);
+
+create function handle_new_user()
+returns trigger as $$
+begin
+  insert into public_profiles (id, email)
+  values (new.id, new.email);
+  return new;
+end;
+$$ language plpgsql security definer SET search_path = public;
+
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute procedure handle_new_user();
+
+-- Enable RLS
+alter table public_profiles enable row level security;
+
+-- Allow read access to everyone (or just authenticated users)
+create policy "Anyone can read profiles"
+  on public_profiles
+  for select
+  using (true);
+
+-- Allow users to update their own profile
+create policy "Users can update their own profile"
+  on public_profiles
+  for update
+  using (auth.uid() = id)
+  with check (auth.uid() = id);
+
+
+
+
 
 -- Only allow owner or friends of owner to read files
 CREATE POLICY "Only owner or their friends can read"
