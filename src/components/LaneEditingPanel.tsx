@@ -1,71 +1,71 @@
-import React, { useContext, useEffect, useRef, useState } from 'react'
-// TODO: Reduce the number of imports here. There must be a cleaner way.
-import { deleteLane, resetLanesEditingStatus, updateAllLaneSizes, retrieveBucketData, patternInCreationPositions, uploadToBucket, findLaneFromCanvas, retrieveBucketList, drawSingleLane, changeEditMode, maxMeasureCount, resetPatternInCreation, setNewPatternMeasures, longest_lane, setLongestLane, lanes } from '../scripts/main'
 import Lane from '../scripts/Lane';
+import Note from '../scripts/Note.ts';
 import { EDIT_MODES } from '../scripts/constants';
 import { supabase } from '../scripts/supa-client.ts';
-import { UserContext } from './App.tsx';
-import Note from '../scripts/Note.ts';
+import React, { useContext, useEffect, useRef, useState } from 'react'
 
+// TODO: Reduce the number of imports here. There must be a cleaner way.
+import { deleteLane, resetLanesEditingStatus, updateAllLaneSizes, retrieveBucketData, patternInCreationPositions, uploadToBucket, findLaneFromCanvas, retrieveBucketList, drawSingleLane, changeEditMode, maxMeasureCount, resetPatternInCreation, setNewPatternMeasures, longest_lane, setLongestLane, lanes } from '../scripts/main'
 
 // TODO: HUGE REFACTOR OF ALL OF THIS NEEDED
-// TODO: Add in correct selection of hit precision, time signature and lane sound selects.
 interface ILaneEditingPanelProps {
   canvas: HTMLCanvasElement;
   unmount: () => void; 
 }
 
-// TODO: See if unmount is necessary
-const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas, unmount }) => { 
+const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas }) => { 
   const lane: Lane = findLaneFromCanvas(canvas);
-  // TODO: Improve these names
+
+  // #region ( REFS )
+  const laneEditingRef = useRef<HTMLDivElement | null>(null); 
+  const saveLaneNameRef = useRef<HTMLInputElement | null>(null);
   const newPatternNameRef = useRef<HTMLInputElement | null>(null);
+  const loadLaneSelectRef = useRef<HTMLSelectElement | null>(null);
   const newPatternMeasuresRef = useRef<HTMLInputElement | null>(null);
   const loadPatternSelectRef = useRef<HTMLSelectElement | null>(null);
   const loadPatternMeasuresRef = useRef<HTMLInputElement | null>(null);
-  const loadLaneSelectRef = useRef<HTMLSelectElement | null>(null);
-  const saveLaneNameRef = useRef<HTMLInputElement | null>(null);
+  // #endregion
 
-  const laneEditingRef = useRef<HTMLDivElement | null>(null); 
-
-  const [editMode, setEditMode] = useState("individual");
-  const [metronomeEnabled, setMetronomeEnabled] = useState(false);
-  // TODO: Change looping system
-  const [looped, setLooped] = useState(false);
-  const [canLoop, setCanLoop] = useState(false);
-
+  // #region ( STATE )
   const [key, setKey] = useState(0);
 
+  const [repeated, setRepeated] = useState(false);
+  const [canRepeat, setCanRepeat] = useState(false);
+  
+  const [editMode, setEditMode] = useState("individual");
+  const [metronomeEnabled, setMetronomeEnabled] = useState(false);
+  
   const [selectedPattern, setSelectedPattern] = useState<string | null>(null);
-  const [selectedLane, setSelectedLane] = useState<string | null>(null);
+  // #endregion
 
   useEffect(() => {
-    // setCanLoop(maxMeasureCount % lane.measureCount == 0 ? true : false);
-    console.log(maxMeasureCount % lane.measureCount == 0);
+    // Populates list of loadable lanes
     getSavedLanes(); 
 
     if(!laneEditingRef.current)
       return; 
 
+    // Observer for redetermining if lane can be repeated when active class is added
     const observer = new MutationObserver((mutations) => {
       mutations.forEach((mutation) => {
+        // Watches for class attribute mutations
         if(mutation.type === 'attributes' && mutation.attributeName === 'class') {
-          let canLoop = lane.getRatio() < longest_lane.getRatio()
-          setCanLoop(canLoop);
-          if(!lane.looped)
-            setLooped(false);
+          let canRepeat = lane.getRatio() < longest_lane.getRatio();
+          setCanRepeat(canRepeat);
+          // Updates UI based on current lane repeated status 
+          if(!lane.repeated)
+            setRepeated(false);
         }
       })      
-    })
+    });
 
-    observer.observe(laneEditingRef.current!, {
+    observer.observe(laneEditingRef.current, {
       attributes: true, 
       attributeFilter: ['class'],
     }); 
 
+    // Disconnects observer on dismount 
     return () => observer.disconnect(); 
-
-    // TODO: Have user as a ref, set it here with async function
   }, [key]);
 
   // TODO: Move all those like this to util function
@@ -73,10 +73,14 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas, unmount })
     if(!loadLaneSelectRef.current || !saveLaneNameRef.current)
       return;
 
-    let data = await retrieveBucketList('lanes');
     let patternSelectInnerHTML = '';
+    let data = await retrieveBucketList('lanes');
     data?.forEach((lane) => {
-      patternSelectInnerHTML += `<option value="${lane.name}" ${saveLaneNameRef.current?.value == lane.name ? 'selected' : ''}>${lane.name}</option>`;
+      patternSelectInnerHTML += 
+      `<option value="${lane.name}" 
+      ${saveLaneNameRef.current?.value == lane.name ? 'selected' : ''}>
+      ${lane.name}
+      </option>`;
     });
 
     loadLaneSelectRef.current.innerHTML = patternSelectInnerHTML;
@@ -97,11 +101,11 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas, unmount })
     if(editMode == 'pattern')
       return; 
 
+    // TODO: Keep next measure index updated while adding notes in individual mode so this isn't necessary
     lane.notes = [];
 
     setEditMode('pattern');
     changeEditMode(EDIT_MODES.PATTERN_MODE);
-    console.log(selectedPattern);
 
     // TODO: Keep local list to be updated, do not retrieve it every time.
     // TODO: Move these data retrieval functions out of script
@@ -130,66 +134,47 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas, unmount })
 
   const onMeasureCountChange = (event: React.ChangeEvent<HTMLInputElement>) => {    
     let value = parseInt(event.target.value);
-    // TODO: Update how the max measure system works.
-    let oldMC = lane.measureCount; 
     let newMC = value < maxMeasureCount ? value : maxMeasureCount;
     
     lane.measureCount = newMC;
     event.target.value = newMC.toString(); 
     
-    // TODO: Add ability to keep notes before measure cut off. 
     lane.patternStartMeasure = 0;
        
     lane.recalculateHeight();
     lane.cullOutOfBoundsNotes();
 
-    lane.unloopLane();
-    setLooped(false);
+    lane.unrepeatNotes();
+    setRepeated(false);
 
+    // If the user is scrolled past the top of the lane, reset their view
     if(-lane.translationAmount < lane.calculateTopOfLane(false))
       lane.translationAmount = -lane.calculateTopOfLane(false);
 
-    // if(lane.topOfLane < longest_lane.topOfLane)
     setLongestLane();
     if(lane == longest_lane) {
       lanes.forEach(lane => {
-        if(lane.looped) {
-          lane.unloopLane();
+        if(lane.repeated) {
+          lane.unrepeatNotes();
         }
       });
     }
 
-
-    // TODO: Deal with potential bug with looping when measures change
-    // console.log(longest_lane);
-    // setCanLoop(lane.topOfLane <= longest_lane.topOfLane ? false : true);
-    setCanLoop(lane.getRatio() < longest_lane.getRatio()); 
-
+    setCanRepeat(lane.getRatio() < longest_lane.getRatio()); 
     drawSingleLane(lane);
   }
 
-  const onLoopClick = () => {
-    if(!looped) {
-      // Toggle looping on
-      lane.looped = true;
-      
-      let loops = maxMeasureCount / lane.measureCount; 
+  const onRepeatClick = () => {
+    if(!repeated) {
       if(lane.notes.length > 0) 
-        lane.loopNotes(loops);
-      
-      lane.loopedHeight = lane.calculateHeight(true); 
-      lane.topOfLane = lane.calculateTopOfLane(true);
+        lane.repeatNotes();
     } else {
-      // Lane has already been looped. Toggle looping off
-      lane.unloopLane();
-
-      
-      // TODO: DETERMINE IF THIS IS NECESSARY. TEST CASES OF LOOPING BEING TURNED OFF
-      // lane.loopedHeight = lane.calculateHeight(false);      
+      // Lane has already been repeated. Toggle repeating off
+      lane.unrepeatNotes();   
     }
     
     drawSingleLane(lane); 
-    setLooped(!looped);
+    setRepeated(!repeated);
   }
 
   const loadPatternClick = async () => {
@@ -214,10 +199,8 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas, unmount })
     let patternMeasures = parseInt(newPatternMeasuresRef.current.value);
     console.log(patternName, patternMeasures);
 
-
     let content = JSON.stringify({measures: patternMeasures, notePositions: patternInCreationPositions});
     await uploadToBucket('patterns', `${data.user.id}/${patternName}`, patternName, content);
-
 
     let bucketList = await retrieveBucketList('patterns');
     let patternSelectInnerHTML = '';
@@ -264,13 +247,13 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas, unmount })
     lane.timeSignature = newLane.timeSignature; 
     lane.hitPrecision = newLane.hitPrecision; 
     lane.metronomeEnabled = newLane.metronomeEnabled;
+
     lane.notes = []; 
     // TODO: Optimize this for lower load times
     newLane.notes.forEach((note) => {
-      console.log(note);
-      // TODO Change to new note with index constructor
       lane.notes.push(new Note(note.index));   
     })
+
     lane.hitzone = lane.calculateHitzone(); 
     lane.recalculateHeight(); 
     updateAllLaneSizes();
@@ -278,18 +261,12 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas, unmount })
     drawSingleLane(lane); 
     lane.translationAmount = 0;     
 
-    console.log(lane.translationAmount, lane.height, lane.metronomeEnabled);
-
+    setLongestLane();
     // TODO: Work around using key
     setKey(key + 1);  
   }
 
-  const onCloseClick = () => {
-    resetLanesEditingStatus();
-  }
-
   if (lane) return (
-  // TODO: Try to work around having to use key to remount
   <div key={key} ref={laneEditingRef} className={`lane_editing ${canvas.classList.contains('editing') ? 'activated' : ''}`}>
     <div className='edit_mode_container'>
       <button 
@@ -309,7 +286,7 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas, unmount })
         lane.metronomeEnabled = !lane.metronomeEnabled;
         setMetronomeEnabled(!metronomeEnabled);
       }}>
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="lucide lucide-list-music"><path d="M21 15V6"/><path d="M18.5 18a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"/><path d="M12 12H3"/><path d="M16 6H3"/><path d="M12 18H3"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-list-music"><path d="M21 15V6"/><path d="M18.5 18a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"/><path d="M12 12H3"/><path d="M16 6H3"/><path d="M12 18H3"/></svg>
       </button>
       <label className="metronome_label">Metronome <b>({lane.metronomeEnabled ? 'enabled' : 'disabled'})</b></label>
     </div>
@@ -319,7 +296,15 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas, unmount })
       onChange={(event)=>{
         lane.bpm = parseInt(event.target.value);
         setLongestLane(); 
-        setCanLoop(lane.getRatio() < longest_lane.getRatio());
+        setCanRepeat(lane.getRatio() < longest_lane.getRatio());
+
+        if(lane == longest_lane) {
+          lanes.forEach(lane => {
+            if(lane.repeated) {
+              lane.unrepeatNotes();
+            }
+          });
+        }
       }} 
       defaultValue={lane.bpm} min="1"/>
       <label>BPM</label>
@@ -330,12 +315,11 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas, unmount })
       onChange={onMeasureCountChange}/>
       <label>measure count</label>
       
-      <button className={`loop_button ${looped ? 'selected' : ''}`} disabled={!canLoop ? true : false} onClick={onLoopClick}>repeat</button>
+      <button className={`repeat_button ${repeated ? 'selected' : ''}`} disabled={!canRepeat ? true : false} onClick={onRepeatClick}>repeat</button>
       
-      <button className="loop_question" title="Repeats the notes in this lane up until the height of the longest lane in the session">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="lucide lucide-circle-help-icon lucide-circle-help"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
+      <button className="repeat_question" title="Repeats the notes in this lane up until the height of the longest lane in the session">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-circle-help-icon lucide-circle-help"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
       </button>
-
     </div>
 
     <div className="precisioun_container">
@@ -385,7 +369,6 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas, unmount })
       <label htmlFor="lane_sound_select">Metronome sound</label>
     </div>
 
-      
     <div className="lane_sound_container">
       <select className="lane_sound_select" 
       onChange={(event)=>{
@@ -462,7 +445,6 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas, unmount })
           <button className="load_lane" onClick={onLoadLaneClick}>Load lane</button>
       </div>
     </div>
-
 
     <button className="close" onClick={resetLanesEditingStatus}>close</button>
     <p className="tootltip">right click to delete note</p>

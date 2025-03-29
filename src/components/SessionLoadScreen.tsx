@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
 import './styles/session_screen.css';
-import { deleteLane, drawSingleLane, lanes, onAddLaneButtonClick, retrieveBucketData, retrieveBucketList, setLanes, updateAllLaneSizes } from '../scripts/main';
+import { deleteLane, drawSingleLane, lanes, onAddLaneButtonClick, retrieveBucketData, retrieveBucketList, setLongestLane, updateAllLaneSizes } from '../scripts/main';
 import { supabase } from '../scripts/supa-client';
 import Lane from '../scripts/Lane';
 import LaneEditingPanel from './LaneEditingPanel';
@@ -86,11 +86,7 @@ const SessionLoadScreen: React.FC<ISessionLoadScreenProps>
             laneObject.notes = []; 
             laneObject.metronomeEnabled = newLane.metronomeEnabled;
             // TODO: Optimize this for lower load times
-            newLane.notes.forEach((note) => {
-                console.log(note);
-                // TODO Change to new note with index constructor
-                laneObject.notes.push(new Note(note.index));   
-            })
+            newLane.notes.forEach((note) => { laneObject.notes.push(new Note(note.index)) });
             laneObject.hitzone = laneObject.calculateHitzone(); 
             laneObject.recalculateHeight(); 
             
@@ -101,6 +97,7 @@ const SessionLoadScreen: React.FC<ISessionLoadScreenProps>
             console.log(laneObject);
         });
 
+        setLongestLane();
         setLoadStatus(`Session: ${sessionName} loaded!`);
     }
 
@@ -133,7 +130,7 @@ const SessionLoadScreen: React.FC<ISessionLoadScreenProps>
     <div className="session_load_screen">
         <div className="closeContainer"
             onClick={()=> { setSessionLoadScreen(false); }}>
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="lucide lucide-circle-x"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-circle-x"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>
         </div>
 
         <div className="tabs">

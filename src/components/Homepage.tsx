@@ -23,12 +23,11 @@ import SessionSaveScreen from './SessionSaveScreen.tsx';
 import { acceptPendingFriendRequest, retrievePendingFriendReqeusts, sendFriendRequest } from '../scripts/SupaUtils.ts';
 // import { sendFriendRequest } from '../scripts/SupaUtils.ts';
 
-
-
 export let midiAccess: MIDIAccess; 
 const Homepage = () => {
-
-    const updateDevices = (event: Event) => { console.log(event) } // Does not work in FireFox
+    const updateDevices = (event: Event) => { 
+        // TODO: Implement hotswapping of MIDI devices here
+    } 
     
     const processMidiMessage = (input: MIDIMessageEvent) => {
         handleMIDIMessage(input)
@@ -36,7 +35,6 @@ const Homepage = () => {
     
     const midi_connection_success = (access: MIDIAccess) => {
         midiAccess = access; 
-        console.log(midiAccess)
         midiAccess.onstatechange = updateDevices;
 
         const inputs = midiAccess.inputs; 
@@ -197,7 +195,7 @@ const Homepage = () => {
         <div id="settings_panel">
             <div id="workspace_measure_count_container">
             <label htmlFor="workspace_measure_count">Session length (measures)</label>
-            <input type="number" id="workspace_measure_count" value="400" min="1"/>
+            <input type="number" id="workspace_measure_count" defaultValue="400" min="1"/>
             </div>
             <button id="settings_panel_close">close</button>
         </div>

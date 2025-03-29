@@ -1,10 +1,10 @@
 import Note from "./Note.ts";
 import Hitzone from "./Hitzone.ts";
-import { drawLine, getNoteFill } from "./Utils";
-import { COLORS, EDIT_MODES, HIT_STATUSES, ZONE_NAMES } from "./constants";
+import { longest_lane } from "./main.ts";
 import AudioSprite from "./AudioSprite.ts";
 import { selectedPattern } from "./types.ts";
-import { longest_lane } from "./main.ts";
+import { drawLine, getNoteFill } from "./Utils";
+import { COLORS, EDIT_MODES, HIT_STATUSES, ZONE_NAMES } from "./constants";
 
 // TODO: Make sure that values relient on height can be updated when the window size changes. Have an update function for this. 
 export default class Lane {
@@ -24,41 +24,31 @@ export default class Lane {
     // The height above the hitzone that notes will be populated upon run start
     public startY: number; 
     public height: number; 
-    // TODO: come back to this
-    public loopedHeight: number; 
+    public topOfInputVisual: number;
     
     public notes: Note[];
-    public looped: boolean;
-    public loopedNotes: number;
-    public nonLoopedNotes: any;
-
+    public repeated: boolean;
+    public repeatedNotes: number;
+    
+    public maxWrongNotes: number; 
     public notesHit: Note[] = [];
     public notesMissed: Note[] = [];
     public wrongNotes: Note[] = []; 
-
-    public maxWrongNotes: number; 
-
-    // TODO: Remove 
-    // public canvasWidth: number; 
-    // public canvasHeight: number; 
-
-    public topOfLane: number; 
-    public topOfInputVisual: number;
-
+    
     public inputKey: string; 
-    public inputAreaHeight: number;
     public pressed: boolean;
+    public inputAreaHeight: number;
+    
+    public hitPrecision: number; 
+    public patternStartMeasure: number; 
     
     public canvas: HTMLCanvasElement;
     public ctx: CanvasRenderingContext2D;
     public translationAmount: number; 
-
+    
     public audioSprite: any;
     public metronomeSprite: any;
-
-    public hitPrecision: number; 
-    public patternStartMeasure: number; 
-
+    
     public fullyScrolled: boolean;
 
     constructor(
@@ -78,71 +68,53 @@ export default class Lane {
         this.timeSignature = timeSignature;
 
         this.notes = notes; 
-        this.loopedNotes = 0;
+        this.repeated = false; 
+        this.repeatedNotes = 0;
+        this.nextNoteIndex = 0; 
 
         // Note gap defines the distance between between note values that the time signature is counting
         this.noteGap = noteGap;
         
         this.hitsound = hitsound; 
-        this.looped = false; 
         this.maxWrongNotes = maxWrongNotes;
         
         this.canvas = canvas; 
         this.ctx = this.canvas.getContext('2d')!; 
 
-        // this.canvasWidth = this.canvas.width;
-        // this.canvas.height = this.canvas.height;
-        
         this.hitPrecision = hitPrecision;
         this.hitzone = this.calculateHitzone(); 
 
         // So that the first note drawn will be exaclty one full note above the perfect hit area
         this.startY = this.calculatePerfectHitY() - this.noteGap;
-        
-        // timeSignature[0] represents the upper numeral (the number of notes per bar)
-        // this.height = measureCount * (this.timeSignature[0] * this.noteGap); 
-        // this.topOfLane = this.startY - this.height; 
-        
-        this.height = this.calculateHeight(false);
-        this.loopedHeight = this.calculateHeight(true);
-
-        // this.effectiveHeight = this.calculateHeight(true); 
-        this.topOfLane = this.calculateTopOfLane(false); 
-
+                
+        this.height = this.measureCount * this.calculateSingleMeasureHeight();
         this.topOfInputVisual = this.canvas.height - 70;
-        this.nextNoteIndex = 0; 
 
         this.inputKey = inputKey;
         this.inputAreaHeight = this.canvas.height - this.topOfInputVisual;
-
-        this.translationAmount = 0; 
+        
         this.pressed = false;
-        this.metronomeEnabled = false;
-
-        this.metronomeSound = 'metronome1';
+        this.fullyScrolled = false; 
+        this.translationAmount = 0; 
         this.patternStartMeasure = 0; 
 
-        this.fullyScrolled = false; 
+        this.metronomeEnabled = false;
+        this.metronomeSound = 'metronome1';
     }
 
     public recalculateHeight() {
-        this.height = this.measureCount * (this.timeSignature[0] * this.noteGap); 
-        this.topOfLane = this.startY - this.height;
+        // Number of measures, times the height of a single measure 
+        this.height = this.measureCount * this.calculateSingleMeasureHeight();
     }
 
-    public calculateHeight(looped: boolean) {
-        // let measureCount = looped ? this.maxMeasureCount : this.measureCount; 
-        // return measureCount * this.calculateSingleMeasureHeight(); 
-        return this.measureCount * this.calculateSingleMeasureHeight(); 
-    }
-    
     public calculateSingleMeasureHeight() {
+        // timeSignature[0] represents the upper numeral (the number of notes per bar)
         return this.timeSignature[0] * this.noteGap;
     }
     
-    public calculateTopOfLane(looped: boolean) {
-        if(looped)
-            return this.startY - this.loopedHeight; 
+    public calculateTopOfLane(repeated: boolean) {
+        if(repeated)
+            return this.startY - longest_lane.getRatio() * this.bpm;
         
         return this.startY - this.height; 
     }   
@@ -150,15 +122,21 @@ export default class Lane {
     public calcualteTopOfMeasuresN(n: number) {
         return this.startY - (this.calculateSingleMeasureHeight() * n); 
     }
+
+    public getRatio() {
+        return this.height / this.bpm; 
+    }
     
 
     // TODO: Give this better name and have one that also removes all notes 
     public resetLane(overshoot?: number) { 
-        console.log(overshoot)
-        this.fullyScrolled = false;
-        this.translationAmount = overshoot ? this.noteGap - overshoot : 0; 
         this.notesHit = [];
         this.notesMissed = [];
+
+        console.log(overshoot)
+        this.fullyScrolled = false;
+        this.translationAmount = overshoot ? -overshoot : 0; 
+        // this.translationAmount = 0; 
 
         for(let i = 0; i < this.notes.length; i++) {
             let note = this.notes[i];
@@ -169,7 +147,6 @@ export default class Lane {
 
     // TODO: Update note colours based on hitzone at time of hit
     public handleInputOn(paused: boolean) { 
-        console.log("Handling on");
         this.pressed = true; 
         // Sets pressed so that input modes can be tested, but returns after so that notes can't be hit
         if(paused)
@@ -217,9 +194,7 @@ export default class Lane {
         }
     }
 
-    public handleInputOff() { 
-        this.pressed = false; 
-    }
+    public handleInputOff() { this.pressed = false; }
 
     public drawInputVisual() {
         this.ctx.fillStyle = this.pressed ? COLORS.PRESSED_INPUT_FILL : COLORS.UNPRESSED_INPUT_FILL;
@@ -234,17 +209,10 @@ export default class Lane {
         this.ctx.fillText(displayedInput, this.canvas.width/2 - (textWidth / 2), this.topOfInputVisual + 50); 
     }
 
-        
     // let inverse = ((newNoteIndex * (lane.noteGap/lane.timeSignature[1])) - lane.startY) * -1;
-
-    // Draws all notes and looped notes to the screen
-    public updateAndDrawNotes(editMode: boolean, ups: number, translationSpeed: number, noteOverride?: Note[]) {
-        let notesArray;
-        if(noteOverride)
-            notesArray = noteOverride; 
-        else 
-            notesArray = this.notes; 
-        
+    // Draws all notes and repeated notes to the screen
+    public updateAndDrawNotes(editing: boolean, ups: number, translationSpeed: number, noteOverride?: Note[]) {
+        let notesArray = noteOverride ? noteOverride : this.notes;
         for(let i = 0; i < notesArray.length; i++) {
             let note;
             if(noteOverride)
@@ -252,7 +220,6 @@ export default class Lane {
             else
                 note = this.notes[i]; 
             
-            // TODO: Change for new note object
             let effectiveY = note.getY(this.noteGap, this.timeSignature[1], this.startY) + this.translationAmount;
             // Reduces time spent drawing notes that have scrolled passed the bottom of the screen
             if(effectiveY > this.canvas.height)
@@ -262,15 +229,13 @@ export default class Lane {
             if(effectiveY < -this.noteGap) 
                 return;
             
-            if(!editMode) 
+            if(!editing) 
                 this.updateNote(note, effectiveY, ups, translationSpeed);
-
-
-            this.drawNote(note, effectiveY);
+            this.drawNote(note, effectiveY, editing);
         }
     }
 
-    public drawNote(note: Note, y: number) {
+    public drawNote(note: Note, y: number, editing: boolean) {
         let x = (this.canvas.width/2) - (this.canvas.width/4);
         let width = this.canvas.width/2;
 
@@ -283,6 +248,9 @@ export default class Lane {
         if(this.notes.indexOf(note) == this.nextNoteIndex)
             this.ctx.fillStyle = 'blue';
         
+        if(editing)
+            this.ctx.fillStyle = getNoteFill(ZONE_NAMES.EARLY_ZONE, HIT_STATUSES.UNHIT); 
+
         this.ctx.beginPath();
         this.ctx.roundRect(x, y - (height/2), width, height, 20);
         this.ctx.fill();
@@ -294,26 +262,22 @@ export default class Lane {
 
     // Updates the hitzone and hitstatus of a specific note
     public updateNote(note: Note, y: number, ups: number, translationSpeed: number) {
-
         // TODO: Change for new note object
         let distanceToPerfectHitzone = ((this.hitzone.perfect_hit_y - this.translationAmount) - note.getY(this.noteGap, this.timeSignature[1], this.startY))
 
-        // TODO: this is disgustingly ugly
-
-
+        // TODO: Review if this can be done cleaner
         if(note.hitStatus == 'unhit')
             note.timeToZone = ((distanceToPerfectHitzone/translationSpeed)/ups)*1000;
 
-        if(y > this.hitzone.early_hit_y && note.currentZone == ZONE_NAMES.EARLY_ZONE) 
+        if(y > this.hitzone.early_hit_y && note.currentZone == ZONE_NAMES.EARLY_ZONE) {
             note.currentZone = ZONE_NAMES.EARLY_HIT_ZONE;
-        else if(y > this.hitzone.perfect_hit_y && note.currentZone == ZONE_NAMES.EARLY_HIT_ZONE) {
+        } else if(y > this.hitzone.perfect_hit_y && note.currentZone == ZONE_NAMES.EARLY_HIT_ZONE) {
             note.currentZone = ZONE_NAMES.PERFECT_HIT_ZONE;
             if(this.audioSprite && this.metronomeEnabled)
                 this.audioSprite.play(this.hitsound, 0.25);
-        }
-        else if(y > this.hitzone.late_hit_y && note.currentZone == ZONE_NAMES.PERFECT_HIT_ZONE) 
+        } else if(y > this.hitzone.late_hit_y && note.currentZone == ZONE_NAMES.PERFECT_HIT_ZONE) {
             note.currentZone = ZONE_NAMES.LATE_HIT_ZONE;
-        else if(y > this.hitzone.late_hit_y + this.hitzone.late_hit_height && note.currentZone == ZONE_NAMES.LATE_HIT_ZONE) {
+        } else if(y > this.hitzone.late_hit_y + this.hitzone.late_hit_height && note.currentZone == ZONE_NAMES.LATE_HIT_ZONE) {
             note.currentZone = ZONE_NAMES.MISS_ZONE;
             if(this.notes.indexOf(note) == this.nextNoteIndex) {
                 note.hitStatus = 'missed';
@@ -332,17 +296,11 @@ export default class Lane {
     
     public drawMeasureIndicators(editMode?: string, newPatternMeasures?: number) {
         let noteCount = 1; 
-        let topOfLane;
 
-        if(this.looped)
-            topOfLane = this.startY - longest_lane.getRatio() * this.bpm;
-        else 
-            topOfLane = this.calculateTopOfLane(false);
-    
-         if(newPatternMeasures && editMode && editMode == EDIT_MODES.CREATE_PATTERN_MODE)
+        let topOfLane = this.calculateTopOfLane(this.repeated);
+        if(newPatternMeasures && editMode && editMode == EDIT_MODES.CREATE_PATTERN_MODE)
             topOfLane = this.calcualteTopOfMeasuresN(newPatternMeasures)
 
-            
         for(let y = this.startY; y > topOfLane; y -= this.noteGap) {
             // Optimisation so that only the measure lines actually visible on the page need to be drawn
             if(y + this.translationAmount > this.canvas.height) {
@@ -353,19 +311,17 @@ export default class Lane {
                 continue; 
             }
             
+            // TODO: Add a continue statement here so that measure lines before the currently visible section aren't drawn either. Potentially use an index range?
             if(y + this.translationAmount < 0)
                 return; 
-            // TODO: Add a continue statement here so that measure lines before the currently visible section aren't drawn either. Potentially use an index range?
 
-            // this.ctx.strokeStyle = COLORS.MEASURE_LINE_FILL;
             // So that the actual y values can be held constant
             let effectiveY = y + this.translationAmount;
             // TODO: Choose more generic starting X value
-
             if(y == topOfLane + this.noteGap)
-                drawLine(this.ctx, 30, effectiveY, this.canvas.width - 30, effectiveY,COLORS.MEASURE_LINE, 1, [25, 5]);
+                drawLine(this.ctx, 30, effectiveY, this.canvas.width - 30, effectiveY, COLORS.MEASURE_LINE, 1, [25, 5]);
             else 
-                drawLine(this.ctx, 30, effectiveY, this.canvas.width - 30, effectiveY,COLORS.MEASURE_LINE, 1);
+                drawLine(this.ctx, 30, effectiveY, this.canvas.width - 30, effectiveY, COLORS.MEASURE_LINE, 1);
 
             // Emphasises the first note of a bar by giving it bigger text
             // TODO: Create a functional pixel to em converted and use relative units to position these.
@@ -385,37 +341,42 @@ export default class Lane {
         }
     }
 
-    private calculatePerfectHitY() {
-        return this.canvas.height - (this.canvas.height * 0.25); 
+    public drawLoopIndicator() {
+        let effectiveY = this.startY + this.translationAmount + this.noteGap;
+
+        let text = 'End of Lane'; 
+        this.ctx.font = "italic 20px Inria-serif"
+        let textWidth = this.ctx.measureText(text).width; 
+        this.ctx.fillText(text, (this.canvas.width/2) - (textWidth/2), effectiveY);
+
+        drawLine(this.ctx, (this.canvas.width/2) - 50, effectiveY + 5, 
+        (this.canvas.width/2) + 50, effectiveY + 5, COLORS.MEASURE_LINE, 1);
     }
+
+    private calculatePerfectHitY() { return this.canvas.height - (this.canvas.height * 0.25); }
 
     public calculateHitzone(): Hitzone {
         // TODO: Decide if this level of dynamic sizing is even necessary.
-        let nonPerfectHitArea = (this.noteGap / ((this.hitPrecision*2)/this.timeSignature[1]))/2; //TODO: Write justifcation for this
+        let nonPerfectHitArea = (this.noteGap / ((this.hitPrecision*2) / this.timeSignature[1])) /2; //TODO: Write justifcation for this
         let perfectHitArea = (this.noteGap / (32/this.timeSignature[1]))/2;
 
-        // let early_hit_y = this.canvas.height - (this.canvas.height * 0.25); 
         let perfect_hit_y = this.calculatePerfectHitY();
-
-        // let perfect_hit_y = early_hit_y + nonPerfectHitArea; 
         let early_hit_y = perfect_hit_y - nonPerfectHitArea
-
         let late_hit_y = perfect_hit_y + perfectHitArea; 
-
 
         return new Hitzone(early_hit_y, nonPerfectHitArea, perfect_hit_y, perfectHitArea, late_hit_y, nonPerfectHitArea); 
     }
 
-    public loopNotes(loops: number) {
-        this.looped = true; 
-
+    public repeatNotes() {
+        this.repeated = true; 
+        
         let l = 1;
         let highestNoteY = 0;         
         let length = this.notes.length; 
-        this.loopedNotes = 0; 
+        this.repeatedNotes = 0; 
 
-        let repeatedLaneHeight = longest_lane.getRatio() * this.bpm;
-        while(highestNoteY >= this.startY - repeatedLaneHeight) {
+        let repeatedHeight = longest_lane.getRatio() * this.bpm;
+        while(highestNoteY >= this.startY - repeatedHeight) {
             for(let i = 0; i < length; i++) {
             
                 let newNoteY = this.notes[i].getY(this.noteGap, this.timeSignature[1], this.startY) - (this.height * l)
@@ -423,22 +384,23 @@ export default class Lane {
                 highestNoteY = newNoteY; 
                 console.log(highestNoteY);
 
-                if(highestNoteY <= this.startY - repeatedLaneHeight)
+                if(highestNoteY <= this.startY - repeatedHeight)
                     return; 
 
                 let newNote = new Note(newNoteIndex);
 
-                this.notes.push(newNote); // Change this to looped notes 
-                this.loopedNotes++; 
+                // TODO: Change this to repeated notes?
+                this.notes.push(newNote); 
+                this.repeatedNotes++; 
             }
             l++;
         }
     }
 
-    public unloopLane() {
-        this.notes.splice(this.notes.length - this.loopedNotes, this.loopedNotes);
-        this.loopedNotes = 0;
-        this.looped = false; 
+    public unrepeatNotes() {
+        this.notes.splice(this.notes.length - this.repeatedNotes, this.repeatedNotes);
+        this.repeatedNotes = 0;
+        this.repeated = false; 
     }
 
     public cullOutOfBoundsNotes() {
@@ -453,14 +415,11 @@ export default class Lane {
         }
     }
 
-
-
     public loadPattern(selectedPattern: selectedPattern, measures: number) {
         if(this.patternStartMeasure + (measures * selectedPattern.measures) > this.measureCount) {
             console.error("Loading this pattern will exceed the lane's measure limit", measures, selectedPattern.measures, this.measureCount);
             return; 
         }
-        console.log(selectedPattern);
 
         let notePositions = selectedPattern.notePositions;
         console.log(notePositions, measures);
@@ -480,7 +439,6 @@ export default class Lane {
             }
             this.patternStartMeasure += 1; 
         }
-        console.log(this.notes);
     }    
 
     public handleResize() {
@@ -494,16 +452,9 @@ export default class Lane {
             inputAreaHeight,
         */
         this.startY = this.calculatePerfectHitY() - this.noteGap;
-        this.height = this.calculateHeight(false);
-        this.loopedHeight = this.calculateHeight(true);
-        this.topOfLane = this.calculateTopOfLane(this.looped); 
+        this.recalculateHeight(); 
         this.topOfInputVisual = this.canvas.height - 70;
         this.inputAreaHeight = this.canvas.height - this.topOfInputVisual;
         this.hitzone = this.calculateHitzone(); 
     }
-
-    public getRatio() {
-        return this.height / this.bpm; 
-    }
 }
-
