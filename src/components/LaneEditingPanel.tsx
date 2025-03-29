@@ -1,11 +1,12 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
 // TODO: Reduce the number of imports here. There must be a cleaner way.
-import { deleteLane, resetLanesEditingStatus, updateAllLaneSizes, retrieveBucketData, patternInCreationPositions, uploadToBucket, findLaneFromCanvas, retrieveBucketList, drawSingleLane, changeEditMode, maxMeasureCount, resetPatternInCreation, setNewPatternMeasures } from '../scripts/main'
+import { deleteLane, resetLanesEditingStatus, updateAllLaneSizes, retrieveBucketData, patternInCreationPositions, uploadToBucket, findLaneFromCanvas, retrieveBucketList, drawSingleLane, changeEditMode, maxMeasureCount, resetPatternInCreation, setNewPatternMeasures, longest_lane, setLongestLane, lanes } from '../scripts/main'
 import Lane from '../scripts/Lane';
 import { EDIT_MODES } from '../scripts/constants';
 import { supabase } from '../scripts/supa-client.ts';
 import { UserContext } from './App.tsx';
 import Note from '../scripts/Note.ts';
+
 
 // TODO: HUGE REFACTOR OF ALL OF THIS NEEDED
 // TODO: Add in correct selection of hit precision, time signature and lane sound selects.
@@ -25,6 +26,8 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas, unmount })
   const loadLaneSelectRef = useRef<HTMLSelectElement | null>(null);
   const saveLaneNameRef = useRef<HTMLInputElement | null>(null);
 
+  const laneEditingRef = useRef<HTMLDivElement | null>(null); 
+
   const [editMode, setEditMode] = useState("individual");
   const [metronomeEnabled, setMetronomeEnabled] = useState(false);
   // TODO: Change looping system
@@ -37,9 +40,30 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas, unmount })
   const [selectedLane, setSelectedLane] = useState<string | null>(null);
 
   useEffect(() => {
-    setCanLoop(maxMeasureCount % lane.measureCount == 0 ? true : false);
+    // setCanLoop(maxMeasureCount % lane.measureCount == 0 ? true : false);
     console.log(maxMeasureCount % lane.measureCount == 0);
     getSavedLanes(); 
+
+    if(!laneEditingRef.current)
+      return; 
+
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if(mutation.type === 'attributes' && mutation.attributeName === 'class') {
+          let canLoop = lane.getRatio() < longest_lane.getRatio()
+          setCanLoop(canLoop);
+          if(!lane.looped)
+            setLooped(false);
+        }
+      })      
+    })
+
+    observer.observe(laneEditingRef.current!, {
+      attributes: true, 
+      attributeFilter: ['class'],
+    }); 
+
+    return () => observer.disconnect(); 
 
     // TODO: Have user as a ref, set it here with async function
   }, [key]);
@@ -104,9 +128,10 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas, unmount })
     drawSingleLane(lane);
   }
 
-  const onMeasureCountChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const onMeasureCountChange = (event: React.ChangeEvent<HTMLInputElement>) => {    
     let value = parseInt(event.target.value);
     // TODO: Update how the max measure system works.
+    let oldMC = lane.measureCount; 
     let newMC = value < maxMeasureCount ? value : maxMeasureCount;
     
     lane.measureCount = newMC;
@@ -114,15 +139,31 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas, unmount })
     
     // TODO: Add ability to keep notes before measure cut off. 
     lane.patternStartMeasure = 0;
-    lane.notes = [];
+       
     lane.recalculateHeight();
-    lane.translationAmount = 0; 
+    lane.cullOutOfBoundsNotes();
+
+    lane.unloopLane();
+    setLooped(false);
+
+    if(-lane.translationAmount < lane.calculateTopOfLane(false))
+      lane.translationAmount = -lane.calculateTopOfLane(false);
+
+    // if(lane.topOfLane < longest_lane.topOfLane)
+    setLongestLane();
+    if(lane == longest_lane) {
+      lanes.forEach(lane => {
+        if(lane.looped) {
+          lane.unloopLane();
+        }
+      });
+    }
+
 
     // TODO: Deal with potential bug with looping when measures change
-    if(newMC != maxMeasureCount && maxMeasureCount % newMC == 0)
-      setCanLoop(true);
-    else 
-      setCanLoop(false);
+    // console.log(longest_lane);
+    // setCanLoop(lane.topOfLane <= longest_lane.topOfLane ? false : true);
+    setCanLoop(lane.getRatio() < longest_lane.getRatio()); 
 
     drawSingleLane(lane);
   }
@@ -140,9 +181,8 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas, unmount })
       lane.topOfLane = lane.calculateTopOfLane(true);
     } else {
       // Lane has already been looped. Toggle looping off
-      lane.notes.splice(lane.notes.length - lane.loopedNotes, lane.loopedNotes);
-      lane.looped = false; 
-      lane.loopedNotes = 0; 
+      lane.unloopLane();
+
       
       // TODO: DETERMINE IF THIS IS NECESSARY. TEST CASES OF LOOPING BEING TURNED OFF
       // lane.loopedHeight = lane.calculateHeight(false);      
@@ -197,6 +237,8 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas, unmount })
     if(!data.user || !saveLaneNameRef.current || !saveLaneNameRef.current.value)
       return; 
     let laneName = saveLaneNameRef.current.value;
+
+    // TODO: Disallow repeated notes from being saved here
     let content = JSON.stringify({lane: lane, name: laneName})
     await uploadToBucket('lanes', `${data.user.id}/${laneName}`, laneName, content);
     
@@ -211,6 +253,7 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas, unmount })
 
     let newLaneName = loadLaneSelectRef.current.value; 
     let laneData = await retrieveBucketData('lanes', `${data.user.id}/${newLaneName}`);
+    console.log(laneData);
     let newLane: Lane = laneData.lane; 
 
     lane.bpm =  newLane.bpm; 
@@ -220,6 +263,7 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas, unmount })
     lane.hitsound = newLane.hitsound; 
     lane.timeSignature = newLane.timeSignature; 
     lane.hitPrecision = newLane.hitPrecision; 
+    lane.metronomeEnabled = newLane.metronomeEnabled;
     lane.notes = []; 
     // TODO: Optimize this for lower load times
     newLane.notes.forEach((note) => {
@@ -229,10 +273,12 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas, unmount })
     })
     lane.hitzone = lane.calculateHitzone(); 
     lane.recalculateHeight(); 
-    
     updateAllLaneSizes();
     lane.handleResize();
     drawSingleLane(lane); 
+    lane.translationAmount = 0;     
+
+    console.log(lane.translationAmount, lane.height, lane.metronomeEnabled);
 
     // TODO: Work around using key
     setKey(key + 1);  
@@ -244,7 +290,7 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas, unmount })
 
   if (lane) return (
   // TODO: Try to work around having to use key to remount
-  <div key={key} className={`lane_editing ${canvas.classList.contains('editing') ? 'activated' : ''}`}>
+  <div key={key} ref={laneEditingRef} className={`lane_editing ${canvas.classList.contains('editing') ? 'activated' : ''}`}>
     <div className='edit_mode_container'>
       <button 
       className={`edit_mode_button note_mode_button ${editMode == 'individual' ? 'selected' : ''}`}
@@ -258,19 +304,23 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas, unmount })
 
 
     <div className="metronome_container">
-      <button className={`metronome_button ${metronomeEnabled ? 'selected' : ''}`} 
+      <button className={`metronome_button ${lane.metronomeEnabled ? 'selected' : ''}`} 
       onClick={()=>{
         lane.metronomeEnabled = !lane.metronomeEnabled;
         setMetronomeEnabled(!metronomeEnabled);
       }}>
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="lucide lucide-list-music"><path d="M21 15V6"/><path d="M18.5 18a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"/><path d="M12 12H3"/><path d="M16 6H3"/><path d="M12 18H3"/></svg>
       </button>
-      <label className="metronome_label">Metronome <b>({metronomeEnabled ? 'enabled' : 'disabled'})</b></label>
+      <label className="metronome_label">Metronome <b>({lane.metronomeEnabled ? 'enabled' : 'disabled'})</b></label>
     </div>
     
     <div className="bpm_container">
       <input className="bpm_input" type="number" 
-      onChange={(event)=>{lane.bpm = parseInt(event.target.value);}} 
+      onChange={(event)=>{
+        lane.bpm = parseInt(event.target.value);
+        setLongestLane(); 
+        setCanLoop(lane.getRatio() < longest_lane.getRatio());
+      }} 
       defaultValue={lane.bpm} min="1"/>
       <label>BPM</label>
     </div>
@@ -279,7 +329,13 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas, unmount })
       <input className="measure_count_input" type="number" defaultValue={lane.measureCount} min="1"
       onChange={onMeasureCountChange}/>
       <label>measure count</label>
-      <button disabled={!canLoop ? true : false} className={`loop_button ${looped ? 'selected' : ''}`} onClick={onLoopClick}>loop</button>
+      
+      <button className={`loop_button ${looped ? 'selected' : ''}`} disabled={!canLoop ? true : false} onClick={onLoopClick}>repeat</button>
+      
+      <button className="loop_question" title="Repeats the notes in this lane up until the height of the longest lane in the session">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="lucide lucide-circle-help-icon lucide-circle-help"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
+      </button>
+
     </div>
 
     <div className="precisioun_container">

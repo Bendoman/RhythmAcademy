@@ -86,7 +86,7 @@
     pointer-events: all;
   }
 
-  @media (max-width: 768px) {
+  @media (max-width: 900px) {
     .lane_editing.activated {
       
       transition: left 0s;
@@ -190,6 +190,21 @@
     align-items: center;
   }
 
+  .loop_question {
+    padding: 0;
+    display: flex;
+    border-radius: 15px;
+  }
+
+  .loop_question {
+    color: #ECDFCC !important;
+    background-color: #ffffff00 !important;
+  }
+
+  .loop_question:hover {
+    background-color: #ecdfcc65 !important;
+  }
+
   .bpm_input, .measure_count_input{
     max-width: 4em;
   }
@@ -242,15 +257,6 @@
   }
   
 
-
-
-  
-
-  
-
-  /* .lane_canvas:hover {
-    background-color: red; 
-   } */
   
   .time_signature_select {
     max-width: 4em;

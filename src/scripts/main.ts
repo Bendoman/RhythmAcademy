@@ -32,6 +32,7 @@ export function handleMIDIMessage(input: MIDIMessageEvent) {
 
 // #region ( Global variables )
 export let lanes: Lane[] = []; 
+export let longest_lane: Lane; 
 // Associates an inputkey string with the index of its associated lane within the lanes list
 const input_lane_pairs: { [key: string ]: number } = {}; 
 // Associates a canvas' ID with its lane
@@ -39,6 +40,7 @@ const canvas_lane_pairs: { [key: string ]: Lane } = {};
 
 let laneCount = 0; 
 export let maxMeasureCount = 400; 
+export let measureHeight = 800;
 
 let ups = 0; 
 let translationAmount = 0; 
@@ -301,10 +303,14 @@ function retrieveElements() {
 }
 
 
-function resetLanes() {
+function resetLanes(overshoot?: number) {
     lanes.forEach(lane => {
-      lane.resetLane();
+      if(overshoot)
+        lane.resetLane(overshoot);
+      else
+        lane.resetLane();
     })
+
 }
 
 function populateTestNotes(lane: Lane) {
@@ -405,7 +411,7 @@ function createNewLane(
   
   newCanvas.addEventListener('click', handleCanvasClick);
 
-  const new_lane = new Lane(bpm, measureCount, maxMeasureCount, noteGap, hitsound, maxWrongNotes, notes, timeSignature, inputKey, newCanvas, hitPrecision);
+  const new_lane = new Lane(bpm, measureCount, noteGap, hitsound, maxWrongNotes, notes, timeSignature, inputKey, newCanvas, hitPrecision);
 
   // TODO: Review if these can be unified
   lanes.push(new_lane); 
@@ -432,50 +438,23 @@ function createNewLane(
   laneCount++;
   laneContainer?.appendChild(canvasContainer);
 
-  // TODO: Put all this in its own function
   document.getElementById(`${newCanvas.id}`)?.addEventListener('mousemove', canvasMouseOver);
   document.getElementById(`${newCanvas.id}`)?.addEventListener('mouseout', canvasMouseOut);
   document.getElementById(`${newCanvas.id}`)?.addEventListener('wheel', canvasMouseWheel);
-  
-  // #region (old event listeners)
-  document.getElementById(`${newCanvas.id}_pattern_mode`)?.addEventListener('click', patternModeClick);
-  document.getElementById(`${newCanvas.id}_note_mode`)?.addEventListener('click', noteModeClick);
 
-  document.getElementById(`${newCanvas.id}_bpm_input`)?.addEventListener('change', bpmInputChange);
-  document.getElementById(`${newCanvas.id}_measure_count_input`)?.addEventListener('change', measureCountChange);
-  document.getElementById(`${newCanvas.id}_time_signature_select`)?.addEventListener('change', timeSignatureChange);
-  document.getElementById(`${newCanvas.id}_precision_select`)?.addEventListener('change', precisionSelectChange);
-
-  document.getElementById(`${newCanvas.id}_metronome_button`)?.addEventListener('click', metronomeButtonClick);
-  document.getElementById(`${newCanvas.id}_loop_button`)?.addEventListener('click', loopButtonClick);
-
-  document.getElementById(`${newCanvas.id}_clear_notes_button`)?.addEventListener('click', clearNotesClick);
-  document.getElementById(`${newCanvas.id}_back_to_start`)?.addEventListener('click', backToStartClick);
-  
-  document.getElementById(`${newCanvas.id}_hitsound_select`)?.addEventListener('change', hitsoundSelectChange);
-  document.getElementById(`${newCanvas.id}_metronome_select`)?.addEventListener('change', metronomeSelectChange);
-  
-  document.getElementById(`${newCanvas.id}_load_pattern_select`)?.addEventListener('change', patternSelectChange);  
-  document.getElementById(`${newCanvas.id}_load_pattern_button`)?.addEventListener('click', loadPatternClick);
-  document.getElementById(`${newCanvas.id}_loaded_pattern_measures`)?.addEventListener('change', loadedPatternMeasuresChange);
-
-  document.getElementById(`${newCanvas.id}_create_pattern_button`)?.addEventListener('click', createPatternClick);
-  document.getElementById(`${newCanvas.id}_new_pattern_measures`)?.addEventListener('change', newPatternMeasuresChange);
-  document.getElementById(`${newCanvas.id}_save_pattern_button`)?.addEventListener('click', savePatternClick);
-  document.getElementById(`${newCanvas.id}_close_pattern_button`)?.addEventListener('click', closePatternClick);
-  
-  document.getElementById(`${newCanvas.id}_load_lane_button`)?.addEventListener('click', loadLaneClick);
-  document.getElementById(`${newCanvas.id}_save_lane_button`)?.addEventListener('click', saveLaneClick);
-
-
-
-
-  document.getElementById(`${newCanvas.id}_close`)?.addEventListener('click', closeClick);
-  document.getElementById(`${newCanvas.id}_delete`)?.addEventListener('click', deleteButtonClick);
-  // #endregion
 
   // Dynamically updates lane widths based on the number of lanes
   updateAllLaneSizes();
+
+  if(!longest_lane) {
+    longest_lane = new_lane; 
+  } else {
+    setLongestLane(); 
+  }
+  
+  // else if(new_lane.topOfLane < longest_lane.topOfLane) {
+  //   longest_lane = new_lane;
+  // }
 
   // return laneEditingSection;
   return canvasContainer; 
@@ -599,7 +578,8 @@ export async function retrieveBucketData(bucket: string, path: string) {
   const { data, error } = await supabase
   .storage
   .from(bucket)
-  .download(path);
+  .download(`${path}?t=${Date.now()}`);
+
   if(!error)
     return data.text().then(JSON.parse); 
 }
@@ -769,12 +749,18 @@ export function deleteLane(lane: Lane, canvas: HTMLCanvasElement) {
   if(!associatedCanvasContainer)
     return; 
   
+  if(lane == longest_lane)
+    resetLongestLane();
+
   delete input_lane_pairs[lane.inputKey];
   console.log(lanes);
   lanes.splice(lanes.indexOf(lane), 1);
   console.log(lanes);
   delete canvas_lane_pairs[canvas.id];
   
+  setLongestLane();
+
+
   console.log(canvas_lane_pairs);
   console.log(input_lane_pairs);
 
@@ -834,9 +820,26 @@ export async function uploadToBucket(bucket: string, filePath: string, fileName:
   const jsonBlob = new Blob([content], {type: "application/json"});
   const jsonFile = new File([jsonBlob], fileName, {type: "application/json"});
   
+  // // Step 1: Check if the file already exists
+  // const { data: existing, error: listError } = await supabase
+  // .storage
+  // .from(bucket)
+  // .list(filePath.split('/')[0]); // assumes filePath = "userId/filename.json"
+  
+  // const fileExists = existing?.some(file => `${filePath.split('/')[0]}/${file.name}` === filePath);
+  
+  // if (fileExists) {
+  //   console.log('Overwriting existing file');  
+  //   const { error: deleteError } = await supabase.storage.from(bucket).remove([filePath]);
+  //   if (deleteError) {
+  //     console.log('Error deleting existing file:', deleteError);
+  //     return;
+  //   }
+  // }
+
   const {data, error} = await supabase.storage
   .from(bucket)
-  .upload(filePath, jsonFile);
+  .upload(filePath, jsonFile, {upsert: true});
 
   if(error) {
     console.log('upload error ', error); 
@@ -1249,11 +1252,11 @@ function canvasMouseWheel(event: WheelEvent) {
     lane.translationAmount -= event.deltaY/2.5; 
   drawSingleLane(lane);
 
-  if(event.deltaY > 0) {
-      console.log('scroll down in edit mode');    
-  } else {
-      console.log('scroll up in edit mode');
-  }
+  // if(event.deltaY > 0) {
+  //     console.log('scroll down in edit mode');    
+  // } else {
+  //     console.log('scroll up in edit mode');
+  // }
 }
 
 let offsetY:number | null = 0; 
@@ -1284,6 +1287,8 @@ async function handleCanvasClick(event: MouseEvent) {
   if(!editing)
     return; 
 
+  console.log(newNoteIndex);
+
   let canvas = event.target as HTMLElement; 
 
   if(canvas.classList.contains('editing')) {
@@ -1307,7 +1312,8 @@ async function handleCanvasClick(event: MouseEvent) {
           if(lane.looped) {
             lane.notes.splice(lane.notes.length - lane.loopedNotes, lane.loopedNotes);
             lane.notes.splice(sortedIndex[0], 1);
-            lane.loopNotes(maxMeasureCount / lane.measureCount)
+            if(lane.notes.length > 0)
+              lane.loopNotes(maxMeasureCount / lane.measureCount)
           } else {
             lane.notes.splice(sortedIndex[0], 1);
           }
@@ -1318,6 +1324,7 @@ async function handleCanvasClick(event: MouseEvent) {
       return;
     } else if(event.button != 2 && editMode != EDIT_MODES.PATTERN_MODE) {
       let newNote = new Note(newNoteIndex);
+      console.log(newNote.getY(lane.noteGap, lane.timeSignature[1], lane.startY) - lane.startY); 
 
       if(editMode == EDIT_MODES.CREATE_PATTERN_MODE) {
         patternInCreationNotes.splice(sortedIndex[0], 0, newNote);
@@ -1393,7 +1400,7 @@ async function handleCanvasClick(event: MouseEvent) {
 
 // TODO: Reword this and rework it too, split it into seperate functions
 let newNoteY = -1; 
-let newNoteIndex = -1;
+let newNoteIndex = 0;
 export function drawSingleLane(lane: Lane) {
   lane.ctx.clearRect(0, 0, lane.canvas.width, lane.canvas.height - lane.inputAreaHeight);
   lane.drawHitzone();
@@ -1483,7 +1490,7 @@ function gameLoop(timeStamp: number) {
   let interval = timeStamp - lastLoop; 
   updateTime += (interval - updateTime) / filterStrength; 
   ups = (1000/updateTime); 
-  upsParagraph.innerText = ups.toString().substring(0, 6); 
+  upsParagraph!.innerText = ups.toString().substring(0, 6); 
   lastLoop = timeStamp;
 
   lanes.forEach(lane => {
@@ -1495,12 +1502,36 @@ function gameLoop(timeStamp: number) {
     // Determining the speed of translation for each lane based on the current loop interval
     let translationSpeed = (interval / (60000/lane.bpm)) * lane.noteGap;
     lane.translationAmount += translationSpeed;
-       
+
     lane.ctx.clearRect(0, 0, lane.canvas.width, lane.canvas.height - lane.inputAreaHeight);
     lane.drawHitzone();
     lane.drawMeasureIndicators();
     lane.updateAndDrawNotes(editing, ups, translationSpeed);
+
+
+    // if(-(lane.translationAmount + (lane.noteGap/lane.timeSignature[1])) < longest_lane.calculateTopOfLane(false)) {
+
+    //   let oldTranslationAmount = lane.translationAmount; 
+    //   // console.log(lane.startY + (-lane.canvas.height + 10));
+    //   lane.translationAmount = lane.translationAmount - lane.height; 
+    //   // console.log((lane.startY - lane.height) + lane.translationAmount);
+    //   lane.drawMeasureIndicators();
+    //   lane.updateAndDrawNotes(true, ups, translationSpeed);
+    //   console.log('over top of lane in view'); 
+    //   lane.translationAmount = oldTranslationAmount;
+    // }
+
     lane.drawInputVisual();
+
+    if(lane == longest_lane) {
+      let overshoot = ((lane.startY - lane.translationAmount) + lane.noteGap) - lane.calculateTopOfLane(false);
+      if(overshoot <= 0) {
+        // console.log()
+        // lane.resetLane();
+        // lane.translationAmount = lane.noteGap - overshoot; 
+        resetLanes(overshoot)
+      }
+    }
 
   })
   // console.log(test); 
@@ -1684,3 +1715,32 @@ export function assignLaneInput(lane: Lane, inputKey: string) {
   input_lane_pairs[inputKey.toUpperCase()] = lanes.indexOf(lane); 
   drawSingleLane(lane); 
 }
+
+export function resetLongestLane() {
+  longest_lane = lanes[0]; 
+}
+
+export function setLongestLane() {   
+  console.log(longest_lane)
+  
+
+  lanes.forEach(curr => {
+    if(longest_lane == null){
+      longest_lane = curr; 
+    } else if(curr.getRatio() > longest_lane.getRatio()) {
+      longest_lane = curr; 
+    }
+  });
+
+  lanes.forEach(curr => {
+    if(curr.looped && curr.getRatio() >= longest_lane.getRatio()) {
+      curr.unloopLane();
+      console.log('unlooping lane');
+    }
+  })
+
+
+  console.log(longest_lane);
+}
+
+

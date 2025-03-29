@@ -84,6 +84,7 @@ const SessionLoadScreen: React.FC<ISessionLoadScreenProps>
             laneObject.timeSignature = newLane.timeSignature; 
             laneObject.hitPrecision = newLane.hitPrecision; 
             laneObject.notes = []; 
+            laneObject.metronomeEnabled = newLane.metronomeEnabled;
             // TODO: Optimize this for lower load times
             newLane.notes.forEach((note) => {
                 console.log(note);

@@ -4,12 +4,12 @@ import { drawLine, getNoteFill } from "./Utils";
 import { COLORS, EDIT_MODES, HIT_STATUSES, ZONE_NAMES } from "./constants";
 import AudioSprite from "./AudioSprite.ts";
 import { selectedPattern } from "./types.ts";
+import { longest_lane } from "./main.ts";
 
 // TODO: Make sure that values relient on height can be updated when the window size changes. Have an update function for this. 
 export default class Lane {
     public bpm: number;
     public measureCount: number; 
-    public maxMeasureCount: number;
     public timeSignature: number[]; // Index 0 will be the upper numeral, index 1 the lower
     public metronomeEnabled: boolean; 
 
@@ -64,7 +64,6 @@ export default class Lane {
     constructor(
         bpm: number, 
         measureCount: number, 
-        maxMeasureCount: number,
         noteGap: number,
         hitsound: string, 
         maxWrongNotes: number,
@@ -76,7 +75,6 @@ export default class Lane {
     ) {
         this.bpm = bpm; 
         this.measureCount = measureCount;
-        this.maxMeasureCount = maxMeasureCount;
         this.timeSignature = timeSignature;
 
         this.notes = notes; 
@@ -127,19 +125,38 @@ export default class Lane {
         this.fullyScrolled = false; 
     }
 
-    public setNotes(notes: Note[]): void { this.notes = notes; }
-
-    public incrementNoteIndex() { this.nextNoteIndex++; }
-
     public recalculateHeight() {
         this.height = this.measureCount * (this.timeSignature[0] * this.noteGap); 
         this.topOfLane = this.startY - this.height;
     }
 
+    public calculateHeight(looped: boolean) {
+        // let measureCount = looped ? this.maxMeasureCount : this.measureCount; 
+        // return measureCount * this.calculateSingleMeasureHeight(); 
+        return this.measureCount * this.calculateSingleMeasureHeight(); 
+    }
+    
+    public calculateSingleMeasureHeight() {
+        return this.timeSignature[0] * this.noteGap;
+    }
+    
+    public calculateTopOfLane(looped: boolean) {
+        if(looped)
+            return this.startY - this.loopedHeight; 
+        
+        return this.startY - this.height; 
+    }   
+
+    public calcualteTopOfMeasuresN(n: number) {
+        return this.startY - (this.calculateSingleMeasureHeight() * n); 
+    }
+    
+
     // TODO: Give this better name and have one that also removes all notes 
-    public resetLane() { 
+    public resetLane(overshoot?: number) { 
+        console.log(overshoot)
         this.fullyScrolled = false;
-        this.translationAmount = 0; 
+        this.translationAmount = overshoot ? this.noteGap - overshoot : 0; 
         this.notesHit = [];
         this.notesMissed = [];
 
@@ -309,7 +326,6 @@ export default class Lane {
         }
     }
 
-
     public drawHitzone() {
         this.hitzone.drawHitZone(this.ctx, this.canvas.width);
     }
@@ -317,8 +333,9 @@ export default class Lane {
     public drawMeasureIndicators(editMode?: string, newPatternMeasures?: number) {
         let noteCount = 1; 
         let topOfLane;
+
         if(this.looped)
-            topOfLane = this.calculateTopOfLane(true);
+            topOfLane = this.startY - longest_lane.getRatio() * this.bpm;
         else 
             topOfLane = this.calculateTopOfLane(false);
     
@@ -344,7 +361,11 @@ export default class Lane {
             // So that the actual y values can be held constant
             let effectiveY = y + this.translationAmount;
             // TODO: Choose more generic starting X value
-            drawLine(this.ctx, 30, effectiveY, this.canvas.width - 30, effectiveY,COLORS.MEASURE_LINE, 1);
+
+            if(y == topOfLane + this.noteGap)
+                drawLine(this.ctx, 30, effectiveY, this.canvas.width - 30, effectiveY,COLORS.MEASURE_LINE, 1, [25, 5]);
+            else 
+                drawLine(this.ctx, 30, effectiveY, this.canvas.width - 30, effectiveY,COLORS.MEASURE_LINE, 1);
 
             // Emphasises the first note of a bar by giving it bigger text
             // TODO: Create a functional pixel to em converted and use relative units to position these.
@@ -386,53 +407,53 @@ export default class Lane {
     }
 
     public loopNotes(loops: number) {
+        this.looped = true; 
+
+        let l = 1;
+        let highestNoteY = 0;         
         let length = this.notes.length; 
         this.loopedNotes = 0; 
-        for(let l = 1; l < loops; l++) {
+
+        let repeatedLaneHeight = longest_lane.getRatio() * this.bpm;
+        while(highestNoteY >= this.startY - repeatedLaneHeight) {
             for(let i = 0; i < length; i++) {
-                
-                
+            
                 let newNoteY = this.notes[i].getY(this.noteGap, this.timeSignature[1], this.startY) - (this.height * l)
                 let newNoteIndex = (this.startY - newNoteY) / (this.noteGap/this.timeSignature[1]);
+                highestNoteY = newNoteY; 
+                console.log(highestNoteY);
 
+                if(highestNoteY <= this.startY - repeatedLaneHeight)
+                    return; 
 
                 let newNote = new Note(newNoteIndex);
-                // TODO: Calculate y, then calculate index based on it. 
-                // newNoteIndex = (lane.startY - newNoteY) / (lane.noteGap/lane.timeSignature[1]);
-
-
 
                 this.notes.push(newNote); // Change this to looped notes 
                 this.loopedNotes++; 
-                console.log('pushing new note');
-                // this.notes.push(new Note(this.notes[i].y -= (this.height * l)));
             }
+            l++;
         }
     }
 
-    public calculateHeight(looped: boolean) {
-        let measureCount = looped ? this.maxMeasureCount : this.measureCount; 
-        return measureCount * this.calculateSingleMeasureHeight(); 
+    public unloopLane() {
+        this.notes.splice(this.notes.length - this.loopedNotes, this.loopedNotes);
+        this.loopedNotes = 0;
+        this.looped = false; 
     }
-    
-    public calculateSingleMeasureHeight() {
-        return this.timeSignature[0] * this.noteGap;
-    }
-    
-    public calculateTopOfLane(looped: boolean) {
-        if(looped)
-            return this.startY - this.loopedHeight; 
-        return this.startY - this.height; 
-    }   
 
-    public calcualteTopOfMeasuresN(n: number) {
-        return this.startY - (this.calculateSingleMeasureHeight() * n); 
+    public cullOutOfBoundsNotes() {
+        if(this.notes.length == 0)
+            return; 
+
+        for(let i = this.notes.length - 1; i >= 0; i--) {
+            console.log(this.notes[i]);
+
+            if(this.notes[i].getY(this.noteGap, this.timeSignature[1], this.startY) <= this.calculateTopOfLane(false))
+                this.notes.splice(i, 1); 
+        }
     }
-    
-    public updateMaxMeasureCount(maxMeasureCount: number) {
-        this.maxMeasureCount = maxMeasureCount; 
-        // TODO: Remove looped notes array. If current measure count is greater, remove notes. 
-    }
+
+
 
     public loadPattern(selectedPattern: selectedPattern, measures: number) {
         if(this.patternStartMeasure + (measures * selectedPattern.measures) > this.measureCount) {
@@ -463,7 +484,6 @@ export default class Lane {
     }    
 
     public handleResize() {
-        console.log("Handling resize");
         /*
             Reset: 
             startY,
@@ -481,4 +501,9 @@ export default class Lane {
         this.inputAreaHeight = this.canvas.height - this.topOfInputVisual;
         this.hitzone = this.calculateHitzone(); 
     }
+
+    public getRatio() {
+        return this.height / this.bpm; 
+    }
 }
+

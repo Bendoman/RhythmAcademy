@@ -8,6 +8,7 @@ import { StatsObject } from '../../scripts/types.ts';
 
 import '../styles/runControls.css';
 import AddLaneButton from './AddLaneButton.tsx';
+import { lanes } from '../../scripts/main.ts';
 
 export interface RunControlsRef {
     processMidiMessage: (input: MIDIMessageEvent) => void; 
@@ -49,7 +50,7 @@ const RunControls = forwardRef<RunControlsRef, RunControlsProps>(
             <PlayButton 
             isPlaying={isPlaying}
             onComponentClick={() => {
-                if(!isEditing && !isPlaying) { 
+                if(lanes.length > 0 && !isEditing && !isPlaying) { 
                     setIsPlaying(true); 
                     setIsPaused(false);
                     setIsStopped(false);
@@ -98,6 +99,13 @@ const RunControls = forwardRef<RunControlsRef, RunControlsProps>(
             }}></EditButton>
 
             <AddLaneButton></AddLaneButton>
+
+            <button className="loop_button" title='Loop session'
+            onClick={() => {
+                
+            }}>
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="lucide lucide-repeat2-icon lucide-repeat-2"><path d="m2 9 3-3 3 3"/><path d="M13 18H7a2 2 0 0 1-2-2V6"/><path d="m22 15-3 3-3-3"/><path d="M11 6h6a2 2 0 0 1 2 2v10"/></svg>
+            </button>
             
             <div className="middle_buttons">
                 <button id="save_workspace_button" title='save workspace'
