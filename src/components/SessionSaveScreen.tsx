@@ -1,4 +1,4 @@
-import React, { HTMLInputTypeAttribute, useRef, useState } from 'react'
+import React, { HTMLInputTypeAttribute, useEffect, useRef, useState } from 'react'
 import './styles/session_screen.css';
 import { useSearchParams } from 'react-router-dom';
 import { uploadToBucket } from '../scripts/main';
@@ -17,7 +17,18 @@ const SessionSaveScreen: React.FC<ISessionSaveScreenProps>
     let friends_checkbox_ref = useRef<HTMLInputElement>(null); 
 
     const [savedStatus, setSavedStatus] = useState(''); 
-    
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+        if(event.key != 'Escape')
+            return; 
+        setSessionSaveScreen(false);
+    }
+
+    useEffect(() => {
+        window.addEventListener('keydown', handleKeyDown);
+        return () => { window.removeEventListener('keydown', handleKeyDown); }
+    }, []);
+
     const onSaveSessionClick = async (sessionName: string) => {
         const { data, error } = await supabase.auth.getUser();
 

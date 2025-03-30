@@ -4,7 +4,7 @@ import Note from "./Note.ts";
 import AudioSprite from "./AudioSprite.ts";
 
 import { StatsObject } from "./types.ts";
-import { findSortedIndex } from "./Utils.ts";
+import { findSortedIndex, saveToLocalStorage } from "./Utils.ts";
 import { COLORS, EDIT_MODES } from "./constants.ts";
 import { getPatternOptionHTML } from "./elements.ts";
 import { supabase } from '../scripts/supa-client.ts';
@@ -737,7 +737,7 @@ export function drawSingleLane(lane: Lane) {
 
 function drawLanes() {
   lanes.forEach(lane => {
-
+    lane.ctx.clearRect(0, 0, lane.canvas.width, lane.canvas.height - lane.inputAreaHeight);
     lane.drawHitzone();
     lane.drawMeasureIndicators();
     lane.updateAndDrawNotes(editing, ups, 0); 
@@ -750,7 +750,6 @@ let lastLoop = performance.now();
 let updateTime = 0; 
 let filterStrength = 20; 
 
-let test = 0; 
 // TODO: Pause updating when the window is out of focus. 
 function gameLoop(timeStamp: number) {
   // Calculating the number of updates per second
@@ -971,3 +970,40 @@ export function setLongestLane() {
 
 export function toggleLooping() { looping = !looping; console.log(looping)}
 
+export function saveCurrentSessionLocally() {
+  let sessionObject: { lanes: Lane[] } = { lanes: [] };
+  lanes.forEach(lane => { sessionObject.lanes.push(lane); });
+  let content = JSON.stringify(sessionObject);
+  saveToLocalStorage('current_session', content); 
+}
+
+// TODO: Make sure this is complete
+export function remapLane(target: Lane, reference: Lane) {
+  target.bpm =  reference.bpm; 
+  target.noteGap = reference.noteGap; 
+  target.hitsound = reference.hitsound; 
+  target.measureCount = reference.measureCount; 
+  target.hitPrecision = reference.hitPrecision; 
+  target.maxWrongNotes = reference.maxWrongNotes; 
+  target.timeSignature = reference.timeSignature; 
+  target.metronomeEnabled = reference.metronomeEnabled;
+  
+  target.repeated = reference.repeated;
+  target.repeatedNotes = reference.repeatedNotes;
+
+  target.notes = []; 
+  target.translationAmount = 0;
+  target.nextNoteIndex = 0; 
+
+  // TODO: Optimize this for lower load times
+  reference.notes.forEach((note) => { target.notes.push(new Note(note.index)) });
+  
+  target.hitzone = target.calculateHitzone(); 
+  target.recalculateHeight(); 
+
+  updateAllLaneSizes();
+  target.handleResize();
+  drawSingleLane(target); 
+
+  setLongestLane();
+}

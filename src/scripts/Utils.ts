@@ -23,7 +23,6 @@ export function resetLaneStats(lane: Lane) {
     lane.nextNoteIndex = 0;
 }
 
-
 export function getNoteFill(currentZone: string, hitStatus: string): string {
     let fillStyle = ''; 
     if(currentZone == ZONE_NAMES.EARLY_ZONE)
@@ -42,8 +41,6 @@ export function getNoteFill(currentZone: string, hitStatus: string): string {
 
     return fillStyle; 
 }
-
-
 
 
 // TODO: Come back to this
@@ -84,4 +81,24 @@ export function findSortedIndex(notes: Note[], newNoteIndex: number, lane: Lane)
     }
 
     return [notes.length, 0];
+}
+
+export function saveToLocalStorage(key: string, content: string) {
+    try {
+        localStorage.setItem(key, content);
+    } catch (err) {
+        console.error('Failed to save to localStorage:', err);
+    }
+}
+
+export function loadFromLocalStorage<T = any>(key: string): T | null {
+    try {
+        const item = localStorage.getItem(key);
+        if (!item) return null;
+
+        return JSON.parse(item) as T;
+    } catch (err) {
+        console.error(`Failed to load key "${key}" from localStorage:`, err);
+        return null;
+    }
 }

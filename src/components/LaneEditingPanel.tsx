@@ -5,12 +5,11 @@ import { supabase } from '../scripts/supa-client.ts';
 import React, { useContext, useEffect, useRef, useState } from 'react'
 
 // TODO: Reduce the number of imports here. There must be a cleaner way.
-import { deleteLane, resetLanesEditingStatus, updateAllLaneSizes, retrieveBucketData, patternInCreationPositions, uploadToBucket, findLaneFromCanvas, retrieveBucketList, drawSingleLane, changeEditMode, maxMeasureCount, resetPatternInCreation, setNewPatternMeasures, longest_lane, setLongestLane, lanes } from '../scripts/main'
+import { deleteLane, resetLanesEditingStatus, updateAllLaneSizes, retrieveBucketData, patternInCreationPositions, uploadToBucket, findLaneFromCanvas, retrieveBucketList, drawSingleLane, changeEditMode, maxMeasureCount, resetPatternInCreation, setNewPatternMeasures, longest_lane, setLongestLane, lanes, remapLane, saveCurrentSessionLocally } from '../scripts/main'
 
 // TODO: HUGE REFACTOR OF ALL OF THIS NEEDED
 interface ILaneEditingPanelProps {
   canvas: HTMLCanvasElement;
-  unmount: () => void; 
 }
 
 const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas }) => { 
@@ -236,32 +235,9 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas }) => {
 
     let newLaneName = loadLaneSelectRef.current.value; 
     let laneData = await retrieveBucketData('lanes', `${data.user.id}/${newLaneName}`);
-    console.log(laneData);
-    let newLane: Lane = laneData.lane; 
 
-    lane.bpm =  newLane.bpm; 
-    lane.measureCount = newLane.measureCount; 
-    lane.noteGap = newLane.noteGap; 
-    lane.maxWrongNotes = newLane.maxWrongNotes; 
-    lane.hitsound = newLane.hitsound; 
-    lane.timeSignature = newLane.timeSignature; 
-    lane.hitPrecision = newLane.hitPrecision; 
-    lane.metronomeEnabled = newLane.metronomeEnabled;
+    remapLane(lane, laneData.lane);
 
-    lane.notes = []; 
-    // TODO: Optimize this for lower load times
-    newLane.notes.forEach((note) => {
-      lane.notes.push(new Note(note.index));   
-    })
-
-    lane.hitzone = lane.calculateHitzone(); 
-    lane.recalculateHeight(); 
-    updateAllLaneSizes();
-    lane.handleResize();
-    drawSingleLane(lane); 
-    lane.translationAmount = 0;     
-
-    setLongestLane();
     // TODO: Work around using key
     setKey(key + 1);  
   }
@@ -446,7 +422,10 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas }) => {
       </div>
     </div>
 
-    <button className="close" onClick={resetLanesEditingStatus}>close</button>
+    <button className="close" onClick={() => {
+      resetLanesEditingStatus(); 
+      saveCurrentSessionLocally(); 
+    }}>close</button>
     <p className="tootltip">right click to delete note</p>
     <button className="delete_button" onClick={()=>{deleteLane(lane, canvas); }}>Delete lane</button>
   </div>

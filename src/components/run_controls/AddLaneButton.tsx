@@ -1,6 +1,6 @@
 import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react'
 import LaneEditingPanel from '../LaneEditingPanel.tsx'
-import { onAddLaneButtonClick } from '../../scripts/main.ts'
+import { onAddLaneButtonClick, saveCurrentSessionLocally } from '../../scripts/main.ts'
 import { createRoot } from 'react-dom/client';
 import ChangeLaneKey from './ChangeLaneKey.tsx';
 import { midiAccess } from '../Homepage';
@@ -50,8 +50,10 @@ const AddLaneButton = () => {
 
   const handleOnClick = () => {
     let key = ""; 
-    console.log(inputValue)
-    if(inputValue != "Listening..." && inputValue != "Input key..."){ key = inputValue; }
+
+    if(inputValue != "Listening..." && inputValue != "Input key...")
+      key = inputValue; 
+    
     // TODO: Refactor this name
     const canvasContainer = onAddLaneButtonClick(key);
   
@@ -68,13 +70,9 @@ const AddLaneButton = () => {
     const laneContent = document.createElement('div');
     const contentRoot = createRoot(laneContent);
 
-    const unmount=()=>{console.log("unmounting"); 
-      root.unmount(); contentRoot.unmount()
-    };
-    
     const laneCanvas = canvasContainer.querySelector('canvas') as HTMLCanvasElement
 
-    root.render(<LaneEditingPanel unmount={unmount} canvas={laneCanvas}/>);
+    root.render(<LaneEditingPanel canvas={laneCanvas}/>);
 
     // TODO: Refactor name
     laneContent.classList.add('lane_content');
@@ -82,6 +80,7 @@ const AddLaneButton = () => {
     contentRoot.render(<ChangeLaneKey canvas={laneCanvas}/>)
   
     canvasContainer.appendChild(laneContent);
+    saveCurrentSessionLocally();
   }
 
   useEffect(() => {
@@ -105,31 +104,31 @@ const AddLaneButton = () => {
   }, [])
 
   return (<>
-        <button
-            id="add_button"
-            className='add_lane_button'
-            onClick={handleOnClick}>
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-circle-plus"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>
-        </button>
+    <button
+        id="add_button"
+        className='add_lane_button'
+        onClick={handleOnClick}>
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-circle-plus"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>
+    </button>
 
-        <input 
-          ref={inputElementRef}
-          readOnly id="new_lane_input" 
-          type="text" 
-          value={inputValue == " " ? "space" : inputValue} 
-          onFocus={() => {
-            setInputValue("Listening...")
-            setListening(true);
-          }}
-          onBlur={() => {
-            if(listeningRef.current) {
-              setInputValue("Input key...")
-              setListening(false);
-              console.log(listening)
-            }
-          }}  
-        />
-        </>)
+    <input 
+      ref={inputElementRef}
+      readOnly id="new_lane_input" 
+      type="text" 
+      value={inputValue == " " ? "space" : inputValue} 
+      onFocus={() => {
+        setInputValue("Listening...")
+        setListening(true);
+      }}
+      onBlur={() => {
+        if(listeningRef.current) {
+          setInputValue("Input key...")
+          setListening(false);
+          console.log(listening)
+        }
+      }}  
+    />
+  </>)
 }
 
 export default AddLaneButton

@@ -1,19 +1,21 @@
 import React, { useEffect, useRef, useState } from 'react'
-import './styles/session_screen.css';
-import { deleteLane, drawSingleLane, lanes, onAddLaneButtonClick, retrieveBucketData, retrieveBucketList, setLongestLane, updateAllLaneSizes } from '../scripts/main';
-import { supabase } from '../scripts/supa-client';
+
 import Lane from '../scripts/Lane';
-import LaneEditingPanel from './LaneEditingPanel';
-import { createRoot } from 'react-dom/client';
-import ChangeLaneKey from './run_controls/ChangeLaneKey';
 import Note from '../scripts/Note';
+import './styles/session_screen.css';// TODO: Refactor this name
+import LaneEditingPanel from './LaneEditingPanel';
+import ChangeLaneKey from './run_controls/ChangeLaneKey';
+
+import { supabase } from '../scripts/supa-client';
+import { createRoot } from 'react-dom/client';
 import { newRetrieveBucketList, retrieveFriendBucketList } from '../scripts/SupaUtils';
+import { deleteLane, drawSingleLane, lanes, onAddLaneButtonClick, remapLane, retrieveBucketData, retrieveBucketList, setLongestLane, updateAllLaneSizes } from '../scripts/main'; // TODO: Refactor this name
 
 interface ISessionLoadScreenProps {
     setSessionLoadScreen: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-const createNewLane = (inputKey: string) => {
+export const createNewLane = (inputKey: string) => {
     const canvasContainer = onAddLaneButtonClick(inputKey); 
 
     if(!canvasContainer)
@@ -28,14 +30,10 @@ const createNewLane = (inputKey: string) => {
     const root = createRoot(laneEditingSection);
     const laneContent = document.createElement('div');
     const contentRoot = createRoot(laneContent);
-
-    const unmount=()=>{console.log("unmounting"); 
-        root.unmount(); contentRoot.unmount()
-    };
     
     const canvas = canvasContainer.querySelector('canvas') as HTMLCanvasElement
 
-    root.render(<LaneEditingPanel unmount={unmount} canvas={canvas}/>);
+    root.render(<LaneEditingPanel canvas={canvas}/>);
 
     // TODO: Refactor name
     laneContent.classList.add('lane_content');
@@ -52,6 +50,18 @@ const SessionLoadScreen: React.FC<ISessionLoadScreenProps>
     const loadSessionSelectRef = useRef<HTMLSelectElement | null>(null);
 
     const [selectedTab, setSelectedTab] = useState('public');
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+        if(event.key != 'Escape')
+            return; 
+        setSessionLoadScreen(false);
+    }
+
+    useEffect(() => {
+        window.addEventListener('keydown', handleKeyDown);
+        return () => { window.removeEventListener('keydown', handleKeyDown); }
+    }, []);
+    
     const onLoadSessionClick = async (sessionName: string) => {
         const { data, error } = await supabase.auth.getUser();
 
@@ -75,26 +85,7 @@ const SessionLoadScreen: React.FC<ISessionLoadScreenProps>
         
         newLanes.forEach(newLane => {
             createNewLane(newLane.inputKey);
-            let laneObject = lanes[lanes.length - 1];
-            laneObject.bpm =  newLane.bpm; 
-            laneObject.measureCount = newLane.measureCount; 
-            laneObject.noteGap = newLane.noteGap; 
-            laneObject.maxWrongNotes = newLane.maxWrongNotes; 
-            laneObject.hitsound = newLane.hitsound; 
-            laneObject.timeSignature = newLane.timeSignature; 
-            laneObject.hitPrecision = newLane.hitPrecision; 
-            laneObject.notes = []; 
-            laneObject.metronomeEnabled = newLane.metronomeEnabled;
-            // TODO: Optimize this for lower load times
-            newLane.notes.forEach((note) => { laneObject.notes.push(new Note(note.index)) });
-            laneObject.hitzone = laneObject.calculateHitzone(); 
-            laneObject.recalculateHeight(); 
-            
-            updateAllLaneSizes();
-            laneObject.handleResize();
-            drawSingleLane(laneObject); 
-            
-            console.log(laneObject);
+            remapLane(lanes[lanes.length - 1], newLane);
         });
 
         setLongestLane();

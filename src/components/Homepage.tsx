@@ -8,19 +8,23 @@ import { supabase } from '../scripts/supa-client.ts';
 import { ThemeSupa } from "@supabase/auth-ui-shared";
 // Custom components
 import { UserContext } from "./App.tsx";
-import RunControls, { RunControlsRef } from './run_controls/RunControls.tsx';
+import RunControls from './run_controls/RunControls.tsx';
 import AddLaneButton from './run_controls/AddLaneButton.tsx';
 
 // Custom scripts and styles
 import './styles/homepage.css';
 import './styles/oldHomepage.css';
 
-import { startLoop, handleMIDIMessage } from '../scripts/main.ts';
+import { startLoop, handleMIDIMessage, lanes, loadSessionFromLocalStorage, remapLane } from '../scripts/main.ts';
 import StatsScreen from './StatsScreen.tsx';
 import { StatsObject } from '../scripts/types.ts';
-import SessionLoadScreen from './SessionLoadScreen.tsx';
+import SessionLoadScreen, { createNewLane } from './SessionLoadScreen.tsx';
 import SessionSaveScreen from './SessionSaveScreen.tsx';
 import { acceptPendingFriendRequest, retrievePendingFriendReqeusts, sendFriendRequest } from '../scripts/SupaUtils.ts';
+import ProfileScreen from './ProfileScreen.tsx';
+import NotificationsScreen from './NotificationsScreen.tsx';
+import Lane from '../scripts/Lane.ts';
+import { loadFromLocalStorage, saveToLocalStorage } from '../scripts/Utils.ts';
 // import { sendFriendRequest } from '../scripts/SupaUtils.ts';
 
 export let midiAccess: MIDIAccess; 
@@ -63,24 +67,35 @@ const Homepage = () => {
     const [pendingFriendRequests, setPendingFriendRequests] = useState<string[][]>([]);
 
     useEffect(() => {
+        // TODO: UPDATE THIS SO THAT ACCOUNT CHANGES MID SESSION ARE HANDLED
+        startLoop();
+
+        const navEntries = performance.getEntriesByType("navigation") as PerformanceNavigationTiming[];
+        if (navEntries.length > 0 && navEntries[0].type === "reload") {
+            // Page reloaded
+            // loadSessionFromLocalStorage();
+            let current_session: {lanes: Lane[]} | null = loadFromLocalStorage<{lanes: Lane[]}>('current_session');
+            if(current_session) {
+                current_session.lanes.forEach(lane => {
+                    createNewLane(lane.inputKey);
+                    remapLane(lanes[lanes.length - 1], lane);
+                });
+            }
+        } else {
+            // Overwriting current_session on startup
+            saveToLocalStorage('current_session', '');
+        }
+        
         if(navigator.requestMIDIAccess) // Ensures that MIDI access is enabled in the current browser
             navigator.requestMIDIAccess().then(midi_connection_success, midi_connection_failure);
         else
             console.log("MIDI Access not supported on current browser");
-
         fetchPendingFriendRequests();
     }, []);
 
     const friendEmailRef = useRef<HTMLInputElement | null>(null);
 
-
-
-
     const { session } = useContext(UserContext);
-    useEffect(() => {
-        // TODO: UPDATE THIS SO THAT ACCOUNT CHANGES MID SESSION ARE HANDLED
-        startLoop();
-    }, []);
 
     const [signupDisplay, setSignupDisplay] = useState('none'); 
     const [loginDisplay, setLoginDisplay] = useState('none'); 
@@ -90,6 +105,10 @@ const Homepage = () => {
 
     const [showSessionLoadScreen, setSessionLoadScreen] = useState(false); 
     const [showSessionSaveScreen, setSessionSaveScreen] = useState(false); 
+
+    const [showProfileScreen, setShowProfileScreen] = useState(false);
+    const [showNotificationsScreen, setShowNotificationsScreen] = useState(false);
+    const [notificationsNumber, setNotificationsNumber] = useState(0);
 
     const [friendRequestStatus, setFriendRequestStatus] = useState(''); 
 
@@ -203,10 +222,19 @@ const Homepage = () => {
         <section id='content'>
             <RunControls setStats={setStats} setShowStats={setShowStats} setSessionLoadScreen={setSessionLoadScreen} setSessionSaveScreen={setSessionSaveScreen}
             showSessionLoadScreen={showSessionLoadScreen} showSessionSaveScreen={showSessionSaveScreen}
+            showProfileScreen={showProfileScreen} 
+            setShowProfileScreen={setShowProfileScreen}
+            showNotificationsScreen={showNotificationsScreen}
+            notificationsNumber={notificationsNumber}
+            setShowNotificationsScreen={setShowNotificationsScreen} 
             ></RunControls>
+
             { showStats && <StatsScreen stats={stats} setShowStats={setShowStats}/> }
             { showSessionLoadScreen && <SessionLoadScreen setSessionLoadScreen={setSessionLoadScreen}/>}
             { showSessionSaveScreen && <SessionSaveScreen setSessionSaveScreen={setSessionSaveScreen}/>}
+            { showProfileScreen && <ProfileScreen setShowProfileScreen={setShowProfileScreen}/> }
+            { showNotificationsScreen && <NotificationsScreen setNotificationsNumber={setNotificationsNumber}setShowNotificationsScreen={setShowNotificationsScreen}/>}
+
             <div id="lane_container">
             </div>
         </section>
