@@ -9,7 +9,7 @@ import ChangeLaneKey from './run_controls/ChangeLaneKey';
 import { supabase } from '../scripts/supa-client';
 import { createRoot } from 'react-dom/client';
 import { newRetrieveBucketList, retrieveFriendBucketList } from '../scripts/SupaUtils';
-import { deleteLane, drawSingleLane, lanes, onAddLaneButtonClick, remapLane, retrieveBucketData, retrieveBucketList, setLongestLane, updateAllLaneSizes } from '../scripts/main'; // TODO: Refactor this name
+import { deleteLane, drawSingleLane, lanes, onAddLaneButtonClick, remapLane, retrieveBucketData, retrieveBucketList, saveCurrentSessionLocally, setLongestLane, updateAllLaneSizes } from '../scripts/main'; // TODO: Refactor this name
 
 interface ISessionLoadScreenProps {
     setSessionLoadScreen: React.Dispatch<React.SetStateAction<boolean>>;
@@ -89,6 +89,7 @@ const SessionLoadScreen: React.FC<ISessionLoadScreenProps>
         });
 
         setLongestLane();
+        saveCurrentSessionLocally(); 
         setLoadStatus(`Session: ${sessionName} loaded!`);
     }
 

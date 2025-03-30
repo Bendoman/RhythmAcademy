@@ -11,12 +11,14 @@ const StatsScreen: React.FC<IStatsScreenProps> = ({ setShowStats, stats }) => {
     const [selectedTab, setSelectedTab] = useState(-1);
 
     let notesHitRef = useRef<number>(0); 
+    let wrongNotesRef = useRef<number>(0); 
     let totalNotesRef = useRef<number>(0); 
     let notesMissedRef = useRef<number>(0); 
     // let notesPlayedRef = useRef<number>(0);
 
     const [notesHit, setNotesHit] = useState(0);
     const [totalNotes, setTotalNotes] = useState(0);
+    const [wrongNotes, setWrongNotes] = useState(0);
     const [notesMissed, setNotesMissed] = useState(0);
     const [notesPlayed, setNotesPlayed] = useState(0); 
     
@@ -28,16 +30,19 @@ const StatsScreen: React.FC<IStatsScreenProps> = ({ setShowStats, stats }) => {
 
     useEffect(()=>{
         notesHitRef.current = 0; 
+        wrongNotesRef.current = 0;
         totalNotesRef.current = 0; 
         notesMissedRef.current = 0;
 
         stats.forEach(statObject => {
             totalNotesRef.current = totalNotesRef.current + statObject.totalNotes;
             notesHitRef.current = notesHitRef.current + statObject.notesHit.length;
+            wrongNotesRef.current = wrongNotesRef.current + statObject.wrongNotes.length; 
             notesMissedRef.current = notesMissedRef.current + statObject.notesMissed.length;
         });
         
         setNotesHit(notesHitRef.current);
+        setWrongNotes(wrongNotesRef.current);
         setTotalNotes(totalNotesRef.current);
         setNotesMissed(notesMissedRef.current);
         setNotesPlayed(notesHitRef.current + notesMissedRef.current)
@@ -94,6 +99,8 @@ const StatsScreen: React.FC<IStatsScreenProps> = ({ setShowStats, stats }) => {
             <p>Notes missed: {selectedTab < 0 ? notesMissed : stats[selectedTab].notesMissed.length}</p>
             <p>Missed percentage: {selectedTab < 0 ? ((notesMissed/totalNotes) * 100).toFixed(2) : 
             ((stats[selectedTab].notesMissed.length/stats[selectedTab].totalNotes)*100).toFixed(2)}%</p><br/>
+
+            <p>Wrong notes played:  {selectedTab < 0 ? wrongNotes : stats[selectedTab].wrongNotes.length}</p><br/>
 
             <p>Hits mean deviation: { getAverageDeviation() }</p>
             <p>Hits median deviation: {  }</p>

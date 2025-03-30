@@ -27,6 +27,7 @@ export default class Lane {
     public topOfInputVisual: number;
     
     public notes: Note[];
+    public loopCount: number; 
     public repeated: boolean;
     public repeatedNotes: number;
     
@@ -93,6 +94,7 @@ export default class Lane {
         this.inputKey = inputKey;
         this.inputAreaHeight = this.canvas.height - this.topOfInputVisual;
         
+        this.loopCount = 1; 
         this.pressed = false;
         this.fullyScrolled = false; 
         this.translationAmount = 0; 
@@ -130,12 +132,20 @@ export default class Lane {
 
     // TODO: Give this better name and have one that also removes all notes 
     public resetLane(overshoot?: number) { 
-        this.notesHit = [];
-        this.notesMissed = [];
+        if(overshoot) {
+            // Lane is being looped
+            this.loopCount++; 
+            console.log(this.loopCount);
+        } else {
+            this.loopCount = 1;
+            this.notesHit = [];
+            this.notesMissed = [];
+        }
 
         console.log(overshoot)
         this.fullyScrolled = false;
         this.translationAmount = overshoot ? -overshoot : 0; 
+        console.log(this.translationAmount);
         // this.translationAmount = 0; 
 
         for(let i = 0; i < this.notes.length; i++) {
@@ -163,6 +173,7 @@ export default class Lane {
         switch(nextNote.currentZone) {
             case ZONE_NAMES.EARLY_ZONE:
                 console.log(`Wrong note:\nTime to zone: ${nextNote.timeToZone}\nZone: ${nextNote.currentZone}`);
+                this.wrongNotes.push(noteCopy); 
                 break;
             case ZONE_NAMES.EARLY_HIT_ZONE:
                 console.log(`Early hit:\nTime to zone: ${nextNote.timeToZone}\nZone: ${nextNote.currentZone}`);

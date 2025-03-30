@@ -27,32 +27,47 @@
 
 /* #region ( buttons )  */
 #button_container button {
-  border: none;
   padding: 0.25em;
   border-radius: 5px;
   
   text-decoration: none;
   background-color: gray;
-
+  color: #131B23;
+  background-color: #131b2352;
+  
+  box-sizing: border-box;
+  border: 1px solid #131B23;
+  
   cursor: pointer;  
 }
 
 #button_container button.selected {
-  background-color: orange;
+  background-color: rgba(255, 145, 0, 0.534);
 }
 
 #button_container button:hover {
-  background-color: green;
+  color: #ecdfccd5;
+  background-color: #131b23e5;
 }
 
 
 #lock_button.selected {
   top: .25em;
   right: -5.5em;
+
   position: absolute;
 
+  transform-origin: center;
   rotate: 180deg;
-  background-color: var(--lane_background);
+
+
+  background-color: var(--lane_background) !important;
+}
+
+#lock_button.selected:hover {
+  border: 1px solid #ecdfccd5 !important;
+  color: #ecdfccd5 !important;
+  background-color: #131b23e5 !important;
 }
 
 .bottom_buttons {

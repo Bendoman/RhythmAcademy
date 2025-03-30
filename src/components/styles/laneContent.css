@@ -21,9 +21,14 @@
 
 .change_lane_key button:hover {
     cursor: pointer;
-    background-color: orange;
+    /* background-color: orange; */
+    color: #131b23e5;
+    background-color: #ecdfccd5;
+    border: 1px solid #131b23e5;
 }
 
 .change_lane_key button:focus {
-    background-color: green;
+    color: #131b23e5;
+    border: 1px solid #131b23e5;
+    background-color: rgba(255, 145, 0, 0.534);
 }

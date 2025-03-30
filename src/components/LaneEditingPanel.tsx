@@ -143,8 +143,10 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas }) => {
     lane.recalculateHeight();
     lane.cullOutOfBoundsNotes();
 
-    lane.unrepeatNotes();
-    setRepeated(false);
+    if(lane.repeated) {
+      lane.unrepeatNotes();
+      setRepeated(false);
+    }
 
     // If the user is scrolled past the top of the lane, reset their view
     if(-lane.translationAmount < lane.calculateTopOfLane(false))
@@ -272,6 +274,13 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas }) => {
       onChange={(event)=>{
         lane.bpm = parseInt(event.target.value);
         setLongestLane(); 
+
+        if(lane.repeated) {
+          lane.unrepeatNotes(); 
+          setRepeated(false);
+          drawSingleLane(lane); 
+        }
+
         setCanRepeat(lane.getRatio() < longest_lane.getRatio());
 
         if(lane == longest_lane) {
@@ -428,7 +437,18 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas }) => {
     }}>close</button>
     <p className="tootltip">right click to delete note</p>
     <button className="delete_button" onClick={()=>{
+      if(lane == longest_lane) {
+        lanes.forEach(lane => {
+          if(lane.repeated) {
+            lane.unrepeatNotes();
+          }
+        });
+      }
+      
       deleteLane(lane, canvas); 
+      setLongestLane();
+      
+
       saveCurrentSessionLocally();
     }}>Delete lane</button>
   </div>

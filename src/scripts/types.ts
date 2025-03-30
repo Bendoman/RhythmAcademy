@@ -11,6 +11,7 @@ export type StatsObject = {
     totalNotes: number; 
     notesHit: Note[]; 
     notesMissed: Note[]; 
+    wrongNotes: Note[];
 }
 
 export type FriendRequest = {

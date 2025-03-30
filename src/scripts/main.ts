@@ -74,6 +74,7 @@ function initalizeListeners() {
           return;
         
         if(editing && event.key == "Escape") {
+          saveCurrentSessionLocally();
           resetLanesEditingStatus();
           return; 
         }
@@ -776,10 +777,21 @@ function gameLoop(timeStamp: number) {
     lane.updateAndDrawNotes(editing, ups, translationSpeed);
     lane.drawInputVisual();
 
+    // If both tops are visible. Take whichever tranlsation amount is highest. 
+    let topOfLongestLaneVisible = -(longest_lane.translationAmount + (longest_lane.noteGap/longest_lane.timeSignature[1])) < (longest_lane.calculateTopOfLane(false));
+    let topOfCurrentLaneVisible = -(lane.translationAmount + (lane.noteGap/lane.timeSignature[1])) < (lane.calculateTopOfLane(lane.repeated));
 
-    if(-(longest_lane.translationAmount + (longest_lane.noteGap/longest_lane.timeSignature[1])) < (longest_lane.calculateTopOfLane(false))) {
+
+    if(topOfLongestLaneVisible && topOfCurrentLaneVisible) {
       let oldTranslationAmount = lane.translationAmount; 
-      lane.translationAmount = longest_lane.translationAmount - longest_lane.height - (longest_lane.noteGap); 
+
+      // lane.translationAmount = lane.translationAmount - lane.height - (lane.noteGap);
+      
+      
+      let longest_t = longest_lane.translationAmount - longest_lane.height - (longest_lane.noteGap); 
+      let current_t = lane.translationAmount - (-lane.calculateTopOfLane(lane.repeated) + lane.startY) - (lane.noteGap);
+      lane.translationAmount = longest_t < current_t ? longest_t : current_t; 
+
       
       lane.drawLoopIndicator();
       if(looping) {
@@ -790,10 +802,12 @@ function gameLoop(timeStamp: number) {
     }
 
     if(lane == longest_lane) {
-      console.log(lane.inputKey);
+      // console.log(lane.inputKey);
       let overshoot = ((lane.startY - lane.translationAmount) + lane.noteGap) - lane.calculateTopOfLane(false);
       if(overshoot <= 0 && looping) {
-        resetLanes(overshoot)
+        resetLanes(overshoot);
+        // TODO: See if this is needed
+        //window.requestAnimationFrame(gameLoop); // Ensures all lanes stay tightly in sync
       } else if(overshoot <= 0) {
         // TODO: See if this can be reworked
         (document.querySelector('#session_stop_button') as HTMLElement)?.click();
@@ -846,9 +860,14 @@ export function onStopButtonClick(): StatsObject[] {
     console.log(lane.notesHit);
     console.log(lane.notesMissed);
 
+
+
     stats[stats.length] = {
-      lane: lane.inputKey, totalNotes: lane.notes.length, 
-      notesHit: lane.notesHit, notesMissed: lane.notesMissed 
+      lane: lane.inputKey, 
+      totalNotes: lane.notes.length * lane.loopCount, 
+      notesHit: lane.notesHit, 
+      notesMissed: lane.notesMissed, 
+      wrongNotes: lane.wrongNotes
     };
   })
 
