@@ -427,7 +427,10 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas }) => {
       saveCurrentSessionLocally(); 
     }}>close</button>
     <p className="tootltip">right click to delete note</p>
-    <button className="delete_button" onClick={()=>{deleteLane(lane, canvas); }}>Delete lane</button>
+    <button className="delete_button" onClick={()=>{
+      deleteLane(lane, canvas); 
+      saveCurrentSessionLocally();
+    }}>Delete lane</button>
   </div>
   )
 }
