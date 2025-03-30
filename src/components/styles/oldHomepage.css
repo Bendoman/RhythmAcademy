@@ -427,6 +427,8 @@
   background-color: #ecdfcc62;
   border-top-right-radius: 12px;
   border-top-left-radius: 3px;
+
+  padding: 0 0.25em 0 0.25em;
 }
 
 .tab.selected {

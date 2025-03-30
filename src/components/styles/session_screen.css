@@ -19,7 +19,7 @@
     color: var(--lane_background);   
 }
 
-.save_content, .load_content {
+.save_content, .load_content, .notifications_content, .profile_content {
     /* height: 100%;
     width: 100%; */
     /* background-color: #ecdfcc7c; */

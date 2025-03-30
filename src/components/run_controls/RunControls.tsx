@@ -46,6 +46,14 @@ const RunControls: React.FC<IRunControlsProps> =
     // TODO: Refactor this name
     const [menuHover, setMenuHover] = useState(false);
 
+    const closeAllScreens = () => {
+        setShowStats(false);
+        setSessionSaveScreen(false); 
+        setSessionLoadScreen(false);
+        setShowProfileScreen(false); 
+        setShowNotificationsScreen(false);    
+    }
+
     return (
     <>
     {/* TODO: Add smooth transition to width here instead of in css file */}
@@ -117,12 +125,18 @@ const RunControls: React.FC<IRunControlsProps> =
             
             <div className="middle_buttons">
                 <button id="save_workspace_button" title='save workspace'
-                onClick={() => { setSessionSaveScreen(!showSessionSaveScreen); setSessionLoadScreen(false); }}>
+                onClick={() => { 
+                    closeAllScreens();
+                    setSessionSaveScreen(!showSessionSaveScreen); setSessionLoadScreen(false); 
+                }}>
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-save"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></svg>
                 </button>
 
                 <button id="open_workspace_load_button" title='load workspace'
-                onClick={() => { setSessionLoadScreen(!showSessionLoadScreen); setSessionSaveScreen(false); }}>
+                onClick={() => { 
+                    closeAllScreens();
+                    setSessionLoadScreen(!showSessionLoadScreen); 
+                }}>
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-scroll-text"><path d="M15 12h-5"/><path d="M15 8h-5"/><path d="M19 17V5a2 2 0 0 0-2-2H4"/><path d="M8 21h12a2 2 0 0 0 2-2v-1a1 1 0 0 0-1-1H11a1 1 0 0 0-1 1v1a2 2 0 1 1-4 0V5a2 2 0 1 0-4 0v2a1 1 0 0 0 1 1h3"/></svg>
                 </button>
             </div>
@@ -130,13 +144,19 @@ const RunControls: React.FC<IRunControlsProps> =
 
             <div className="bottom_buttons">
                 <button id="user_button" 
-                onClick={() => { setShowProfileScreen(!showProfileScreen); }}>
+                onClick={() => { 
+                    closeAllScreens();
+                    setShowProfileScreen(!showProfileScreen); 
+                }}>
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-circle-user-round-icon lucide-circle-user-round"><path d="M18 20a6 6 0 0 0-12 0"/><circle cx="12" cy="10" r="4"/><circle cx="12" cy="12" r="10"/></svg>   
                 </button>
 
                 <NotificationsButton 
                 notificationsNumber={notificationsNumber}
-                onComponentClick={() => { setShowNotificationsScreen(!showNotificationsScreen); }} 
+                onComponentClick={() => { 
+                    closeAllScreens(); 
+                    setShowNotificationsScreen(!showNotificationsScreen); 
+                }} 
                 />
 
                 <button id="settings_button">

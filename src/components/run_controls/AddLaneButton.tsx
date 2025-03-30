@@ -16,25 +16,24 @@ const AddLaneButton = () => {
 
   const inputElementRef = useRef<HTMLInputElement>(null);
 
+  const processMidiMessage = (input: MIDIMessageEvent) => {    
+    if(!listeningRef.current) return; 
 
-    const processMidiMessage = (input: MIDIMessageEvent) => {    
-      if(!listeningRef.current) return; 
+    const inputData = input.data; 
+    if(inputData == null) return; 
 
-      const inputData = input.data; 
-      if(inputData == null) return; 
+    const note = inputData[1];
+    setInputValue(note.toString());
+    setListening(false);
+    listeningRef.current = false; 
+  }; 
 
-      const note = inputData[1];
-      setInputValue(note.toString());
-      setListening(false);
-      listeningRef.current = false; 
-    }; 
-
-    if(midiAccess) {
-        const inputs = midiAccess.inputs; 
-        inputs.forEach(input => { 
-          input.addEventListener('midimessage', processMidiMessage) 
-        });
-    }
+  if(midiAccess) {
+      const inputs = midiAccess.inputs; 
+      inputs.forEach(input => { 
+        input.addEventListener('midimessage', processMidiMessage); 
+      });
+  }
 
   const handleKeyDown = useRef((event: KeyboardEvent) => {    
     if(event.key == 'space' || event.key == ' ')

@@ -1,5 +1,3 @@
-// Obsolete?
-// import { Link, Navigate, redirect, Route } from 'react-router-dom'
 // React
 import React, { useEffect, useState, useContext, useRef } from 'react';
 // Supabase
@@ -7,44 +5,46 @@ import { Auth } from '@supabase/auth-ui-react';
 import { supabase } from '../scripts/supa-client.ts';
 import { ThemeSupa } from "@supabase/auth-ui-shared";
 // Custom components
-import { UserContext } from "./App.tsx";
-import RunControls from './run_controls/RunControls.tsx';
-import AddLaneButton from './run_controls/AddLaneButton.tsx';
 
 // Custom scripts and styles
 import './styles/homepage.css';
 import './styles/oldHomepage.css';
 
-import { startLoop, handleMIDIMessage, lanes, loadSessionFromLocalStorage, remapLane } from '../scripts/main.ts';
-import StatsScreen from './StatsScreen.tsx';
-import { StatsObject } from '../scripts/types.ts';
-import SessionLoadScreen, { createNewLane } from './SessionLoadScreen.tsx';
-import SessionSaveScreen from './SessionSaveScreen.tsx';
-import { acceptPendingFriendRequest, retrievePendingFriendReqeusts, sendFriendRequest } from '../scripts/SupaUtils.ts';
-import ProfileScreen from './ProfileScreen.tsx';
-import NotificationsScreen from './NotificationsScreen.tsx';
 import Lane from '../scripts/Lane.ts';
+import { UserContext } from "./App.tsx";
+import StatsScreen from './StatsScreen.tsx';
+import ProfileScreen from './ProfileScreen.tsx';
+import { StatsObject } from '../scripts/types.ts';
+import SessionSaveScreen from './SessionSaveScreen.tsx';
+import RunControls from './run_controls/RunControls.tsx';
+import NotificationsScreen from './NotificationsScreen.tsx';
+import SessionLoadScreen, { createNewLane } from './SessionLoadScreen.tsx';
 import { loadFromLocalStorage, saveToLocalStorage } from '../scripts/Utils.ts';
-// import { sendFriendRequest } from '../scripts/SupaUtils.ts';
+import { startLoop, handleMIDIMessage, lanes, remapLane } from '../scripts/main.ts';
+import { acceptPendingFriendRequest, retrievePendingFriendReqeusts, sendFriendRequest } from '../scripts/SupaUtils.ts';
 
 export let midiAccess: MIDIAccess; 
 const Homepage = () => {
-    const updateDevices = (event: Event) => { 
-        // TODO: Implement hotswapping of MIDI devices here
-    } 
-    
     const processMidiMessage = (input: MIDIMessageEvent) => {
-        handleMIDIMessage(input)
+        handleMIDIMessage(input);
     }
+
+    const updateDevices = (event: MIDIConnectionEvent) => { 
+        // TODO: Implement hotswapping of MIDI devices here
+        if(event.port?.state == 'connected' && event.port.type === 'input') {
+            const input = midiAccess.inputs.get(event.port.id);
+            if(input) {
+                input.addEventListener('midimessage', processMidiMessage);
+            }
+        }
+    } 
     
     const midi_connection_success = (access: MIDIAccess) => {
         midiAccess = access; 
         midiAccess.onstatechange = updateDevices;
 
         const inputs = midiAccess.inputs; 
-        inputs.forEach(input => { 
-            input.addEventListener('midimessage', processMidiMessage);
-        });
+        inputs.forEach(input => { input.addEventListener('midimessage', processMidiMessage); });
     }
 
     const midi_connection_failure = (error: Error) => {
@@ -56,11 +56,11 @@ const Homepage = () => {
         if(data) {
             let emailIDPairs: string[][] = []; 
             data.forEach(request => {
-                console.log(request.sender.email);
                 emailIDPairs.push([request.sender_id, request.sender.email])    
             });
 
             setPendingFriendRequests(emailIDPairs);
+            setNotificationsNumber(emailIDPairs.length);
         }
     }
 
@@ -86,16 +86,50 @@ const Homepage = () => {
             saveToLocalStorage('current_session', '');
         }
         
+        // Reload the page on auth state change 
+        const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+            // console.log(event); 
+            if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
+                // TODO: See if reloading is necessary at all
+                // window.location.reload(); 
+            } 
+            
+            if(event === 'SIGNED_OUT') {
+                setNotificationsNumber(0); 
+            }
+        });   
+
         if(navigator.requestMIDIAccess) // Ensures that MIDI access is enabled in the current browser
-            navigator.requestMIDIAccess().then(midi_connection_success, midi_connection_failure);
+            navigator.requestMIDIAccess({ sysex: false }).then(midi_connection_success, midi_connection_failure);
         else
             console.log("MIDI Access not supported on current browser");
-        fetchPendingFriendRequests();
+
+        return () => { listener.subscription.unsubscribe(); };
     }, []);
+
+    const { session } = useContext(UserContext);
+    useEffect(() => {
+        if(session) {
+            fetchPendingFriendRequests();
+            const channel = supabase
+            .channel('incoming_friend_requests')
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'friend_requests',
+                    filter: `receiver_id=eq.${session?.user.id}`, // listen only to requests for this user
+                },
+                () => { fetchPendingFriendRequests(); }
+            )
+            .subscribe();
+            return () => { supabase.removeChannel(channel); };
+        }
+    }, [session])
 
     const friendEmailRef = useRef<HTMLInputElement | null>(null);
 
-    const { session } = useContext(UserContext);
 
     const [signupDisplay, setSignupDisplay] = useState('none'); 
     const [loginDisplay, setLoginDisplay] = useState('none'); 
@@ -179,6 +213,7 @@ const Homepage = () => {
                 showLinks={false}
             />
           </div>
+
           <div className="login" style={{display: loginDisplay}}>
                 <Auth
                     supabaseClient={supabase}
@@ -220,23 +255,19 @@ const Homepage = () => {
         </div>
 
         <section id='content'>
-            <RunControls setStats={setStats} setShowStats={setShowStats} setSessionLoadScreen={setSessionLoadScreen} setSessionSaveScreen={setSessionSaveScreen}
-            showSessionLoadScreen={showSessionLoadScreen} showSessionSaveScreen={showSessionSaveScreen}
-            showProfileScreen={showProfileScreen} 
-            setShowProfileScreen={setShowProfileScreen}
-            showNotificationsScreen={showNotificationsScreen}
-            notificationsNumber={notificationsNumber}
-            setShowNotificationsScreen={setShowNotificationsScreen} 
+            <RunControls 
+            setStats={setStats} setShowStats={setShowStats} setSessionLoadScreen={setSessionLoadScreen} setSessionSaveScreen={setSessionSaveScreen} showSessionLoadScreen={showSessionLoadScreen} showSessionSaveScreen={showSessionSaveScreen} showProfileScreen={showProfileScreen} 
+            setShowProfileScreen={setShowProfileScreen} showNotificationsScreen={showNotificationsScreen}
+            notificationsNumber={notificationsNumber} setShowNotificationsScreen={setShowNotificationsScreen} 
             ></RunControls>
 
             { showStats && <StatsScreen stats={stats} setShowStats={setShowStats}/> }
             { showSessionLoadScreen && <SessionLoadScreen setSessionLoadScreen={setSessionLoadScreen}/>}
             { showSessionSaveScreen && <SessionSaveScreen setSessionSaveScreen={setSessionSaveScreen}/>}
             { showProfileScreen && <ProfileScreen setShowProfileScreen={setShowProfileScreen}/> }
-            { showNotificationsScreen && <NotificationsScreen setNotificationsNumber={setNotificationsNumber}setShowNotificationsScreen={setShowNotificationsScreen}/>}
+            { showNotificationsScreen && <NotificationsScreen setNotificationsNumber={setNotificationsNumber}setShowNotificationsScreen={setShowNotificationsScreen} pendingFriendRequests={pendingFriendRequests}/>}
 
-            <div id="lane_container">
-            </div>
+            <div id="lane_container"/>
         </section>
     </>)
 }

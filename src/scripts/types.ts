@@ -12,3 +12,13 @@ export type StatsObject = {
     notesHit: Note[]; 
     notesMissed: Note[]; 
 }
+
+export type FriendRequest = {
+    id: string, 
+    status: string, 
+    created_at: string, 
+    sender_id: string, 
+    sender: {
+        email: any
+    }
+}

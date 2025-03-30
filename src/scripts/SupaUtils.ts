@@ -1,4 +1,5 @@
 import { supabase } from '../scripts/supa-client.ts';
+import { FriendRequest } from './types.ts';
 
 // TODO: Move all supabase data retrieval here.
 
@@ -98,25 +99,27 @@ export async function sendFriendRequest(email: string) {
 }
 
 
-export async function retrievePendingFriendReqeusts() {
+export async function retrievePendingFriendReqeusts(): Promise<FriendRequest[] | null> {
     const userId = (await supabase.auth.getUser()).data.user?.id as string;
 
     const { data, error } = await supabase
     .from('friend_requests')
     .select(`
-      id,
-      status,
-      created_at,
-      sender_id,
-      sender:public_profiles (
+    id,
+    status,
+    created_at,
+    sender_id,
+    sender:public_profiles (
         email
-      )
-    `)
+    )`)
     .eq('receiver_id', userId)
     .eq('status', 'pending')
     .order('created_at', { ascending: false });
 
-    return data; 
+    if(!data) return null; 
+
+    // @ts-ignore 
+    return data as FriendRequest[];
 }
 
 export async function acceptPendingFriendRequest(senderId: string) {
