@@ -142,7 +142,8 @@ const RunControls: React.FC<IRunControlsProps> =
             controlHeld = true; 
             return; 
         }
-
+        
+        // TODO: CTRL + SPACE to stop
         if(event.key == ' ') {
             event.preventDefault(); 
             if(!isPlayingRef.current)

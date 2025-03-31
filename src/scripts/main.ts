@@ -335,8 +335,12 @@ export async function retrieveBucketData(bucket: string, path: string) {
   .from(bucket)
   .download(`${path}?t=${Date.now()}`);
 
+  console.log(error); 
+
   if(!error)
     return data.text().then(JSON.parse); 
+
+
 }
 
 export function deleteLane(lane: Lane, canvas: HTMLCanvasElement) {

@@ -21,7 +21,7 @@ import NotificationsScreen from './NotificationsScreen.tsx';
 import SessionLoadScreen, { createNewLane } from './SessionLoadScreen.tsx';
 import { loadFromLocalStorage, saveToLocalStorage } from '../scripts/Utils.ts';
 import { startLoop, handleMIDIMessage, lanes, remapLane } from '../scripts/main.ts';
-import { acceptPendingFriendRequest, retrievePendingFriendReqeusts, sendFriendRequest } from '../scripts/SupaUtils.ts';
+import { retrieveFriendsList, sendFriendRequest } from '../scripts/SupaUtils.ts';
 
 export let midiAccess: MIDIAccess; 
 const Homepage = () => {
@@ -51,20 +51,25 @@ const Homepage = () => {
         console.error("MIDI Connection failure: ", error);
     }
 
-    const fetchPendingFriendRequests = async () => {
-        let data = await retrievePendingFriendReqeusts();
+    const fetchFriendsList = async (status: string) => {
+        let data = await retrieveFriendsList(status);
         if(data) {
-            let emailIDPairs: string[][] = []; 
+            let requestInfo: string[][] = []; 
             data.forEach(request => {
-                emailIDPairs.push([request.sender_id, request.sender.email])    
+                requestInfo.push([request.sender_id, request.sender.email, request.created_at])    
             });
 
-            setPendingFriendRequests(emailIDPairs);
-            setNotificationsNumber(emailIDPairs.length);
+            if(status == 'pending') {
+                setPendingFriendRequests(requestInfo);
+                setNotificationsNumber(requestInfo.length);
+            } else if(status == 'accepted') {
+                setAcceptedFriends(requestInfo); 
+            }
         }
     }
 
     const [pendingFriendRequests, setPendingFriendRequests] = useState<string[][]>([]);
+    const [acceptedFriends, setAcceptedFriends] = useState<string[][]>([]);
 
     useEffect(() => {
         // TODO: UPDATE THIS SO THAT ACCOUNT CHANGES MID SESSION ARE HANDLED
@@ -96,6 +101,8 @@ const Homepage = () => {
             
             if(event === 'SIGNED_OUT') {
                 setNotificationsNumber(0); 
+                setPendingFriendRequests([]);
+                setAcceptedFriends([]);
             }
         });   
 
@@ -110,7 +117,8 @@ const Homepage = () => {
     const { session } = useContext(UserContext);
     useEffect(() => {
         if(session) {
-            fetchPendingFriendRequests();
+            fetchFriendsList('pending');
+            fetchFriendsList('accepted');
             const channel = supabase
             .channel('incoming_friend_requests')
             .on(
@@ -121,7 +129,7 @@ const Homepage = () => {
                     table: 'friend_requests',
                     filter: `receiver_id=eq.${session?.user.id}`, // listen only to requests for this user
                 },
-                () => { fetchPendingFriendRequests(); }
+                () => { fetchFriendsList('pending'); fetchFriendsList('accepted'); }
             )
             .subscribe();
             return () => { supabase.removeChannel(channel); };
@@ -129,7 +137,6 @@ const Homepage = () => {
     }, [session])
 
     const friendEmailRef = useRef<HTMLInputElement | null>(null);
-
 
     const [signupDisplay, setSignupDisplay] = useState('none'); 
     const [loginDisplay, setLoginDisplay] = useState('none'); 
@@ -172,13 +179,6 @@ const Homepage = () => {
                 <button type='submit'>send</button>
                 <p>{friendRequestStatus && friendRequestStatus}</p>
             </form>
-
-            {pendingFriendRequests && pendingFriendRequests.map((requestArray, index) => (
-                <div key={index}>
-                    <p>{`${requestArray[1]}`}</p>
-                    <button onClick={() => {acceptPendingFriendRequest(requestArray[0])}}>Accept</button>
-                </div>
-            ))}
         </div> }
 
         { !session?.user &&
@@ -264,7 +264,7 @@ const Homepage = () => {
             { showStats && <StatsScreen stats={stats} setShowStats={setShowStats}/> }
             { showSessionLoadScreen && <SessionLoadScreen setSessionLoadScreen={setSessionLoadScreen}/>}
             { showSessionSaveScreen && <SessionSaveScreen setSessionSaveScreen={setSessionSaveScreen}/>}
-            { showProfileScreen && <ProfileScreen setShowProfileScreen={setShowProfileScreen}/> }
+            { showProfileScreen && <ProfileScreen setShowProfileScreen={setShowProfileScreen} acceptedFriends={acceptedFriends}/> }
             { showNotificationsScreen && <NotificationsScreen setNotificationsNumber={setNotificationsNumber}setShowNotificationsScreen={setShowNotificationsScreen} pendingFriendRequests={pendingFriendRequests}/>}
 
             <div id="lane_container"/>

@@ -8,8 +8,10 @@ import ChangeLaneKey from './run_controls/ChangeLaneKey';
 
 import { supabase } from '../scripts/supa-client';
 import { createRoot } from 'react-dom/client';
-import { newRetrieveBucketList, retrieveFriendBucketList } from '../scripts/SupaUtils';
+import { newnewRetrieveBucketList, newRetrieveBucketList, retrieveFriendBucketList } from '../scripts/SupaUtils';
 import { deleteLane, drawSingleLane, lanes, onAddLaneButtonClick, remapLane, retrieveBucketData, retrieveBucketList, saveCurrentSessionLocally, setLongestLane, updateAllLaneSizes } from '../scripts/main'; // TODO: Refactor this name
+import { FileObject } from '@supabase/storage-js';
+import { LoadedLanePreview } from '../scripts/types';
 
 interface ISessionLoadScreenProps {
     setSessionLoadScreen: React.Dispatch<React.SetStateAction<boolean>>;
@@ -49,6 +51,8 @@ const SessionLoadScreen: React.FC<ISessionLoadScreenProps>
     const [loadStatus, setLoadStatus] = useState(''); 
     const loadSessionSelectRef = useRef<HTMLSelectElement | null>(null);
 
+    const [loadedSessions, setLoadedSessions] = useState<[string,string][] | null>(null);
+
     const [selectedTab, setSelectedTab] = useState('public');
 
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -70,10 +74,10 @@ const SessionLoadScreen: React.FC<ISessionLoadScreenProps>
             return; 
         }
 
-        if(!loadSessionSelectRef || !loadSessionSelectRef.current) {
-            setLoadStatus('No session selected');
-            return; 
-        }
+        // if(!loadSessionSelectRef || !loadSessionSelectRef.current) {
+        //     setLoadStatus('No session selected');
+        //     return; 
+        // }
         
         for(let i = lanes.length - 1; i >= 0; i--) {
             deleteLane(lanes[i], lanes[i].canvas);
@@ -93,9 +97,41 @@ const SessionLoadScreen: React.FC<ISessionLoadScreenProps>
         setLoadStatus(`Session: ${sessionName} loaded!`);
     }
 
-    const getSavedSessions = async() => {
-        if(!loadSessionSelectRef || !loadSessionSelectRef.current)
+    const [expanded, setExpanded] = useState<{ [key: string ]: boolean }>({}); 
+    const [hoveredSession, setHoveredSession] = useState<LoadedLanePreview | null>(null); 
+    
+    const changeHoveredSession = async(sessionName?: string) => {
+        if(!sessionName) {
+            console.log('here')
+            setHoveredSession(null); 
             return; 
+        }
+
+
+        let totalNotes = 0; 
+        let numberOfLanes = 0; 
+        let timeSignatures: number[][] = [];
+        
+        let sessionData = await retrieveBucketData(`${selectedTab}_sessions`, sessionName);
+        let sessionLanes = sessionData.lanes as Lane[];
+        sessionLanes.forEach(lane => {
+            numberOfLanes++;
+            totalNotes += lane.notes.length; 
+            if (!timeSignatures.some(ts => ts[0] === lane.timeSignature[0] && ts[1] === lane.timeSignature[1])) {
+                timeSignatures.push([...lane.timeSignature]);
+            }
+        });
+
+        let session:LoadedLanePreview = 
+        {sessionName: sessionName, totalNotes: totalNotes, 
+            numberOfLanes: numberOfLanes, timeSignatures: timeSignatures};
+        
+        setHoveredSession(session);
+    }
+
+    const getSavedSessions = async() => {
+        // if(!loadSessionSelectRef || !loadSessionSelectRef.current)
+        //     return; 
 
         let data;
         let sessionSelectInnerHTML = ''; 
@@ -103,15 +139,28 @@ const SessionLoadScreen: React.FC<ISessionLoadScreenProps>
         if(selectedTab == 'friend')
             data = await retrieveFriendBucketList(`${selectedTab}_sessions`);
         else
-            data = await newRetrieveBucketList(`${selectedTab}_sessions`);
+            data = await newnewRetrieveBucketList(`${selectedTab}_sessions`);
 
-        data?.forEach(folder => {
-            folder?.data.forEach(session => {
-                sessionSelectInnerHTML += `<option value="${folder.ownerid}/${session.name}">${session.name}</option>`;
-            });
-        });
+        let loadedSessions: [string,string][] = []; 
+        if(data) {
+            for(const folder of data) {
+                for(const session of folder.data) {
+                    // console.log(session, folder);             
+                    loadedSessions.push([folder.ownerid, session.name]);
+                }
+            }
+        }
 
-        loadSessionSelectRef.current.innerHTML = sessionSelectInnerHTML; 
+        if(loadedSessions)
+            setLoadedSessions(loadedSessions);
+        
+
+        // data?.forEach(folder => {
+        //     folder?.data.forEach(session => {
+        //         // sessionSelectInnerHTML += `<option value="${folder.ownerid}/${session.name}">${session.name}</option>`;
+        //     });
+        // });
+        // loadSessionSelectRef.current.innerHTML = sessionSelectInnerHTML; 
     }
 
     useEffect(() => {
@@ -134,18 +183,56 @@ const SessionLoadScreen: React.FC<ISessionLoadScreenProps>
             onClick={()=>{setSelectedTab('friend')}}>Friend's</div>
         </div>
 
-        <div className="load_content">
-            <label htmlFor="session_name_select">Session name: </label>
+        <div className="load_content" 
+                        // onMouseLeave={() => {
+                        //     changeHoveredSession();
+                        // }}
+                        >
+            {/* <label htmlFor="session_name_select">Session name: </label> */}
 
-            <select ref={loadSessionSelectRef} id="session_name_select"></select>
+            {/* <select ref={loadSessionSelectRef} id="session_name_select"></select> */}
             
-            <button id='save_session_button' onClick={() => {
+            {/* <button id='save_session_button' onClick={() => {
                 if(loadSessionSelectRef.current){ onLoadSessionClick(loadSessionSelectRef.current.value); }
-            }}>load</button>
+            }}>load</button> */}
 
-            { loadStatus && <p>{loadStatus}</p>}
 
-            {/* <button onClick={newRetrieveBucketList}>test</button> */}
+            {/* <div className="drop_down" onClick={() => {
+                setExpanded(prev => ({
+                    ...prev, 
+                    ['all']: !prev['all']
+                }));
+            }}>
+                dropper
+            </div>
+            expanded['all'] && */}
+           {  loadedSessions && loadedSessions.map((session, index) => {
+               return <div key={index} className="loaded_session_info"
+                // onMouseEnter={() => {
+                //     changeHoveredSession(`${session[0]}/${session[1]}`);
+                // }}
+                // onMouseLeave={() => {
+                //     changeHoveredSession();
+                // }}
+                onClick={() => {onLoadSessionClick(`${session[0]}/${session[1]}`)}}
+                >
+
+                <p>{session[1]}</p>
+                { hoveredSession && hoveredSession.sessionName === `${session[0]}/${session[1]}` && 
+                <>
+                    <p>Total notes: { hoveredSession.totalNotes } </p>
+                    <p>Number of lanes: { hoveredSession.numberOfLanes } </p>
+                    <p>Time signatures: { hoveredSession.timeSignatures.map((ts) => {return <>{`[${ts[0]}:${ts[1]}] `}</>}) }</p>
+                    <button onClick={(e) => {e.stopPropagation(); changeHoveredSession();}}>Hide info</button>
+                </>}
+
+                { <button onClick={(e) => {e.stopPropagation(); changeHoveredSession(`${session[0]}/${session[1]}`);}}>Info</button>}
+
+
+                </div>
+           })}
+           
+           { loadStatus && <p>{loadStatus}</p>}
 
         </div>
     </div>

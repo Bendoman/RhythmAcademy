@@ -12,6 +12,38 @@ const userId = (await supabase.auth.getUser()).data.user?.id as string;
       return [{ownerid: userId, data: data}]; 
 }
 
+// TODO: Merge these two and add pagination handling to friends bucket
+export async function newnewRetrieveBucketList(bucket: string) {
+    const userId = (await supabase.auth.getUser()).data.user?.id as string;
+
+    let allItems: any[] = [];
+    let offset = 0;
+    const limit = 100;
+    let done = false;
+
+    while (!done) {
+        const { data, error } = await supabase.storage.from(bucket).list(userId, {
+        limit,
+        offset,
+        });
+
+        if (error) {
+        console.error('Error fetching storage list:', error);
+        return null;
+        }
+
+        if (data && data.length > 0) {
+        allItems.push(...data);
+        offset += limit;
+        } else {
+        done = true;
+        }
+    }
+
+    return [{ ownerid: userId, data: allItems }];
+}
+  
+
 // TODO: Conditionally retrieve friends list with parameter
 export async function retrieveFriendBucketList(bucket: string) {
     const userId = (await supabase.auth.getUser()).data.user?.id as string;
@@ -46,6 +78,24 @@ export async function retrieveFriendBucketList(bucket: string) {
     }
 
     return allFiles; 
+}
+
+
+export async function getEmailFromID(id: string) {
+    const userId = (await supabase.auth.getUser()).data.user?.id as string;
+
+    // 1. Look up the receiver's user ID by email
+    const { data: profiles, error: profileError } = await supabase
+    .from('public_profiles')
+    .select('email')
+    .eq('id', id)
+    .single();
+
+    
+    if (profileError || !profiles) 
+        return 'User not found';
+
+    return profiles.email;
 }
 
 export async function sendFriendRequest(email: string) {
@@ -99,7 +149,7 @@ export async function sendFriendRequest(email: string) {
 }
 
 
-export async function retrievePendingFriendReqeusts(): Promise<FriendRequest[] | null> {
+export async function retrieveFriendsList(status: string): Promise<FriendRequest[] | null> {
     const userId = (await supabase.auth.getUser()).data.user?.id as string;
 
     const { data, error } = await supabase
@@ -113,7 +163,7 @@ export async function retrievePendingFriendReqeusts(): Promise<FriendRequest[] |
         email
     )`)
     .eq('receiver_id', userId)
-    .eq('status', 'pending')
+    .eq('status', status)
     .order('created_at', { ascending: false });
 
     if(!data) return null; 
@@ -122,17 +172,18 @@ export async function retrievePendingFriendReqeusts(): Promise<FriendRequest[] |
     return data as FriendRequest[];
 }
 
-export async function acceptPendingFriendRequest(senderId: string) {
+export async function modifyFriend(currentStatus: string, newStatus: string, senderId: string) {
     const userId = (await supabase.auth.getUser()).data.user?.id as string;
 
     const { data, error } = await supabase
         .from('friend_requests')
-        .update({ status: 'accepted' })
+        .update({ status: newStatus })
         .match({
         sender_id: senderId,
         receiver_id: userId,
-        status: 'pending',
+        status: currentStatus,
     });
 
-    console.log(data);
+    // TODO: Handle this
+    console.log(data, error);
 }

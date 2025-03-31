@@ -23,3 +23,11 @@ export type FriendRequest = {
         email: any
     }
 }
+
+export type LoadedLanePreview = {
+    sessionName: string; 
+    totalNotes: number; 
+    numberOfLanes: number; 
+    timeSignatures: number[][]; 
+    // difficulty: number; 
+}

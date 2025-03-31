@@ -8,6 +8,8 @@
     width: 50vw;
     height: 60vh;
   
+    min-height: 200px;
+
     border-radius: 15px;
     border: 3px solid #ECDFCC;
     background-color: var(--site_background);
@@ -17,6 +19,9 @@
     z-index: 1;
   
     color: var(--lane_background);   
+
+    display: flex;
+    flex-direction: column;
 }
 
 .save_content, .load_content, .notifications_content, .profile_content {
@@ -31,6 +36,10 @@
     gap: .25em;
 
     padding: 2.25em;
+}
+
+.tabs {
+    flex-shrink: 1;
 }
 
 .session_load_screen .tab {
@@ -58,3 +67,84 @@
     right: -0.55em;
 }
 
+.notifications_content {
+    overflow-y: auto;
+    flex: 1;
+
+    display: flex;
+    flex-direction: column;
+
+
+    align-items: flex-start;
+    gap: .5em;
+}
+
+.friend_request {
+    padding: .5em;
+    border-radius: 10px;
+    border: 1px solid #ECDFCC;
+
+    display: flex;
+    gap: .25em;
+}
+
+.friend_request button {
+    box-sizing: border-box;
+    background-color: #ECDFCC;
+    color: #131B23;
+    border: none;
+    border-radius: 5px;
+    padding: .25em;
+
+    border: 1px solid #131B23;
+}
+
+.friend_request .accept:hover {
+    background-color: #2a5a29;
+}
+
+.friend_request .decline:hover {
+    background-color: #5a3029;
+}
+
+.friend_request button:hover {
+    color: #ece5da;
+    border: 1px solid #ece2cc;
+}
+
+
+.load_content {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: .5em;
+    cursor: pointer;
+    user-select: none;
+
+    overflow: auto;
+}
+
+.loaded_session_info {
+    padding: .25em; 
+    border-radius: 5px;
+    border: 1px solid #ECDFCC;
+    display: flex;
+}
+
+.loaded_session_info:hover {
+    background-color: red;
+
+}
+
+
+.drop_down:hover {
+    background-color: red;
+}
+
+
+.drop_down {
+    cursor: pointer;
+    border: 1px solid #ECDFCC;
+    padding: .25em;
+
+}

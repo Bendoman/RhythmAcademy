@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react'
 // TODO: Refactor this name
 import './styles/session_screen.css';
-import { acceptPendingFriendRequest } from '../scripts/SupaUtils';
+import { modifyFriend } from '../scripts/SupaUtils';
 
 interface INotificationsScreenProps {
     setShowNotificationsScreen: React.Dispatch<React.SetStateAction<boolean>>;
@@ -29,14 +29,18 @@ const NotificationsScreen: React.FC<INotificationsScreenProps> = ({ setShowNotif
         </div>
 
         <div className="tabs">
-            <div className="tab selected">Notifications</div>
+            <div className="tab selected">Friend Requests</div>
         </div>
 
         <div className="notifications_content">
             {pendingFriendRequests && pendingFriendRequests.map((requestArray, index) => (
                 <div key={index}>
-                    <p>{`${requestArray[1]}`}</p>
-                    <button onClick={() => {acceptPendingFriendRequest(requestArray[0])}}>Accept</button>
+                    <p>{`Date sent: ${new Date(requestArray[2]).toLocaleDateString('en-GB', {day: 'numeric', month: 'short', year: 'numeric'})}`}</p>
+                    <div className="friend_request">
+                        <p>{`${requestArray[1]}`}</p>
+                        <button className='accept' onClick={() => {modifyFriend('pending', 'accepted', requestArray[0])}}>Accept</button>
+                        <button className='decline' onClick={() => {modifyFriend('pending', 'declined', requestArray[0])}}>Decline</button>
+                    </div>
                 </div>
             ))}
         </div>
