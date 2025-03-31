@@ -23,8 +23,6 @@ const App = () => {
         </UserContext.Provider>
       </Router>
     </>
-    // <React.StrictMode>
-    // </React.StrictMode>
   )
 }
 

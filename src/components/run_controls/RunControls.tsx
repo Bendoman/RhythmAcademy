@@ -8,7 +8,7 @@ import { StatsObject } from '../../scripts/types.ts';
 
 import '../styles/runControls.css';
 import AddLaneButton from './AddLaneButton.tsx';
-import { lanes, saveCurrentSessionLocally, toggleLooping } from '../../scripts/main.ts';
+import { lanes, onEditButtonClick, onPauseButtonClick, onPlayButtonClick, onStopButtonClick, saveCurrentSessionLocally, toggleLooping } from '../../scripts/main.ts';
 import NotificationsButton from './NotificationsButton.tsx';
 import Lane from '../../scripts/Lane.ts';
 import { saveToLocalStorage } from '../../scripts/Utils.ts';
@@ -39,12 +39,26 @@ const RunControls: React.FC<IRunControlsProps> =
     showProfileScreen, setShowProfileScreen, showNotificationsScreen,
     setShowNotificationsScreen, notificationsNumber }) => {
     const [looping, setLooping] = useState(false);
+    
     const [isPaused, setIsPaused] = useState(false); 
+    let isPausedRef = useRef(false); 
+
     const [isPlaying, setIsPlaying] = useState(false);
+    let isPlayingRef = useRef(false); 
+    
     const [isStopped, setIsStopped] = useState(true);
+    let isStoppedRef = useRef(true); 
+
     const [isEditing, setIsEditing] = useState(false);
+    let isEditingRef = useRef(false); 
+
     // TODO: Refactor this name
     const [menuHover, setMenuHover] = useState(false);
+
+    let addLaneButtonRef = useRef<HTMLButtonElement | null>(null); 
+    let loopButtonRef = useRef<HTMLButtonElement | null>(null); 
+    let saveButtonRef = useRef<HTMLButtonElement | null>(null); 
+    let loadButtonRef = useRef<HTMLButtonElement | null>(null); 
 
     const closeAllScreens = () => {
         setShowStats(false);
@@ -53,6 +67,136 @@ const RunControls: React.FC<IRunControlsProps> =
         setShowProfileScreen(false); 
         setShowNotificationsScreen(false);    
     }
+
+    const editButtonClick = () => {
+        if(!isPlayingRef.current) {
+            isEditingRef.current = !isEditingRef.current; 
+            setIsEditing(isEditingRef.current);
+
+            setIsPlaying(false);
+            isPlayingRef.current = false; 
+
+            setIsStopped(false);
+            isStoppedRef.current = false; 
+
+            setIsPaused(false);
+            isPausedRef.current = false; 
+
+            setShowStats(false);
+            onEditButtonClick();
+        } 
+    }
+
+    const stopButtonClick = () => {
+        if(isPlaying || isPaused) {
+            isStoppedRef.current = !isStoppedRef.current; 
+            setIsStopped(isStoppedRef.current);
+
+            setIsPlaying(false);
+            isPlayingRef.current = false; 
+
+            setIsPaused(false);
+            isPausedRef.current = false; 
+            
+            // TODO: Change when this shows up or have seperate button for resetting run
+            setShowStats(true);
+            setStats(onStopButtonClick());
+        } 
+    }
+
+    const pausedButtonClick = () => {
+        if(lanes.length > 0 && !isEditingRef.current && !isPausedRef.current) {
+            isPausedRef.current = !isPausedRef.current; 
+            setIsPaused(isPausedRef.current);
+
+            setIsPlaying(false);
+            isPlayingRef.current = false; 
+
+            setIsStopped(false);
+            isStoppedRef.current = false; 
+
+            setShowStats(false);
+            onPauseButtonClick();
+        } 
+    }
+
+    const playButtonClick = () => {
+        if(lanes.length > 0 && !isEditingRef.current && !isPlayingRef.current) { 
+            isPlayingRef.current = !isPlayingRef.current; 
+            setIsPlaying(isPlayingRef.current);
+
+            setIsPaused(false);
+            isPausedRef.current = false; 
+
+            setIsStopped(false);
+            isStoppedRef.current = false; 
+            
+            setShowStats(false);
+            onPlayButtonClick();
+        } 
+    }
+
+    let controlHeld = false; 
+    const handleKeyDown = (event: KeyboardEvent) => {   
+        if(event.key == 'Control') {
+            controlHeld = true; 
+            return; 
+        }
+
+        if(event.key == ' ') {
+            event.preventDefault(); 
+            if(!isPlayingRef.current)
+                playButtonClick(); 
+            else if(!isPausedRef.current)
+                pausedButtonClick(); 
+        }
+
+        if(!controlHeld)
+            return; 
+
+        switch(event.key.toUpperCase()) {
+            case 'E':
+                event.preventDefault();
+                editButtonClick();
+            break;
+            case 'A':
+                if(!isEditingRef.current) {
+                    event.preventDefault(); 
+                    if(addLaneButtonRef.current)
+                        addLaneButtonRef.current.click(); 
+                }
+            break;
+            case 'L':
+                event.preventDefault();
+                if(loopButtonRef.current)
+                    loopButtonRef.current.click();
+            break;
+            case 'S':
+                event.preventDefault();
+                if(saveButtonRef.current)
+                    saveButtonRef.current.click(); 
+            break;
+            case 'X':
+                event.preventDefault();
+                if(loadButtonRef.current)
+                    loadButtonRef.current.click();
+            break;
+        }
+    };
+
+    const handleKeyUp = (event: KeyboardEvent) => {   
+        if(event.key == 'Control')
+            controlHeld = false; 
+    };
+
+    useEffect(() => {
+        window.addEventListener("keydown", handleKeyDown);
+        window.addEventListener("keyup", handleKeyUp);
+        return () => { 
+            window.removeEventListener("keydown", handleKeyDown); 
+            window.removeEventListener("keyup", handleKeyUp); 
+        }
+    }, []);
 
     return (
     <>
@@ -65,66 +209,33 @@ const RunControls: React.FC<IRunControlsProps> =
         {/* TODO: Add titles to all these buttons */}
         <div id="button_container" className={menuHover ? 'active' : ''}>
             {/* TODO: Refactor component clicks to be void? */}
-            <PlayButton 
-            isPlaying={isPlaying}
-            onComponentClick={() => {
-                if(lanes.length > 0 && !isEditing && !isPlaying) { 
-                    setIsPlaying(true); 
-                    setIsPaused(false);
-                    setIsStopped(false);
-                    setShowStats(false);
-                    return true; 
-                } else return false; 
-            }}></PlayButton>
+            <PlayButton isPlaying={isPlaying}
+            onComponentClick={playButtonClick}>
+            </PlayButton>
 
-            <PauseButton 
-            isPaused={isPaused}
-            onComponentClick={() => {
-                if(lanes.length > 0 && !isEditing && !isPaused) {
-                    setIsPaused(true);
-                    setIsPlaying(false);
-                    setIsStopped(false);
-                    setShowStats(false);
-                    return true;
-                } else return false;
-            }}></PauseButton>
+            <PauseButton isPaused={isPaused}
+            onComponentClick={pausedButtonClick}>
+            </PauseButton>
 
-            <StopButton 
-            setStats={setStats}
-            isStopped={isStopped}
-            onComponentClick={() => {
-                if(isPlaying || isPaused) {
-                    setIsStopped(true);
-                    setIsPlaying(false);
-                    setIsPaused(false);
-                    // TODO: Change when this shows up or have seperate button for resetting run
-                    setShowStats(true);
-                    return true;
-                } else return false;
-            }}></StopButton>
+            <StopButton isStopped={isStopped}
+            onComponentClick={stopButtonClick}>
+            </StopButton>
 
-            <EditButton 
-            isEditing={isEditing}
-            onComponentClick={() => {
-                if(!isPlaying) {
-                    setIsEditing(!isEditing);
-                    setIsPlaying(false);
-                    setIsStopped(false);
-                    setIsPaused(false);
-                    setShowStats(false);
-                    return true;
-                } else return false;
-            }}></EditButton>
+            <EditButton isEditing={isEditing}
+            onComponentClick={editButtonClick}>
+            </EditButton>
 
-            <AddLaneButton></AddLaneButton>
+            <AddLaneButton ref={addLaneButtonRef}></AddLaneButton>
 
             <button className={`loop_button ${looping ? 'selected' : ''} `} title='Loop session'
+            ref={loopButtonRef}
             onClick={() => {setLooping(!looping); toggleLooping()}}>
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-repeat2-icon lucide-repeat-2"><path d="m2 9 3-3 3 3"/><path d="M13 18H7a2 2 0 0 1-2-2V6"/><path d="m22 15-3 3-3-3"/><path d="M11 6h6a2 2 0 0 1 2 2v10"/></svg>
             </button>
             
             <div className="middle_buttons">
                 <button id="save_workspace_button" title='save workspace'
+                ref={saveButtonRef}
                 onClick={() => { 
                     closeAllScreens();
                     setSessionSaveScreen(!showSessionSaveScreen); setSessionLoadScreen(false); 
@@ -133,6 +244,7 @@ const RunControls: React.FC<IRunControlsProps> =
                 </button>
 
                 <button id="open_workspace_load_button" title='load workspace'
+                ref={loadButtonRef}
                 onClick={() => { 
                     closeAllScreens();
                     setSessionLoadScreen(!showSessionLoadScreen); 

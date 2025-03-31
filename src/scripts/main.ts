@@ -72,7 +72,11 @@ function initalizeListeners() {
     window.addEventListener('keydown', (event) => {
         if(keyHeld[event.key] == true)
           return;
-        
+
+        // So that control + x keyboard shortcuts do not activate lanes
+        if(keyHeld['Control'] == true) 
+          return; 
+
         if(editing && event.key == "Escape") {
           saveCurrentSessionLocally();
           resetLanesEditingStatus();
@@ -417,8 +421,6 @@ function midiNoteOff(note: number) {
 }
 
 const keyHeld: { [key: string]: boolean } = {};
-
-
 
 function enableAudio() {
   if(audioSprite) 
@@ -860,8 +862,6 @@ export function onStopButtonClick(): StatsObject[] {
     console.log(lane.notesHit);
     console.log(lane.notesMissed);
 
-
-
     stats[stats.length] = {
       lane: lane.inputKey, 
       totalNotes: lane.notes.length * lane.loopCount, 
@@ -950,7 +950,6 @@ export function setNewPatternMeasures(measures: number) {
 }
 
 export function assignLaneInput(lane: Lane, inputKey: string) {
-  console.log('in assign lane');
   if(Object.keys(input_lane_pairs).includes(inputKey)) {
     console.error('Input key already in use');
     return;

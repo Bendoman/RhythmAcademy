@@ -3,6 +3,7 @@ import '../styles/laneContent.css';
 import Lane from '../../scripts/Lane';
 import { assignLaneInput, drawSingleLane, findLaneFromCanvas } from '../../scripts/main';
 import { midiAccess } from '../Homepage';
+import { prohibitedKeysList } from '../../scripts/Utils';
 
 interface IChangeLaneKeyProps {
     canvas: HTMLCanvasElement;
@@ -39,37 +40,37 @@ const ChangeLaneKey: React.FC<IChangeLaneKeyProps> = ({ canvas }) => {
         });
     }
 
-
-    const handleKeyDown = useRef((event: KeyboardEvent) => {   
-        if(event.key == 'space' || event.key == ' ')
-            event.preventDefault(); 
-
+    const handleKeyDown = (event: KeyboardEvent) => {   
         if(!listeningRef.current) 
             return; 
+
+        // TODO: Move this to prohibited keys list
+        if(prohibitedKeysList.includes(event.key)) {
+            event.preventDefault(); 
+            return;
+        }
+
+        console.log(event);
 
         setListening(false);
         listeningRef.current = false;
         buttonRef.current?.blur(); 
 
-        console.log(event); 
-
         assignLaneInput(lane, event.key); 
-    });
+    };
 
     useEffect(() => {
-        // Handler and references used so that event listener 
-        // only has to be mounted once, not on ever state chagne
-        const keyDownHandler = (event: KeyboardEvent) => handleKeyDown.current(event); 
-        window.addEventListener("keydown", keyDownHandler)
+        window.addEventListener("keydown", handleKeyDown);
+        
         return () => { 
-            window.removeEventListener("keydown", keyDownHandler) 
+            window.removeEventListener("keydown", handleKeyDown) 
             if(midiAccess) {
                 midiAccess.inputs.forEach(input => {
                     input.removeEventListener('midimessage', processMidiMessage);
                 });
             }
         }
-    }, [])
+    }, []);
     
 
     return (<>

@@ -6,7 +6,7 @@ import ChangeLaneKey from './ChangeLaneKey.tsx';
 import { midiAccess } from '../Homepage';
 
 
-const AddLaneButton = () => {
+const AddLaneButton = forwardRef<HTMLButtonElement>((props, ref) => {
   const [listening, setListening] = useState(false);
   const listeningRef = useRef(false);
 
@@ -104,6 +104,7 @@ const AddLaneButton = () => {
 
   return (<>
     <button
+        ref={ref}
         id="add_button"
         className='add_lane_button'
         onClick={handleOnClick}>
@@ -129,6 +130,6 @@ const AddLaneButton = () => {
       }}  
     /> */}
   </>)
-}
+});
 
 export default AddLaneButton
