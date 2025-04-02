@@ -6,6 +6,8 @@ export default class Note {
     currentZone: string; 
     hitStatus: string; 
     timeToZone: number; 
+    animationHeight: number; 
+    animationColour: string; 
 
     constructor(index: number) {
         this.index = index; 
@@ -14,6 +16,9 @@ export default class Note {
 
         this.currentZone = ZONE_NAMES.EARLY_ZONE; 
         this.hitStatus = 'unhit';
+
+        this.animationHeight = 0; 
+        this.animationColour = '';
     }
 
     public resetNote() { 
@@ -23,5 +28,17 @@ export default class Note {
 
     public getY(noteGap: number, timeSignature: number, laneStartY: number) {
         return ((this.index * (noteGap/timeSignature)) - laneStartY) * -1;
+    }
+
+    public startAnimation(type: string) {
+        if(type == 'perfect_hit') {
+            this.animationHeight = 25; 
+        } else if(type == 'hit') {
+            this.animationHeight = 20; 
+        }
+    }
+
+    public deprecateAnimation(type: string) {
+
     }
 }

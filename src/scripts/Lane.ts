@@ -1,6 +1,6 @@
 import Note from "./Note.ts";
 import Hitzone from "./Hitzone.ts";
-import { longest_lane } from "./main.ts";
+import { longest_lane, measureHeight } from "./main.ts";
 import AudioSprite from "./AudioSprite.ts";
 import { selectedPattern } from "./types.ts";
 import { drawLine, getNoteFill } from "./Utils";
@@ -75,6 +75,10 @@ export default class Lane {
 
         // Note gap defines the distance between between note values that the time signature is counting
         this.noteGap = noteGap;
+        // TODO: Time signatures THIS WORKS LETS GO
+        this.noteGap = measureHeight / this.timeSignature[0];
+        // this.timeSignature = [8, 8];
+        // this.noteGap = measureHeight/8; 
         
         this.hitsound = hitsound; 
         this.maxWrongNotes = maxWrongNotes;
@@ -102,6 +106,10 @@ export default class Lane {
 
         this.metronomeEnabled = false;
         this.metronomeSound = 'metronome1';
+    }
+
+    public recalculateNoteGap() {
+        
     }
 
     public recalculateHeight() {
@@ -183,6 +191,7 @@ export default class Lane {
                 noteCopy.hitStatus = 'hit';
                 this.notesHit.push(noteCopy);
                 this.nextNoteIndex++;
+                nextNote.startAnimation('hit'); 
                 break;
             case ZONE_NAMES.PERFECT_HIT_ZONE:
                 console.log(`Perfect hit:\nTime to zone: ${nextNote.timeToZone}\nZone: ${nextNote.currentZone}`);
@@ -192,6 +201,7 @@ export default class Lane {
                 noteCopy.hitStatus = 'hit';
                 this.notesHit.push(noteCopy);
                 this.nextNoteIndex++;
+                nextNote.startAnimation('perfect_hit'); 
                 break;
             case ZONE_NAMES.LATE_HIT_ZONE:
                 console.log(`Late hit:\nTime to zone: ${nextNote.timeToZone}\nZone: ${nextNote.currentZone}`);
@@ -201,6 +211,7 @@ export default class Lane {
                 noteCopy.hitStatus = 'hit';
                 this.notesHit.push(noteCopy);
                 this.nextNoteIndex++;
+                nextNote.startAnimation('hit'); 
                 break;
         }
     }
@@ -250,17 +261,20 @@ export default class Lane {
         let x = (this.canvas.width/2) - (this.canvas.width/4);
         let width = this.canvas.width/2;
 
-        // TODO: Review this, justify it.
-        let height = this.noteGap/(this.timeSignature[1] * this.timeSignature[0])
-        if(height < 5) // TODO: Alter this min height
-            height = 5; 
-
-        this.ctx.fillStyle = getNoteFill(note.currentZone, note.hitStatus); 
-        if(this.notes.indexOf(note) == this.nextNoteIndex)
-            this.ctx.fillStyle = 'blue';
-        
-        if(editing)
+        if(editing) {
             this.ctx.fillStyle = getNoteFill(ZONE_NAMES.EARLY_ZONE, HIT_STATUSES.UNHIT); 
+        } else {
+            this.ctx.fillStyle = getNoteFill(note.currentZone, note.hitStatus); 
+            if(this.notes.indexOf(note) == this.nextNoteIndex)
+                this.ctx.fillStyle = '#2323FF';
+        }
+        
+        // TODO: Review this, justify it.
+        let height = 12.5;
+        if(!editing && note.animationHeight > 0) {
+            height += note.animationHeight;
+            note.animationHeight--; 
+        }       
 
         this.ctx.beginPath();
         this.ctx.roundRect(x, y - (height/2), width, height, 20);
@@ -357,11 +371,16 @@ export default class Lane {
 
         let text = 'End of Lane'; 
         this.ctx.font = "italic 20px Inria-serif"
+        this.ctx.fillStyle = COLORS.MEASURE_NUMBER;
         let textWidth = this.ctx.measureText(text).width; 
         this.ctx.fillText(text, (this.canvas.width/2) - (textWidth/2), effectiveY);
 
         drawLine(this.ctx, (this.canvas.width/2) - 50, effectiveY + 5, 
         (this.canvas.width/2) + 50, effectiveY + 5, COLORS.MEASURE_LINE, 1);
+    }
+
+    public clearCanvas() {
+      this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height - this.inputAreaHeight);
     }
 
     private calculatePerfectHitY() { return this.canvas.height - (this.canvas.height * 0.25); }

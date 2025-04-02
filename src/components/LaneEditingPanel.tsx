@@ -6,6 +6,7 @@ import React, { useContext, useEffect, useRef, useState } from 'react'
 
 // TODO: Reduce the number of imports here. There must be a cleaner way.
 import { deleteLane, resetLanesEditingStatus, updateAllLaneSizes, retrieveBucketData, patternInCreationPositions, uploadToBucket, findLaneFromCanvas, retrieveBucketList, drawSingleLane, changeEditMode, maxMeasureCount, resetPatternInCreation, setNewPatternMeasures, longest_lane, setLongestLane, lanes, remapLane, saveCurrentSessionLocally } from '../scripts/main'
+import PatternEditingPanel from './PatternEditingPanel.tsx';
 
 // TODO: HUGE REFACTOR OF ALL OF THIS NEEDED
 interface ILaneEditingPanelProps {
@@ -96,6 +97,8 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas }) => {
     drawSingleLane(lane);
   }
 
+  const [loadedPatterns, setLoadedPatterns] = useState<string[]>([]); 
+
   const onPatternModeClick = async () => {
     if(editMode == 'pattern')
       return; 
@@ -109,10 +112,16 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas }) => {
     // TODO: Keep local list to be updated, do not retrieve it every time.
     // TODO: Move these data retrieval functions out of script
     let data = await retrieveBucketList('patterns');
+    console.log(data); 
     let patternSelectInnerHTML = '';
+    
+    let patterns: string[] = [];
     data?.forEach((pattern) => {
+      patterns.push(pattern.name); 
       patternSelectInnerHTML += `<option value="${pattern.name}" ${selectedPattern == pattern.name ? 'selected' : ''}>${pattern.name}</>`;
     });
+    setLoadedPatterns(patterns); 
+
     if(loadPatternSelectRef.current)
       loadPatternSelectRef.current.innerHTML = patternSelectInnerHTML;
 
@@ -200,6 +209,7 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas }) => {
     let patternMeasures = parseInt(newPatternMeasuresRef.current.value);
     console.log(patternName, patternMeasures);
 
+    // TODO: Include subdivisions here.
     let content = JSON.stringify({measures: patternMeasures, notePositions: patternInCreationPositions});
     await uploadToBucket('patterns', `${data.user.id}/${patternName}`, patternName, content);
 
@@ -257,136 +267,145 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas }) => {
       onClick={onPatternModeClick}>Pattern mode</button>
     </div>
 
-
-    <div className="metronome_container">
-      <button className={`metronome_button ${lane.metronomeEnabled ? 'selected' : ''}`} 
-      onClick={()=>{
-        lane.metronomeEnabled = !lane.metronomeEnabled;
-        setMetronomeEnabled(!metronomeEnabled);
-      }}>
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-list-music"><path d="M21 15V6"/><path d="M18.5 18a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"/><path d="M12 12H3"/><path d="M16 6H3"/><path d="M12 18H3"/></svg>
-      </button>
-      <label className="metronome_label">Metronome <b>({lane.metronomeEnabled ? 'enabled' : 'disabled'})</b></label>
-    </div>
-    
-    <div className="bpm_container">
-      <input className="bpm_input" type="number" 
-      onChange={(event)=>{
-        lane.bpm = parseInt(event.target.value);
-        setLongestLane(); 
-
-        if(lane.repeated) {
-          lane.unrepeatNotes(); 
-          setRepeated(false);
-          drawSingleLane(lane); 
-        }
-
-        setCanRepeat(lane.getRatio() < longest_lane.getRatio());
-
-        if(lane == longest_lane) {
-          lanes.forEach(lane => {
-            if(lane.repeated) {
-              lane.unrepeatNotes();
-            }
-          });
-        }
-      }} 
-      defaultValue={lane.bpm} min="1"/>
-      <label>BPM</label>
-    </div>
-    
-    <div className="measure_count_container">
-      <input className="measure_count_input" type="number" defaultValue={lane.measureCount} min="1"
-      onChange={onMeasureCountChange}/>
-      <label>measure count</label>
+    { editMode == 'individual' && <>
+      <div className="metronome_container">
+        <button className={`metronome_button ${lane.metronomeEnabled ? 'selected' : ''}`} 
+        onClick={()=>{
+          lane.metronomeEnabled = !lane.metronomeEnabled;
+          setMetronomeEnabled(!metronomeEnabled);
+        }}>
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-list-music"><path d="M21 15V6"/><path d="M18.5 18a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"/><path d="M12 12H3"/><path d="M16 6H3"/><path d="M12 18H3"/></svg>
+        </button>
+        <label className="metronome_label">Metronome <b>({lane.metronomeEnabled ? 'enabled' : 'disabled'})</b></label>
+      </div>
       
-      <button className={`repeat_button ${repeated ? 'selected' : ''}`} disabled={!canRepeat ? true : false} onClick={onRepeatClick}>repeat</button>
-      
-      <button className="repeat_question" title="Repeats the notes in this lane up until the height of the longest lane in the session">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-circle-help-icon lucide-circle-help"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
-      </button>
-    </div>
-
-    <div className="precisioun_container">
-        <select className="precision_select" 
+      {/* TODO: Bpm increment for all lanes */}
+      <div className="bpm_container">
+        <input className="bpm_input" type="number" 
         onChange={(event)=>{
-          lane.hitPrecision = parseInt(event.target.value)
-          lane.hitzone = lane.calculateHitzone();
-          drawSingleLane(lane);
-        }}>
-            <option value="16" selected={lane.hitPrecision == 16 ? true : false}>1/16</option>
-            <option value="8"  selected={lane.hitPrecision == 8 ? true : false}>1/8</option>
-            <option value="4"  selected={lane.hitPrecision == 4 ? true : false}>1/4</option>
-        </select>
-        <label htmlFor="precision_select">Hit precision</label>
-    </div>
+          lane.bpm = parseInt(event.target.value);
+          setLongestLane(); 
 
-    <div className="time_signature_container">
-      <select className="time_signature_select"        
-      onChange={(event)=>{
-          // TODO: IMPORTANT, actually figure out how time signatures will work
-          let split = event.target.value.split('/');
-          lane.timeSignature = [parseInt(split[0]), parseInt(split[1])];
-          lane.notes = [];
-          lane.translationAmount = 0;
-          // TODO: Review this
-          lane.recalculateHeight();
-          drawSingleLane(lane);
-        }}>
-          <option value="4/4" selected={(lane.timeSignature[0] == 4 && lane.timeSignature[1] == 4) ? true : false}>4/4</option>
-          <option value="2/4" selected={(lane.timeSignature[0] == 2 && lane.timeSignature[1] == 4) ? true : false}>2/4</option>
-          <option value="3/4" selected={(lane.timeSignature[0] == 3 && lane.timeSignature[1] == 4) ? true : false}>3/4</option>
-          <option value="6/8" selected={(lane.timeSignature[0] == 6 && lane.timeSignature[1] == 8) ? true : false}>6/8</option>
-      </select>
-      <label htmlFor="lane_sound_select">Time signature</label>
-    </div>
+          if(lane.repeated) {
+            lane.unrepeatNotes(); 
+            setRepeated(false);
+            drawSingleLane(lane); 
+          }
+
+          setCanRepeat(lane.getRatio() < longest_lane.getRatio());
+
+          if(lane == longest_lane) {
+            lanes.forEach(lane => {
+              if(lane.repeated) {
+                lane.unrepeatNotes();
+              }
+            });
+          }
+        }} 
+        defaultValue={lane.bpm} min="1"/>
+        <label>BPM</label>
+      </div>
       
-    {/* TODO: Implement this */}
-    <div className="metronome_sound_container">
-      <select className="metronome_select">
-          <option value="metronome1" selected>1</option>
-          <option value="metronome2">2</option>
-          <option value="metronome3">3</option>
-          <option value="metronome4">4</option>
-          <option value="metronome5">5</option>
-          <option value="metronome6">6</option>
-      </select>
-      <label htmlFor="lane_sound_select">Metronome sound</label>
-    </div>
+      <div className="measure_count_container">
+        <input className="measure_count_input" type="number" defaultValue={lane.measureCount} min="1"
+        onChange={onMeasureCountChange}/>
+        <label>measure count</label>
+        
+        <button className={`repeat_button ${repeated ? 'selected' : ''}`} disabled={!canRepeat ? true : false} onClick={onRepeatClick}>repeat</button>
+        
+        <button className="repeat_question" title="Repeats the notes in this lane up until the height of the longest lane in the session">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-circle-help-icon lucide-circle-help"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
+        </button>
+      </div>
 
-    <div className="lane_sound_container">
-      <select className="lane_sound_select" 
-      onChange={(event)=>{
-        lane.hitsound = event.target.value;
-      }}>
-          <option value="kick"  selected={lane.hitsound == "kick" ? true : false}>kick</option>
-          <option value="snare" selected={lane.hitsound == "snare" ? true : false}>snare</option>
-          <option value="clap"  selected={lane.hitsound == "clap" ? true : false}>clap</option>
-          <option value="crash" selected={lane.hitsound == "crash" ? true : false}>crash</option>
-          <option value="open-hihat"   selected={lane.hitsound == "open-hihat" ? true : false}>open-hihat</option>
-          <option value="closed-hihat" selected={lane.hitsound == "closed-hihat" ? true : false}>closed-hihat</option>
-      </select>
-      <label htmlFor="lane_sound_select">Lane sound</label>
-    </div>
+      <div className="precisioun_container">
+          <select className="precision_select" 
+          onChange={(event)=>{
+            lane.hitPrecision = parseInt(event.target.value)
+            lane.hitzone = lane.calculateHitzone();
+            drawSingleLane(lane);
+          }}>
+              <option value="16" selected={lane.hitPrecision == 16 ? true : false}>1/16</option>
+              <option value="8"  selected={lane.hitPrecision == 8 ? true : false}>1/8</option>
+              <option value="4"  selected={lane.hitPrecision == 4 ? true : false}>1/4</option>
+          </select>
+          <label htmlFor="precision_select">Hit precision</label>
+      </div>
 
-    {/* TODO: Ctrl + z | ctrl + y implementation */}
-    <button className="clear_notes" onClick={()=>{
-        // TODO: Move this to own function
-        if(editMode == "pattern_creation") {
-          resetPatternInCreation();
-        } else {
-          lane.notes = [];
-          lane.patternStartMeasure = 0; 
-        }
-        lane.translationAmount = 0; 
-        drawSingleLane(lane);
-    }}>clear notes</button>
+      <div className="time_signature_container">
+        <select className="time_signature_select"        
+        onChange={(event)=>{
+            // TODO: Add coming soon question mark here
+            // TODO: IMPORTANT, actually figure out how time signatures will work
+            let split = event.target.value.split('/');
+            lane.timeSignature = [parseInt(split[0]), parseInt(split[1])];
+            lane.notes = [];
+            lane.translationAmount = 0;
+            // TODO: Review this
+            lane.recalculateHeight();
+            drawSingleLane(lane);
+          }}>
+            <option value="4/4" selected={(lane.timeSignature[0] == 4 && lane.timeSignature[1] == 4) ? true : false}>4/4</option>
+            {/* <option value="2/4" selected={(lane.timeSignature[0] == 2 && lane.timeSignature[1] == 4) ? true : false}>2/4</option>
+            <option value="3/4" selected={(lane.timeSignature[0] == 3 && lane.timeSignature[1] == 4) ? true : false}>3/4</option>
+            <option value="6/8" selected={(lane.timeSignature[0] == 6 && lane.timeSignature[1] == 8) ? true : false}>6/8</option> */}
+        </select>
+        <label htmlFor="time_signature_select">Time signature</label>
+      </div>
 
-    <button className="back_to_start" onClick={()=>{
-      lane.translationAmount = 0;
-      drawSingleLane(lane);
-    }}>back to start</button>
+      <div className="subdivision_container">
+        <select className="subdivision_select"        
+        onChange={(event)=>{
+            // TODO: Add coming soon question mark here
+            // TODO: IMPORTANT, actually figure out how time signatures will work
+            let newValue = parseInt(event.target.value);
+            lane.subdivision = newValue;
+            lane.notes = [];
+            lane.translationAmount = 0;
+            // TODO: Review this
+            lane.recalculateNoteGap(); 
+            lane.recalculateHeight();
+            drawSingleLane(lane);
+          }}>
+            <option value="2" selected={(lane.subdivision == 2) ? true : false}>2</option>
+            <option value="3" selected={(lane.subdivision == 3) ? true : false}>3</option>
+            <option value="4" selected={(lane.subdivision == 4) ? true : false}>4</option>
+            <option value="7" selected={(lane.subdivision == 7) ? true : false}>7</option>
+        </select>
+        <label htmlFor="subdivision_select">Subdivision</label>
+      </div>
+        
+      {/* TODO: Implement this */}
+      <div className="metronome_sound_container">
+        <select className="metronome_select">
+            <option value="metronome1" selected>1</option>
+            <option value="metronome2">2</option>
+            <option value="metronome3">3</option>
+            <option value="metronome4">4</option>
+            <option value="metronome5">5</option>
+            <option value="metronome6">6</option>
+        </select>
+        <label htmlFor="lane_sound_select">Metronome sound</label>
+      </div>
 
+      <div className="lane_sound_container">
+        <select className="lane_sound_select" 
+        onChange={(event)=>{
+          lane.hitsound = event.target.value;
+        }}>
+            <option value="kick"  selected={lane.hitsound == "kick" ? true : false}>kick</option>
+            <option value="snare" selected={lane.hitsound == "snare" ? true : false}>snare</option>
+            <option value="clap"  selected={lane.hitsound == "clap" ? true : false}>clap</option>
+            <option value="crash" selected={lane.hitsound == "crash" ? true : false}>crash</option>
+            <option value="open-hihat"   selected={lane.hitsound == "open-hihat" ? true : false}>open-hihat</option>
+            <option value="closed-hihat" selected={lane.hitsound == "closed-hihat" ? true : false}>closed-hihat</option>
+        </select>
+        <label htmlFor="lane_sound_select">Lane sound</label>
+      </div>
+    </>}
+
+    { editMode == 'pattern' && <>    
+    </>}
     <div className={`pattern_loading_container ${editMode == 'pattern' ? 'visible' : ''}`}>
       <select ref={loadPatternSelectRef} className="load_pattern_select" 
       onChange={(event)=>{setSelectedPattern(event.target.value)}}/>
@@ -395,10 +414,15 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas }) => {
           <input ref={loadPatternMeasuresRef} className="loaded_pattern_measures" type="number" min="1" defaultValue="1"></input>
           <label htmlFor="loaded_pattern_measures">measures</label>
       </div>
-      
-      <button className="create_pattern" onClick={onPatternCreationClick}>Create note pattern</button>
+
+      {/* TODO: Change this obviously  */}
+      <PatternEditingPanel lane={lane} patterns={loadedPatterns} visible={editMode == 'pattern'}/>
+
+      <button className="create_pattern" onClick={onPatternCreationClick}>Create new note pattern</button>
     </div>
 
+
+    { editMode == 'pattern_creation' && <>
     <div className={`pattern_creation_container ${editMode == 'pattern_creation' ? 'visible' : ''}`}>
       <div className="new_pattern_measures_container">
           <input ref={newPatternMeasuresRef} type="number" className="new_pattern_measures" min="1" defaultValue="1"
@@ -420,6 +444,25 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas }) => {
         onPatternModeClick();
       }}>Close pattern</button>
     </div>
+    </>}
+
+    {/* TODO: Ctrl + z | ctrl + y implementation */}
+    <button className="clear_notes" onClick={()=>{
+      // TODO: Move this to own function
+      if(editMode == "pattern_creation") {
+        resetPatternInCreation();
+      } else {
+        lane.notes = [];
+        lane.patternStartMeasure = 0; 
+      }
+      lane.translationAmount = 0; 
+      drawSingleLane(lane);
+    }}>clear notes</button>
+
+    <button className="back_to_start" onClick={()=>{
+      lane.translationAmount = 0;
+      drawSingleLane(lane);
+    }}>back to start</button>
 
     <div className="lane_loading_container">
       <select ref={loadLaneSelectRef} className="load_lane_select">

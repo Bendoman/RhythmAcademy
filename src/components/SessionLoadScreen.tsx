@@ -206,6 +206,8 @@ const SessionLoadScreen: React.FC<ISessionLoadScreenProps>
                 dropper
             </div>
             expanded['all'] && */}
+            
+            {/* TOOD: Star sessions, add to saved bucket */}
            {  loadedSessions && loadedSessions.map((session, index) => {
                return <div key={index} className="loaded_session_info"
                 // onMouseEnter={() => {
@@ -227,13 +229,10 @@ const SessionLoadScreen: React.FC<ISessionLoadScreenProps>
                 </>}
 
                 { <button onClick={(e) => {e.stopPropagation(); changeHoveredSession(`${session[0]}/${session[1]}`);}}>Info</button>}
-
-
                 </div>
            })}
            
            { loadStatus && <p>{loadStatus}</p>}
-
         </div>
     </div>
     </>)

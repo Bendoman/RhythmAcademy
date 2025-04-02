@@ -694,8 +694,11 @@ export function drawSingleLane(lane: Lane) {
   lane.drawInputVisual();
 
   if(editing && editMode != EDIT_MODES.PATTERN_MODE) {
+    // TODO: Hold shift to be continuous. 
     let divider = 16/lane.timeSignature[1];
     let height = lane.noteGap/divider;
+    
+    
     let drawHeight = lane.noteGap/(lane.timeSignature[1] * lane.timeSignature[0])
     
     // So that only non repeated part of lane is shown in edit mode
@@ -964,6 +967,8 @@ export function assignLaneInput(lane: Lane, inputKey: string) {
   lane.inputKey = inputKey; 
   input_lane_pairs[inputKey.toUpperCase()] = lanes.indexOf(lane); 
   drawSingleLane(lane); 
+  
+  saveCurrentSessionLocally(); 
 }
 
 export function resetLongestLane() {

@@ -27,16 +27,10 @@ export function getNoteFill(currentZone: string, hitStatus: string): string {
     let fillStyle = ''; 
     if(currentZone == ZONE_NAMES.EARLY_ZONE)
         fillStyle = COLORS.NOTE_FILL; 
-    else if(currentZone == ZONE_NAMES.EARLY_HIT_ZONE)
-        fillStyle = 'red'; 
-    else if(currentZone == ZONE_NAMES.PERFECT_HIT_ZONE)
-        fillStyle = 'blue'; 
-    else if(currentZone == ZONE_NAMES.LATE_HIT_ZONE)
-        fillStyle = 'orange'; 
     else if(currentZone == ZONE_NAMES.MISS_ZONE) {
         fillStyle = 'maroon'; 
         if(hitStatus == 'hit')
-            fillStyle = 'gray'; 
+            fillStyle = '#317256'; 
     }
 
     return fillStyle; 

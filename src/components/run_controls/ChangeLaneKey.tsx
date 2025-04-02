@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import '../styles/laneContent.css';
 import Lane from '../../scripts/Lane';
-import { assignLaneInput, drawSingleLane, findLaneFromCanvas } from '../../scripts/main';
+import { assignLaneInput, drawSingleLane, findLaneFromCanvas, saveCurrentSessionLocally } from '../../scripts/main';
 import { midiAccess } from '../Homepage';
 import { prohibitedKeysList } from '../../scripts/Utils';
 

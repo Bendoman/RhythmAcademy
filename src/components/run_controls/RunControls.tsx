@@ -161,11 +161,11 @@ const RunControls: React.FC<IRunControlsProps> =
                 editButtonClick();
             break;
             case 'A':
-                if(!isEditingRef.current) {
-                    event.preventDefault(); 
-                    if(addLaneButtonRef.current)
-                        addLaneButtonRef.current.click(); 
-                }
+                if(isEditingRef.current)
+                    editButtonClick(); 
+                event.preventDefault(); 
+                if(addLaneButtonRef.current)
+                    addLaneButtonRef.current.click(); 
             break;
             case 'L':
                 event.preventDefault();
