@@ -20,7 +20,7 @@ import RunControls from './run_controls/RunControls.tsx';
 import NotificationsScreen from './NotificationsScreen.tsx';
 import SessionLoadScreen, { createNewLane } from './SessionLoadScreen.tsx';
 import { loadFromLocalStorage, saveToLocalStorage } from '../scripts/Utils.ts';
-import { startLoop, handleMIDIMessage, lanes, remapLane } from '../scripts/main.ts';
+import { startLoop, handleMIDIMessage, lanes, remapLane, setLongestLane } from '../scripts/main.ts';
 import { retrieveFriendsList, sendFriendRequest } from '../scripts/SupaUtils.ts';
 
 export let midiAccess: MIDIAccess; 
@@ -84,6 +84,7 @@ const Homepage = () => {
                 current_session.lanes.forEach(lane => {
                     createNewLane(lane.inputKey);
                     remapLane(lanes[lanes.length - 1], lane);
+                    // setLongestLane();
                 });
             }
         } else {

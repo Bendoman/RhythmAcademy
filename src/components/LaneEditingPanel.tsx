@@ -289,6 +289,7 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas }) => {
           if(lane.repeated) {
             lane.unrepeatNotes(); 
             setRepeated(false);
+            setCanRepeat(false); 
             drawSingleLane(lane); 
           }
 
@@ -366,11 +367,18 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas }) => {
             lane.recalculateNoteGap(); 
             lane.recalculateHeight();
             drawSingleLane(lane);
+            saveCurrentSessionLocally();
           }}>
             <option value="2" selected={(lane.subdivision == 2) ? true : false}>2</option>
             <option value="3" selected={(lane.subdivision == 3) ? true : false}>3</option>
             <option value="4" selected={(lane.subdivision == 4) ? true : false}>4</option>
+            <option value="5" selected={(lane.subdivision == 5) ? true : false}>5</option>
+            <option value="6" selected={(lane.subdivision == 6) ? true : false}>6</option>
             <option value="7" selected={(lane.subdivision == 7) ? true : false}>7</option>
+            <option value="8" selected={(lane.subdivision == 8) ? true : false}>8</option>
+            <option value="9" selected={(lane.subdivision == 9) ? true : false}>9</option>
+            <option value="10" selected={(lane.subdivision == 10) ? true : false}>10</option>
+            <option value="11" selected={(lane.subdivision == 11) ? true : false}>11</option>
         </select>
         <label htmlFor="subdivision_select">Subdivision</label>
       </div>

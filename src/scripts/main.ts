@@ -22,6 +22,7 @@ let laneCount = 0;
 let looping = false; 
 export let maxMeasureCount = 400; 
 export let measureHeight = 800;
+export let startY = 800; 
 
 let ups = 0; 
 let translationAmount = 0; 
@@ -696,17 +697,44 @@ export function drawSingleLane(lane: Lane) {
   if(editing && editMode != EDIT_MODES.PATTERN_MODE) {
     // TODO: Hold shift to be continuous. 
     let divider = 16/lane.timeSignature[1];
-    let height = lane.noteGap/divider;
+
+    let height; 
+    if(lane.subdivision < 4)
+      height = lane.noteGap/6;
+    else if(lane.subdivision < 7)
+      height = lane.noteGap/4;
+    else
+      height = lane.noteGap/2;
     
-    
-    let drawHeight = lane.noteGap/(lane.timeSignature[1] * lane.timeSignature[0])
+    if(keyHeld['Control']) {
+      const MAX_DISVISOR = 100; 
+      
+      let divisor = 1; 
+      for(; divisor <= MAX_DISVISOR; divider++) {
+        if(lane.noteGap/divisor < 15)
+          break; 
+
+        divisor++;
+        height = lane.noteGap/divisor; 
+      }
+      
+
+      
+    }
+      // height = lane.noteGap/12.5; 
+
+    // let drawHeight = lane.noteGap/(lane.timeSignature[1] * lane.timeSignature[0]);
+    let drawHeight = 12.5;
     
     // So that only non repeated part of lane is shown in edit mode
-    let topeOfLane = lane.calculateTopOfLane(false); 
+    let topOfLane = lane.calculateTopOfLane(false); 
     if(editMode == EDIT_MODES.CREATE_PATTERN_MODE)
-        topeOfLane = lane.calcualteTopOfMeasuresN(newPatternMeasures); 
+        topOfLane = lane.calcualteTopOfMeasuresN(newPatternMeasures); 
 
-    for(let y = lane.startY; y > topeOfLane; y -= height) {
+    for(let y = lane.startY; y > topOfLane; y -= height) {    
+      if(y - topOfLane < 1)
+        break;
+
       let effectiveY = y + lane.translationAmount; 
       if(effectiveY > lane.canvas.height)
         continue; 
@@ -714,10 +742,13 @@ export function drawSingleLane(lane: Lane) {
       if(effectiveY < -lane.noteGap)
         break;
 
+      if(!keyHeld['Control']) {          
+      }
       lane.ctx.fillStyle = COLORS.NOTE_AREA_HIGHLIGHT;
       lane.ctx.beginPath();
       lane.ctx.roundRect(30, effectiveY - (drawHeight/2), lane.canvas.width - 60, drawHeight, 20); 
       lane.ctx.fill();
+      
 
       if(offsetY == null)
         continue;
@@ -736,7 +767,14 @@ export function drawSingleLane(lane: Lane) {
         let width = lane.canvas.width/2; 
         let x = (width) - (width/2);
 
-        lane.ctx.fillStyle = COLORS.HIGHLIGHTED_NOTE_FILL;
+        // console.log(newNoteIndex); 
+        // let sortedIndex = findSortedIndex(lane.notes, newNoteIndex, lane);   
+        // if(sortedIndex[1] == 1)
+        //   lane.ctx.fillStyle = 'red'
+        // else 
+        //   lane.ctx.fillStyle = COLORS.HIGHLIGHTED_NOTE_FILL;
+
+        lane.ctx.fillStyle = COLORS.HIGHLIGHTED_NOTE_FILL        
         lane.ctx.beginPath();
         lane.ctx.roundRect(x, effectiveY - (drawHeight/2), width, drawHeight, 20); 
         lane.ctx.fill();
@@ -760,6 +798,7 @@ let lastLoop = performance.now();
 let updateTime = 0; 
 let filterStrength = 20; 
 
+let animationFrameId: number | null = null; 
 // TODO: Pause updating when the window is out of focus. 
 function gameLoop(timeStamp: number) {
   // Calculating the number of updates per second
@@ -771,36 +810,42 @@ function gameLoop(timeStamp: number) {
   lastLoop = timeStamp;
 
   lanes.forEach(lane => {
+  })
+  
+  for(let lane of lanes) {
     if(paused) {
       lane.drawInputVisual(); // So that when paused an in edit mode you can verify that your input mode works
-      return;
+      continue;
     }
+    // console.log(`${lane.translationAmount} : ${interval} : ${measureHeight/lane.timeSignature[1]} : ${lane.bpm}`); 
+  
     
     // Determining the speed of translation for each lane based on the current loop interval
-    let translationSpeed = (interval / (60000/lane.bpm)) * lane.noteGap;
+    let translationSpeed = (interval / (60000/lane.bpm)) * (measureHeight/lane.timeSignature[1]);
     lane.translationAmount += translationSpeed;
-
+  
     lane.ctx.clearRect(0, 0, lane.canvas.width, lane.canvas.height - lane.inputAreaHeight);
     lane.drawHitzone();
     lane.drawMeasureIndicators();
     lane.updateAndDrawNotes(editing, ups, translationSpeed);
     lane.drawInputVisual();
-
+  
+  
     // If both tops are visible. Take whichever tranlsation amount is highest. 
-    let topOfLongestLaneVisible = -(longest_lane.translationAmount + (longest_lane.noteGap/longest_lane.timeSignature[1])) < (longest_lane.calculateTopOfLane(false));
-    let topOfCurrentLaneVisible = -(lane.translationAmount + (lane.noteGap/lane.timeSignature[1])) < (lane.calculateTopOfLane(lane.repeated));
-
-
+    let topOfLongestLaneVisible = -(longest_lane.translationAmount + ((measureHeight/longest_lane.timeSignature[1])/longest_lane.timeSignature[1])) < (longest_lane.calculateTopOfLane(false));
+    let topOfCurrentLaneVisible = -(lane.translationAmount + ((measureHeight/lane.timeSignature[1])/lane.timeSignature[1])) < (lane.calculateTopOfLane(lane.repeated));
+  
+  
     if(topOfLongestLaneVisible && topOfCurrentLaneVisible) {
       let oldTranslationAmount = lane.translationAmount; 
-
+  
       // lane.translationAmount = lane.translationAmount - lane.height - (lane.noteGap);
       
       
-      let longest_t = longest_lane.translationAmount - longest_lane.height - (longest_lane.noteGap); 
-      let current_t = lane.translationAmount - (-lane.calculateTopOfLane(lane.repeated) + lane.startY) - (lane.noteGap);
+      let longest_t = longest_lane.translationAmount - longest_lane.height - ((measureHeight/longest_lane.timeSignature[1])); 
+      let current_t = lane.translationAmount - (-lane.calculateTopOfLane(lane.repeated) + lane.startY) - (measureHeight/lane.timeSignature[1]);
       lane.translationAmount = longest_t < current_t ? longest_t : current_t; 
-
+  
       
       lane.drawLoopIndicator();
       if(looping) {
@@ -809,23 +854,35 @@ function gameLoop(timeStamp: number) {
       }
       lane.translationAmount = oldTranslationAmount
     }
-
+  
     if(lane == longest_lane) {
       // console.log(lane.inputKey);
-      let overshoot = ((lane.startY - lane.translationAmount) + lane.noteGap) - lane.calculateTopOfLane(false);
+      let overshoot = ((lane.startY - lane.translationAmount) + (measureHeight/lane.timeSignature[1])) - lane.calculateTopOfLane(false);
       if(overshoot <= 0 && looping) {
         resetLanes(overshoot);
         // TODO: See if this is needed
-        //window.requestAnimationFrame(gameLoop); // Ensures all lanes stay tightly in sync
+        // window.requestAnimationFrame(gameLoop); // Ensures all lanes stay tightly in sync
+        // restartLoop(); 
+        // return; 
+        break;
       } else if(overshoot <= 0) {
         // TODO: See if this can be reworked
         (document.querySelector('#session_stop_button') as HTMLElement)?.click();
       }
     }
-  })
 
-  window.requestAnimationFrame(gameLoop);
+  }
+
+  animationFrameId = window.requestAnimationFrame(gameLoop);
 }
+
+function restartLoop() {
+  if(animationFrameId) {
+    window.cancelAnimationFrame(animationFrameId); 
+    animationFrameId = window.requestAnimationFrame(gameLoop); 
+  }
+}
+
 
 export async function startLoop() {
     initalizeListeners();
@@ -1015,6 +1072,8 @@ export function remapLane(target: Lane, reference: Lane) {
   target.timeSignature = reference.timeSignature; 
   target.metronomeEnabled = reference.metronomeEnabled;
   
+  target.subdivision = reference.subdivision; 
+
   target.repeated = reference.repeated;
   target.repeatedNotes = reference.repeatedNotes;
 

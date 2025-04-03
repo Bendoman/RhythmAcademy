@@ -6,8 +6,6 @@
   border-bottom-right-radius: 10px;
   transition: transform 0.5s ease;
   display: flex;
-
-  overflow-y: auto;
 }
 
 #run_controls.active {

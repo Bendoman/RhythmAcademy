@@ -92,7 +92,7 @@ const SessionLoadScreen: React.FC<ISessionLoadScreenProps>
             remapLane(lanes[lanes.length - 1], newLane);
         });
 
-        setLongestLane();
+        // setLongestLane();
         saveCurrentSessionLocally(); 
         setLoadStatus(`Session: ${sessionName} loaded!`);
     }
@@ -197,7 +197,7 @@ const SessionLoadScreen: React.FC<ISessionLoadScreenProps>
             }}>load</button> */}
 
 
-            {/* <div className="drop_down" onClick={() => {
+            <div className="drop_down" onClick={() => {
                 setExpanded(prev => ({
                     ...prev, 
                     ['all']: !prev['all']
@@ -205,10 +205,10 @@ const SessionLoadScreen: React.FC<ISessionLoadScreenProps>
             }}>
                 dropper
             </div>
-            expanded['all'] && */}
+            {/* expanded['all'] && */}
             
             {/* TOOD: Star sessions, add to saved bucket */}
-           {  loadedSessions && loadedSessions.map((session, index) => {
+           {  expanded['all'] && loadedSessions && loadedSessions.map((session, index) => {
                return <div key={index} className="loaded_session_info"
                 // onMouseEnter={() => {
                 //     changeHoveredSession(`${session[0]}/${session[1]}`);

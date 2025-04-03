@@ -10,6 +10,7 @@ import { COLORS, EDIT_MODES, HIT_STATUSES, ZONE_NAMES } from "./constants";
 export default class Lane {
     public bpm: number;
     public measureCount: number; 
+    public subdivision: number; 
     public timeSignature: number[]; // Index 0 will be the upper numeral, index 1 the lower
     public metronomeEnabled: boolean; 
 
@@ -67,6 +68,7 @@ export default class Lane {
         this.bpm = bpm; 
         this.measureCount = measureCount;
         this.timeSignature = timeSignature;
+        this.subdivision = 4; 
 
         this.notes = notes; 
         this.repeated = false; 
@@ -76,7 +78,8 @@ export default class Lane {
         // Note gap defines the distance between between note values that the time signature is counting
         this.noteGap = noteGap;
         // TODO: Time signatures THIS WORKS LETS GO
-        this.noteGap = measureHeight / this.timeSignature[0];
+        this.noteGap = measureHeight / this.subdivision;
+        
         // this.timeSignature = [8, 8];
         // this.noteGap = measureHeight/8; 
         
@@ -90,9 +93,11 @@ export default class Lane {
         this.hitzone = this.calculateHitzone(); 
 
         // So that the first note drawn will be exaclty one full note above the perfect hit area
-        this.startY = this.calculatePerfectHitY() - this.noteGap;
+        // this.startY = this.calculatePerfectHitY() - this.noteGap;
+        this.startY = this.calculatePerfectHitY() - (measureHeight/this.timeSignature[1]);
                 
-        this.height = this.measureCount * this.calculateSingleMeasureHeight();
+        // this.height = this.measureCount * this.calculateSingleMeasureHeight();
+        this.height = this.measureCount * measureHeight;
         this.topOfInputVisual = this.canvas.height - 70;
 
         this.inputKey = inputKey;
@@ -109,12 +114,13 @@ export default class Lane {
     }
 
     public recalculateNoteGap() {
-        
+        this.noteGap = measureHeight / this.subdivision;
     }
 
     public recalculateHeight() {
         // Number of measures, times the height of a single measure 
-        this.height = this.measureCount * this.calculateSingleMeasureHeight();
+        // this.height = this.measureCount * this.calculateSingleMeasureHeight();
+        this.height = this.measureCount * measureHeight;
     }
 
     public calculateSingleMeasureHeight() {
@@ -130,7 +136,7 @@ export default class Lane {
     }   
 
     public calcualteTopOfMeasuresN(n: number) {
-        return this.startY - (this.calculateSingleMeasureHeight() * n); 
+        return this.startY - (measureHeight * n); 
     }
 
     public getRatio() {
@@ -147,6 +153,7 @@ export default class Lane {
         } else {
             this.loopCount = 1;
             this.notesHit = [];
+            this.wrongNotes = [];
             this.notesMissed = [];
         }
 
@@ -331,7 +338,7 @@ export default class Lane {
             if(y + this.translationAmount > this.canvas.height) {
                 noteCount++;
                 // Resets the note count back to 1 after reaching the maximum defined by the time signature
-                if(noteCount > this.timeSignature[0]) 
+                if(noteCount > this.subdivision) 
                     noteCount = 1;
                 continue; 
             }
@@ -343,10 +350,10 @@ export default class Lane {
             // So that the actual y values can be held constant
             let effectiveY = y + this.translationAmount;
             // TODO: Choose more generic starting X value
-            if(y == topOfLane + this.noteGap)
-                drawLine(this.ctx, 30, effectiveY, this.canvas.width - 30, effectiveY, COLORS.MEASURE_LINE, 1, [25, 5]);
-            else 
-                drawLine(this.ctx, 30, effectiveY, this.canvas.width - 30, effectiveY, COLORS.MEASURE_LINE, 1);
+            // if(y == topOfLane + this.noteGap)
+            //     drawLine(this.ctx, 30, effectiveY, this.canvas.width - 30, effectiveY, COLORS.MEASURE_LINE, 1, [25, 5]);
+            // else 
+            drawLine(this.ctx, 30, effectiveY, this.canvas.width - 30, effectiveY, COLORS.MEASURE_LINE, 1);
 
             // Emphasises the first note of a bar by giving it bigger text
             // TODO: Create a functional pixel to em converted and use relative units to position these.
@@ -361,22 +368,27 @@ export default class Lane {
 
             noteCount++;
             // Resets the note count back to 1 after reaching the maximum defined by the time signature
-            if(noteCount > this.timeSignature[0]) 
+            if(noteCount > this.subdivision) 
                 noteCount = 1;
+        }
+        if(!this.repeated) {
+            drawLine(this.ctx, 0, topOfLane + this.translationAmount, this.canvas.width, topOfLane + this.translationAmount, COLORS.MEASURE_LINE, 1, [25, 5]);
         }
     }
 
     public drawLoopIndicator() {
-        let effectiveY = this.startY + this.translationAmount + this.noteGap;
+        let effectiveY = this.startY + this.translationAmount + (measureHeight/this.timeSignature[1]);
 
         let text = 'End of Lane'; 
         this.ctx.font = "italic 20px Inria-serif"
         this.ctx.fillStyle = COLORS.MEASURE_NUMBER;
         let textWidth = this.ctx.measureText(text).width; 
-        this.ctx.fillText(text, (this.canvas.width/2) - (textWidth/2), effectiveY);
+        this.ctx.fillText(text, (this.canvas.width/2) - (textWidth/2), effectiveY - 10);
 
-        drawLine(this.ctx, (this.canvas.width/2) - 50, effectiveY + 5, 
-        (this.canvas.width/2) + 50, effectiveY + 5, COLORS.MEASURE_LINE, 1);
+        drawLine(this.ctx, (this.canvas.width/2) - 50, effectiveY, 
+        (this.canvas.width/2) + 50, effectiveY, COLORS.MEASURE_LINE, 1, [25, 5]);
+        drawLine(this.ctx, 0, effectiveY, this.canvas.width, effectiveY, COLORS.MEASURE_LINE, 1, [25, 5]);
+
     }
 
     public clearCanvas() {
@@ -387,8 +399,8 @@ export default class Lane {
 
     public calculateHitzone(): Hitzone {
         // TODO: Decide if this level of dynamic sizing is even necessary.
-        let nonPerfectHitArea = (this.noteGap / ((this.hitPrecision*2) / this.timeSignature[1])) /2; //TODO: Write justifcation for this
-        let perfectHitArea = (this.noteGap / (32/this.timeSignature[1]))/2;
+        let nonPerfectHitArea = ((measureHeight/this.timeSignature[1]) / ((this.hitPrecision*2) / this.timeSignature[1])) /2; //TODO: Write justifcation for this
+        let perfectHitArea = ((measureHeight/this.timeSignature[1]) / (32/this.timeSignature[1]))/2;
 
         let perfect_hit_y = this.calculatePerfectHitY();
         let early_hit_y = perfect_hit_y - nonPerfectHitArea
@@ -481,7 +493,7 @@ export default class Lane {
             topOfInputVisual,
             inputAreaHeight,
         */
-        this.startY = this.calculatePerfectHitY() - this.noteGap;
+        this.startY = this.calculatePerfectHitY() - (measureHeight/this.timeSignature[1]);
         this.recalculateHeight(); 
         this.topOfInputVisual = this.canvas.height - 70;
         this.inputAreaHeight = this.canvas.height - this.topOfInputVisual;
