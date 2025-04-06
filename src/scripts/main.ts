@@ -585,6 +585,23 @@ async function handleCanvasClick(event: MouseEvent) {
           patternInCreationPositions.splice(sortedIndex[0], 1);
           console.log(patternInCreationPositions);
         } else {
+          let y = lane.notes[sortedIndex[0]].getY(lane.noteGap, lane.innerSubdivision, lane.startY); 
+          let currentMeasure = Math.floor((Math.abs(lane.startY - y)/measureHeight)); 
+
+          console.log(`Deleting in measure ${currentMeasure}`);
+
+          if(sortedIndex[0] > 0 && sortedIndex[0] == lane.notes.length - 1) {
+            let previousNoteY = lane.notes[sortedIndex[0] - 1].getY(lane.noteGap, lane.innerSubdivision, lane.startY); 
+            let previousNoteMeasure = Math.floor((Math.abs(lane.startY - previousNoteY)/measureHeight)); ; 
+
+            if(previousNoteMeasure < currentMeasure)
+              lane.setPatternStartMeasure(previousNoteMeasure + 1);
+              // lane.patternStartMeasure = previousNoteMeasure + 1;
+          } else if(sortedIndex[0] == 0 && lane.notes.length == 1) {
+            // lane.patternStartMeasure = 0; 
+            lane.setPatternStartMeasure(0);
+          }
+
           if(lane.repeated) {
             lane.notes.splice(lane.notes.length - lane.repeatedNotes, lane.repeatedNotes);
             lane.notes.splice(sortedIndex[0], 1);
@@ -600,7 +617,8 @@ async function handleCanvasClick(event: MouseEvent) {
       return;
     } else if(event.button != 2 && editMode != EDIT_MODES.PATTERN_MODE) {
       let newNote = new Note(newNoteIndex);
-      console.log(newNote.getY(lane.noteGap, lane.timeSignature[1], lane.startY) - lane.startY); 
+      // console.log(newNoteIndex);
+      // console.log(newNote.getY(lane.noteGap, lane.innerSubdivision, lane.startY) - lane.startY); 
 
       if(editMode == EDIT_MODES.CREATE_PATTERN_MODE) {
         patternInCreationNotes.splice(sortedIndex[0], 0, newNote);
@@ -609,10 +627,12 @@ async function handleCanvasClick(event: MouseEvent) {
         let height = lane.noteGap/divider; 
         
         // TODO: GET Y FROM INDEX.
-        let y = patternInCreationNotes[sortedIndex[0]].getY(lane.noteGap, lane.timeSignature[1], lane.startY); 
+        let y = patternInCreationNotes[sortedIndex[0]].getY(lane.noteGap, lane.innerSubdivision, lane.startY); 
         let dif = (y - lane.startY) / height;
-        patternInCreationPositions.splice(sortedIndex[0], 0, dif);
-        
+        console.debug(patternInCreationNotes[sortedIndex[0]].index);
+
+        patternInCreationPositions.splice(sortedIndex[0], 0, patternInCreationNotes[sortedIndex[0]].index);
+
         console.log(patternInCreationPositions);
 
       } else {
@@ -625,6 +645,14 @@ async function handleCanvasClick(event: MouseEvent) {
         }
       }
 
+      let y = newNote.getY(lane.noteGap, lane.innerSubdivision, lane.startY); 
+      let currentMeasure = Math.floor((Math.abs(lane.startY - y)/measureHeight)); 
+      
+      if(currentMeasure >= lane.patternStartMeasure)
+        lane.setPatternStartMeasure(currentMeasure + 1);
+        // lane.patternStartMeasure = currentMeasure + 1; 
+
+      // console.log(`Current measure ${currentMeasure}`);
       drawSingleLane(lane); 
     }
     return;
@@ -698,29 +726,29 @@ export function drawSingleLane(lane: Lane) {
     // TODO: Hold shift to be continuous. 
     let divider = 16/lane.timeSignature[1];
 
-    let height; 
-    if(lane.subdivision < 4)
-      height = lane.noteGap/6;
-    else if(lane.subdivision < 7)
-      height = lane.noteGap/4;
-    else
-      height = lane.noteGap/2;
+    let height = lane.noteGap/lane.innerSubdivision; 
+    // if(lane.subdivision < 4)
+    //   height = lane.noteGap/6;
+    // else if(lane.subdivision < 7)
+    //   height = lane.noteGap/4;
+    // else
+    //   height = lane.noteGap/2;
     
-    if(keyHeld['Control']) {
-      const MAX_DISVISOR = 100; 
+    // TODO: If time come back. Divider must be even, and be divisible by original value determined above.
+    // if(keyHeld['Control']) {
+    //   const MAX_DISVISOR = 100; 
       
-      let divisor = 1; 
-      for(; divisor <= MAX_DISVISOR; divider++) {
-        if(lane.noteGap/divisor < 15)
-          break; 
+    //   let divisor = 1; 
+    //   for(; divisor <= MAX_DISVISOR; divider++) {
+    //     if(lane.noteGap/divisor < 15)
+    //       break; 
 
-        divisor++;
-        height = lane.noteGap/divisor; 
-      }
-      
-
-      
-    }
+    //     divisor++;
+    //     height = lane.noteGap/divisor; 
+    //   }
+    //   console.log(divisor)
+    //   height = lane.noteGap/12; 
+    // }
       // height = lane.noteGap/12.5; 
 
     // let drawHeight = lane.noteGap/(lane.timeSignature[1] * lane.timeSignature[0]);
@@ -729,7 +757,7 @@ export function drawSingleLane(lane: Lane) {
     // So that only non repeated part of lane is shown in edit mode
     let topOfLane = lane.calculateTopOfLane(false); 
     if(editMode == EDIT_MODES.CREATE_PATTERN_MODE)
-        topOfLane = lane.calcualteTopOfMeasuresN(newPatternMeasures); 
+        topOfLane = lane.calculateTopOfMeasuresN(newPatternMeasures); 
 
     for(let y = lane.startY; y > topOfLane; y -= height) {    
       if(y - topOfLane < 1)
@@ -742,8 +770,8 @@ export function drawSingleLane(lane: Lane) {
       if(effectiveY < -lane.noteGap)
         break;
 
-      if(!keyHeld['Control']) {          
-      }
+      // if(!keyHeld['Control']) {          
+      // }
       lane.ctx.fillStyle = COLORS.NOTE_AREA_HIGHLIGHT;
       lane.ctx.beginPath();
       lane.ctx.roundRect(30, effectiveY - (drawHeight/2), lane.canvas.width - 60, drawHeight, 20); 
@@ -756,11 +784,14 @@ export function drawSingleLane(lane: Lane) {
       let effectiveOffsetY = offsetY - translationAmount;
       if(effectiveOffsetY > (effectiveY - (height/2)) && effectiveOffsetY <= (effectiveY - (height/2)) + height) {
         newNoteY = y; 
-        newNoteIndex = (lane.startY - newNoteY) / (lane.noteGap/lane.timeSignature[1]);
+        // newNoteIndex = (lane.startY - newNoteY) / (lane.noteGap/lane.timeSignature[1]);
+        // newNoteIndex = Math.round((lane.startY - newNoteY) / (lane.noteGap/lane.timeSignature[1]));
+
+        newNoteIndex = Math.round(parseInt(((lane.startY - newNoteY) / (lane.noteGap/lane.innerSubdivision)).toFixed(1)));
+        // console.log(newNoteIndex);
+        
         // let inverse = ((newNoteIndex * (lane.noteGap/lane.timeSignature[1])) - lane.startY) * -1;
         // console.log(newNoteY, " : ", newNoteIndex, " : ", inverse);
-
-        
 
         // console.log(newNoteY);
         // console.log(lane.notes);
@@ -1073,9 +1104,12 @@ export function remapLane(target: Lane, reference: Lane) {
   target.metronomeEnabled = reference.metronomeEnabled;
   
   target.subdivision = reference.subdivision; 
+  target.innerSubdivision = reference.innerSubdivision; 
 
   target.repeated = reference.repeated;
   target.repeatedNotes = reference.repeatedNotes;
+
+  target.patternStartMeasure = reference.patternStartMeasure; 
 
   target.notes = []; 
   target.translationAmount = 0;

@@ -104,7 +104,7 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas }) => {
       return; 
 
     // TODO: Keep next measure index updated while adding notes in individual mode so this isn't necessary
-    lane.notes = [];
+    // lane.notes = [];
 
     setEditMode('pattern');
     changeEditMode(EDIT_MODES.PATTERN_MODE);
@@ -147,7 +147,10 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas }) => {
     lane.measureCount = newMC;
     event.target.value = newMC.toString(); 
     
-    lane.patternStartMeasure = 0;
+    // lane.patternStartMeasure = 0;
+
+    if(newMC - 1 < lane.patternStartMeasure)
+      lane.setPatternStartMeasure(newMC); 
        
     lane.recalculateHeight();
     lane.cullOutOfBoundsNotes();
@@ -171,13 +174,14 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas }) => {
     }
 
     setCanRepeat(lane.getRatio() < longest_lane.getRatio()); 
+    saveCurrentSessionLocally();
     drawSingleLane(lane);
   }
 
   const onRepeatClick = () => {
     if(!repeated) {
-      if(lane.notes.length > 0) 
-        lane.repeatNotes();
+      // if(lane.notes.length > 0) 
+      lane.repeatNotes();
     } else {
       // Lane has already been repeated. Toggle repeating off
       lane.unrepeatNotes();   
@@ -362,6 +366,8 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas }) => {
             let newValue = parseInt(event.target.value);
             lane.subdivision = newValue;
             lane.notes = [];
+            // lane.patternStartMeasure = 0; 
+            lane.setPatternStartMeasure(0); 
             lane.translationAmount = 0;
             // TODO: Review this
             lane.recalculateNoteGap(); 
@@ -379,6 +385,7 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas }) => {
             <option value="9" selected={(lane.subdivision == 9) ? true : false}>9</option>
             <option value="10" selected={(lane.subdivision == 10) ? true : false}>10</option>
             <option value="11" selected={(lane.subdivision == 11) ? true : false}>11</option>
+            <option value="16" selected={(lane.subdivision == 16) ? true : false}>16</option>
         </select>
         <label htmlFor="subdivision_select">Subdivision</label>
       </div>
@@ -461,10 +468,12 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas }) => {
         resetPatternInCreation();
       } else {
         lane.notes = [];
-        lane.patternStartMeasure = 0; 
+        // lane.patternStartMeasure = 0; 
+        lane.setPatternStartMeasure(0); 
       }
       lane.translationAmount = 0; 
       drawSingleLane(lane);
+      saveCurrentSessionLocally(); 
     }}>clear notes</button>
 
     <button className="back_to_start" onClick={()=>{

@@ -220,7 +220,7 @@ body {
     overflow-y: auto;
 }
 
-.dropped_pattern {
+.dropped_pattern, .individual_note_section {
     color: #ECDFCC;
     background-color: #131b2386;
     border: 4px solid #131B23;
@@ -234,8 +234,33 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
+
+    position: relative;
 }
 
 .dropped_pattern_container {
     width: 50%;
+}
+ 
+.lane_pattern_display {
+    display: none;
+}
+
+.lane_pattern_display.visible {
+    display: inherit;
+}
+
+.spacer_container {
+    position: absolute;
+    bottom: -1.5em;
+    display: flex;
+    flex-direction: column;
+    gap: .2em;
+}
+.spacer {
+    border-radius: 15px;
+    width: .25em;
+    height: .25em;
+
+    background-color: black;
 }

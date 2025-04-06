@@ -1,19 +1,122 @@
-import React, { useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import Lane from '../scripts/Lane';
 import { createRoot } from 'react-dom/client';
 import DroppedPattern from './DroppedPattern';
+import IndividualNoteSection from './IndividualNoteSection';
 
 interface IPatternDropZoneProps {
     lane: Lane; 
+    setMessage: React.Dispatch<React.SetStateAction<string>>;
 }
 
 // TODO: Allow for clicking pattern to drop them herer too
-const PatternDropZone: React.FC<IPatternDropZoneProps> = ({ lane }) => {
-    const [data, setData] = useState(''); 
+const PatternDropZone: React.FC<IPatternDropZoneProps> = ({ lane, setMessage }) => {       
     
-    return (<div className='pattern_drop_zone' 
+    let topPatternMeasureRef = useRef<number[][]>([]);
+    let individualNotesSectionRef = useRef<number[][]>([]);
+    
+    const [startMeasure, setStartMeasure] = useState(0); 
+
+    let containerRef = useRef<HTMLDivElement | null>(null); 
+
+    const patternStartMeasureChange = (e: number) => {
+        setTimeout(() => {
+            // console.log('changed to ', e); 
+            setStartMeasure(e);         
+            // console.log(topPatternMeasureRef.current[topPatternMeasureRef.current.length - 1])
+
+            let topPattern = topPatternMeasureRef.current[topPatternMeasureRef.current.length - 1];
+            console.debug(topPatternMeasureRef.current);
+
+            for(let i = 0; i < topPatternMeasureRef.current.length; i++) {
+                let pattern = topPatternMeasureRef.current[i];
+
+                console.debug(pattern);
+                if(i == 0 && pattern[0] != 0) {
+                    console.log('there be notes before first pattern'); 
+                    console.log()
+
+                    let sectionInfo = [0, pattern[0]]
+
+                    let alreadyExists = individualNotesSectionRef.current.some((arr) => {
+                        if(arr[0] < pattern[0]) return true; 
+                        return arr[0] === sectionInfo[0] && arr[1] === sectionInfo[1];
+                    });
+
+                    if (!alreadyExists) {
+                        individualNotesSectionRef.current.push(sectionInfo);
+
+                        
+                        let index = individualNotesSectionRef.current.length - 1; 
+
+                        
+                        let individualSection = document.createElement('div'); 
+                        individualSection.classList.add('indivudal_section_container');
+        
+                        let root = createRoot(individualSection);
+        
+                        const unmount = () => {
+                            root.unmount();
+                            individualSection?.remove(); 
+                        }
+        
+                        root.render(<IndividualNoteSection lane={lane} unmount={unmount} individualNotesSectionRef={individualNotesSectionRef} index={index} setMessage={setMessage} />)
+                        
+                        containerRef.current?.appendChild(individualSection);
+                        console.debug('pushing individual notes bit ', sectionInfo);
+
+                    }
+                    console.log(individualNotesSectionRef.current);
+                    // container?.insertBefore(droppedPattern, container.childNodes[1]); 
+                }
+            }
+
+            if(topPattern != undefined && topPattern[0] + topPattern[1] < e) {
+                console.log('there be individual notes above top pattern')
+
+                let sectionInfo = [topPattern[0] + topPattern[1], e - (topPattern[0] + topPattern[1])];
+                console.log(sectionInfo);
+                let alreadyExists = individualNotesSectionRef.current.some(
+                    (arr) => arr[0] === sectionInfo[0]
+                );
+                
+                if (!alreadyExists) {
+                    individualNotesSectionRef.current.push(sectionInfo);
+                    let index = individualNotesSectionRef.current.length - 1; 
+
+                        
+                    let individualSection = document.createElement('div'); 
+                    individualSection.classList.add('indivudal_section_container');
+    
+                    let root = createRoot(individualSection);
+    
+                    const unmount = () => {
+                        root.unmount();
+                        individualSection?.remove(); 
+                    }
+    
+                    root.render(<IndividualNoteSection lane={lane} unmount={unmount} individualNotesSectionRef={individualNotesSectionRef} index={index} setMessage={setMessage} />)
+                    
+                    containerRef.current?.insertBefore(individualSection, containerRef.current?.childNodes[1]); 
+                    console.debug('pushing individual notes bit ', sectionInfo);
+
+                }
+            }   
+        }, 1);
+    }
+
+    useEffect(() => {
+        topPatternMeasureRef.current = []; 
+        lane.onPatternStartChange(patternStartMeasureChange);
+    }, []);
+
+
+
+    return (
+    <div className='pattern_drop_zone' 
     onDragOver={(e) => {
         e.preventDefault(); 
+        // setMessage('');
     }}
 
     onDragEnter={(e) => {
@@ -32,20 +135,38 @@ const PatternDropZone: React.FC<IPatternDropZoneProps> = ({ lane }) => {
         const patternData = e.dataTransfer.getData('application/JSON');
         let data = JSON.parse(patternData);
         
+        if(lane.patternStartMeasure + data.measures > lane.measureCount) {
+            setMessage('will overflow');
+            return; 
+        }
 
-        const container = e.currentTarget.parentElement; 
+
+        const container = e.currentTarget.parentElement as HTMLDivElement; 
+        containerRef.current = container; 
+
         let droppedPattern = document.createElement('div'); 
         droppedPattern.classList.add('dropped_pattern_container');
 
         let root = createRoot(droppedPattern); 
 
-        root.render(<DroppedPattern lane={lane} name={data.name} measures={data.measures}/>);
+        const unmount = () => {
+            root.unmount();
+            droppedPattern?.remove(); 
+        }
+
+        root.render(<DroppedPattern 
+            lane={lane} name={data.name} occurances={data.measures} 
+            unmount={unmount} setMessage={setMessage} topPatternMeasureRef={topPatternMeasureRef}/>);
         
         // container?.prepend(droppedPattern); 
+
         container?.insertBefore(droppedPattern, container.childNodes[1]); 
     }}>
-        Next pattern
-    </div>)
+        <p>
+            Next pattern from measure ({startMeasure + 1})
+        </p>
+    </div>
+    )
 }
 
 export default PatternDropZone
