@@ -80,7 +80,6 @@ export async function retrieveFriendBucketList(bucket: string) {
     return allFiles; 
 }
 
-
 export async function getEmailFromID(id: string) {
     const userId = (await supabase.auth.getUser()).data.user?.id as string;
 

@@ -200,6 +200,9 @@ body {
     background-color: rgb(11, 116, 51);
 }
 
+.pattern_drop_zone.invalid {
+    background-color: rgb(116, 11, 11);
+}
 
 .pattern_drop_zone {
     color: #ECDFCC;
@@ -223,11 +226,11 @@ body {
 .dropped_pattern, .individual_note_section {
     color: #ECDFCC;
     background-color: #131b2386;
-    border: 4px solid #131B23;
+    border: 2px solid #131B23;
 
     border-radius: 15px;
 
-    width: 50%;
+    width: 80%;
     /* height: 10vh; */
     min-height: 7vh;
 
@@ -264,3 +267,57 @@ body {
 
     background-color: black;
 }
+
+.wrong_notes_container {
+    display: flex;
+    flex-direction: column;
+}
+
+.wrong_notes_input {
+    max-width: 4em;
+}
+
+.noFail_button.selected {
+    background-color: red;
+}
+
+.wrong_notes_input:disabled {
+    background-color: blue;
+}
+
+.add_lane_button {
+    position: relative;
+}
+
+.tooltip {
+    pointer-events: none;
+    position: absolute;
+    top: 50%;
+    left: 200%; /* position to the right of the button */
+    transform: translateY(-50%);
+    background: #333;
+    color: #ECDFCC;
+    border: 1px solid #ECDFCC;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 14px;
+    white-space: nowrap;
+    z-index: 100;
+  }
+  
+#open_workspace_load_button {
+    position: relative;
+}
+
+  .tooltip-arrow {
+    position: absolute;
+    left: -15px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 0;
+    height: 0;
+    border-top: 5px solid transparent;
+    border-bottom: 5px solid transparent;
+    border-right: 15px solid #ECDFCC;
+  }
+  

@@ -5,6 +5,8 @@ import PatternDropZone from './PatternDropZone';
 import IndividualNoteSection from './IndividualNoteSection';
 import { PatternModeSection } from '../scripts/types';
 import DroppedPattern from './DroppedPattern';
+import { getEditMode, saveCurrentSessionLocally } from '../scripts/main';
+import { EDIT_MODES } from '../scripts/constants';
 
 interface ILanePatternDisplayProps {
     lane: Lane; 
@@ -34,9 +36,9 @@ const LanePatternDisplay: React.FC<ILanePatternDisplayProps> = ({ lane, visible 
 
     const patternStartMeasureChange = (e: number) => {      
       setTimeout(() => {
+        saveCurrentSessionLocally(); 
         if(droppedPatternsRef.current.length > 0) {
           // Patterns are poulated
-          // console.debug(droppedPatternsRef.current[0]);
           let topPattern = droppedPatternsRef.current[0];
           console.debug(topPattern);
           if(lane.patternStartMeasure > topPattern.start + topPattern.length) {
@@ -47,7 +49,6 @@ const LanePatternDisplay: React.FC<ILanePatternDisplayProps> = ({ lane, visible 
               start: topPattern.start + topPattern.length,
               length: e - (topPattern.start + topPattern.length)
             }
-            // console.debug(pattern);
   
             if(individualNoteSectionsRef.current.length > 0) {
               let top = individualNoteSectionsRef.current[0];
@@ -76,17 +77,12 @@ const LanePatternDisplay: React.FC<ILanePatternDisplayProps> = ({ lane, visible 
             start: 0, 
             length: lane.patternStartMeasure, 
           }
-          
-          if(individualNoteSectionsRef.current.length > 0) {
-            let id = individualNoteSectionsRef.current[0].id;
-            updatePattern(pattern, id);
-          } else {
-            setIndividualNoteSections(prev => {
-              const updated = [pattern, ...prev];
-              individualNoteSectionsRef.current = updated; 
-              return updated; 
-            });
-          }
+
+          setIndividualNoteSections(() => {
+            const updated = [pattern];
+            individualNoteSectionsRef.current = updated; 
+            return updated; 
+          });
         }
       }, 0)
     }
@@ -100,6 +96,22 @@ const LanePatternDisplay: React.FC<ILanePatternDisplayProps> = ({ lane, visible 
               setCanvasWidth(width);
             }
           });
+
+          if(lane.patternStartMeasure > 0) {
+            // No patterns exist and notes are already present
+            let patternID = crypto.randomUUID(); 
+            let pattern = {
+              id: patternID, 
+              start: 0, 
+              length: lane.patternStartMeasure, 
+            }
+  
+            setIndividualNoteSections(() => {
+              const updated = [pattern];
+              individualNoteSectionsRef.current = updated; 
+              return updated; 
+            });
+          }
         
           if (canvas) { observer.observe(canvas); }
           return () => { observer.disconnect(); };

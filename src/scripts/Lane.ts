@@ -34,12 +34,14 @@ export default class Lane {
     public repeated: boolean;
     public repeatedNotes: number;
     
+    public noFail: boolean; 
     public maxWrongNotes: number; 
     public notesHit: Note[] = [];
     public notesMissed: Note[] = [];
     public wrongNotes: Note[] = []; 
     
     public inputKey: string; 
+    public keyAlias: string | null; 
     public pressed: boolean;
     public inputAreaHeight: number;
     
@@ -89,6 +91,7 @@ export default class Lane {
         
         this.hitsound = hitsound; 
         this.maxWrongNotes = maxWrongNotes;
+        this.noFail = false; 
         
         this.canvas = canvas; 
         this.ctx = this.canvas.getContext('2d')!; 
@@ -105,6 +108,7 @@ export default class Lane {
         this.topOfInputVisual = this.canvas.height - 70;
 
         this.inputKey = inputKey;
+        this.keyAlias = null; 
         this.inputAreaHeight = this.canvas.height - this.topOfInputVisual;
         
         this.loopCount = 1; 
@@ -168,12 +172,8 @@ export default class Lane {
             this.notesMissed = [];
         }
 
-        console.log(overshoot)
         this.fullyScrolled = false;
         this.translationAmount = overshoot ? -overshoot : 0; 
-        console.log(this.translationAmount);
-        // this.translationAmount = 0; 
-
         for(let i = 0; i < this.notes.length; i++) {
             let note = this.notes[i];
             note.resetNote();
@@ -243,7 +243,8 @@ export default class Lane {
 
         this.ctx.fillStyle = this.pressed ? COLORS.INPUT_KEY_PRESSED : COLORS.INPUT_KEY_UNPRESSED;
         this.ctx.font = "italic 50px Inria-serif"
-        let displayedInput = this.inputKey == ' ' ? 'Space' : this.inputKey.toUpperCase(); 
+
+        let displayedInput = this.keyAlias ? this.keyAlias : this.inputKey.toUpperCase(); 
         let textWidth = this.ctx.measureText(displayedInput).width;
 
         this.ctx.fillText(displayedInput, this.canvas.width/2 - (textWidth / 2), this.topOfInputVisual + 50); 

@@ -22,6 +22,7 @@ import SessionLoadScreen, { createNewLane } from './SessionLoadScreen.tsx';
 import { loadFromLocalStorage, saveToLocalStorage } from '../scripts/Utils.ts';
 import { startLoop, handleMIDIMessage, lanes, remapLane, setLongestLane } from '../scripts/main.ts';
 import { retrieveFriendsList, sendFriendRequest } from '../scripts/SupaUtils.ts';
+import SettingsScreen from './SettingsScreen.tsx';
 
 export let midiAccess: MIDIAccess; 
 const Homepage = () => {
@@ -94,7 +95,6 @@ const Homepage = () => {
         
         // Reload the page on auth state change 
         const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
-            // console.log(event); 
             if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
                 // TODO: See if reloading is necessary at all
                 // window.location.reload(); 
@@ -147,12 +147,14 @@ const Homepage = () => {
 
     const [showSessionLoadScreen, setSessionLoadScreen] = useState(false); 
     const [showSessionSaveScreen, setSessionSaveScreen] = useState(false); 
+    const [showSettingsScreen, setShowSettingsScreen] = useState(false); 
 
     const [showProfileScreen, setShowProfileScreen] = useState(false);
     const [showNotificationsScreen, setShowNotificationsScreen] = useState(false);
     const [notificationsNumber, setNotificationsNumber] = useState(0);
 
     const [friendRequestStatus, setFriendRequestStatus] = useState(''); 
+
 
     async function requestFriend() {
         if(friendEmailRef.current && friendEmailRef.current.value != '') {
@@ -260,6 +262,7 @@ const Homepage = () => {
             setStats={setStats} setShowStats={setShowStats} setSessionLoadScreen={setSessionLoadScreen} setSessionSaveScreen={setSessionSaveScreen} showSessionLoadScreen={showSessionLoadScreen} showSessionSaveScreen={showSessionSaveScreen} showProfileScreen={showProfileScreen} 
             setShowProfileScreen={setShowProfileScreen} showNotificationsScreen={showNotificationsScreen}
             notificationsNumber={notificationsNumber} setShowNotificationsScreen={setShowNotificationsScreen} 
+            showSettingsScreen={showSettingsScreen} setShowSettingsScreen={setShowSettingsScreen}
             ></RunControls>
 
             { showStats && <StatsScreen stats={stats} setShowStats={setShowStats}/> }
@@ -267,6 +270,7 @@ const Homepage = () => {
             { showSessionSaveScreen && <SessionSaveScreen setSessionSaveScreen={setSessionSaveScreen}/>}
             { showProfileScreen && <ProfileScreen setShowProfileScreen={setShowProfileScreen} acceptedFriends={acceptedFriends}/> }
             { showNotificationsScreen && <NotificationsScreen setNotificationsNumber={setNotificationsNumber}setShowNotificationsScreen={setShowNotificationsScreen} pendingFriendRequests={pendingFriendRequests}/>}
+            { showSettingsScreen && <SettingsScreen setShowSettingsScreen={setShowSettingsScreen}/>}
 
             <div id="lane_container"/>
         </section>

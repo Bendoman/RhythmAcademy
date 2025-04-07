@@ -3,14 +3,20 @@ import Lane from '../scripts/Lane';
 import LanePatternDisplay from './LanePatternDisplay';
 import { createRoot } from 'react-dom/client';
 import { createPortal } from 'react-dom';
+import { changeEditMode, drawSingleLane, retrieveBucketData, setPatternInCreation } from '../scripts/main';
+import { supabase } from '../scripts/supa-client';
+import { EDIT_MODES } from '../scripts/constants';
 
 interface IPatternEditingPanelProps {
     lane: Lane; 
     patterns: string[]; 
     visible: boolean; 
+
+    setEditMode: React.Dispatch<React.SetStateAction<string>>;
+    
 }
 
-const PatternEditingPanel: React.FC<IPatternEditingPanelProps> = ({ lane, patterns, visible }) => {
+const PatternEditingPanel: React.FC<IPatternEditingPanelProps> = ({ lane, patterns, visible, setEditMode }) => {
     let canvas = lane.canvas; 
     let laneContentContainer: HTMLDivElement; 
     let lanePatternContainer: HTMLDivElement;
@@ -41,6 +47,20 @@ const PatternEditingPanel: React.FC<IPatternEditingPanelProps> = ({ lane, patter
     }, []);   
 
 
+    async function onEditClick(patternName: string) {
+        const userId = (await supabase.auth.getUser()).data.user?.id as string;
+        let patternData = await retrieveBucketData('patterns', `${userId}/${lane.subdivision}/${patternName}`);
+
+        setPatternInCreation(patternData.notePositions);
+
+        setEditMode('pattern_creation');
+        changeEditMode(EDIT_MODES.CREATE_PATTERN_MODE);
+        
+        lane.translationAmount = 0;
+        drawSingleLane(lane);
+    }
+
+
     return (<>
         <LanePatternDisplay lane={lane} visible={visible! && visibleHere!}/>
 
@@ -57,14 +77,14 @@ const PatternEditingPanel: React.FC<IPatternEditingPanelProps> = ({ lane, patter
                         const patternData = {name: pattern, measures: parseInt(measureInput?.value || '1')}
                         
                         e.dataTransfer.setData("application/JSON", JSON.stringify(patternData));
-
                     }}>
                         {/* TODO: put in p tag with max width and overflow */}
                         {pattern}
                         <div className="patternMeasureCountContainer">
                             <input type="number" min='1' defaultValue='1' className='patternMeasureCount'/>
                         </div>
-                        <button className='patternEditButton' onClick={() => {}}>edit</button>
+
+                        <button className='patternEditButton' onClick={() => {onEditClick(pattern)}}>edit</button>
                     </div>
                 })}
             </div>

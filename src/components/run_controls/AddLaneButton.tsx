@@ -1,6 +1,6 @@
 import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react'
 import LaneEditingPanel from '../LaneEditingPanel.tsx'
-import { onAddLaneButtonClick, saveCurrentSessionLocally } from '../../scripts/main.ts'
+import { lanes, onAddLaneButtonClick, saveCurrentSessionLocally } from '../../scripts/main.ts'
 import { createRoot } from 'react-dom/client';
 import ChangeLaneKey from './ChangeLaneKey.tsx';
 import { midiAccess } from '../Homepage';
@@ -36,11 +36,8 @@ const AddLaneButton = forwardRef<HTMLButtonElement>((props, ref) => {
   }
 
   const handleKeyDown = useRef((event: KeyboardEvent) => {    
-    if(event.key == 'space' || event.key == ' ')
-      event.preventDefault(); 
-
-    if(!listeningRef.current) 
-      return; 
+    if(!listeningRef.current || event.key == ' ')
+      return;
 
     setInputValue(event.key);
     setListening(false);
@@ -109,6 +106,11 @@ const AddLaneButton = forwardRef<HTMLButtonElement>((props, ref) => {
         className='add_lane_button'
         onClick={handleOnClick}>
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-circle-plus"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>
+
+      {/* <div className="tooltip">
+        Click here to add your first lane!
+        <div className="tooltip-arrow" />
+      </div> */}
     </button>
 
     {/* TODO: See if this should be included */}

@@ -24,12 +24,18 @@ interface IRunControlsProps {
     showProfileScreen: boolean; 
     setShowProfileScreen: React.Dispatch<React.SetStateAction<boolean>>;
     
+    showSettingsScreen: boolean; 
+    setShowSettingsScreen: React.Dispatch<React.SetStateAction<boolean>>;
+
     showNotificationsScreen: boolean; 
     notificationsNumber: number;
     setShowNotificationsScreen: React.Dispatch<React.SetStateAction<boolean>>;
     
     setStats: React.Dispatch<React.SetStateAction<StatsObject[]>>;
     setShowStats: React.Dispatch<React.SetStateAction<boolean>>;
+
+
+    
 }
 
 // TODO: Refactor this name
@@ -37,7 +43,7 @@ const RunControls: React.FC<IRunControlsProps> =
 ({ setShowStats, setSessionLoadScreen, setSessionSaveScreen, 
     setStats, showSessionLoadScreen, showSessionSaveScreen, 
     showProfileScreen, setShowProfileScreen, showNotificationsScreen,
-    setShowNotificationsScreen, notificationsNumber }) => {
+    setShowNotificationsScreen, notificationsNumber, showSettingsScreen, setShowSettingsScreen }) => {
     const [looping, setLooping] = useState(false);
     
     const [isPaused, setIsPaused] = useState(false); 
@@ -88,7 +94,8 @@ const RunControls: React.FC<IRunControlsProps> =
     }
 
     const stopButtonClick = () => {
-        if(isPlaying || isPaused) {
+        console.log('in here')
+        if(isPlayingRef.current || isPausedRef.current) {
             isStoppedRef.current = !isStoppedRef.current; 
             setIsStopped(isStoppedRef.current);
 
@@ -142,9 +149,11 @@ const RunControls: React.FC<IRunControlsProps> =
             controlHeld = true; 
             return; 
         }
-        
+
+        const screenOpen = document.querySelector('div.screen') !== null;
+        const currentlyEditing = document.querySelector('canvas.editing') !== null;
         // TODO: CTRL + SPACE to stop
-        if(event.key == ' ') {
+        if(!screenOpen && !currentlyEditing && event.key == ' ') {
             event.preventDefault(); 
             if(!isPlayingRef.current)
                 playButtonClick(); 
@@ -152,20 +161,24 @@ const RunControls: React.FC<IRunControlsProps> =
                 pausedButtonClick(); 
         }
 
+        if(!screenOpen && isPausedRef.current && event.key == 'Escape')
+            stopButtonClick(); 
+
         if(!controlHeld)
             return; 
 
         switch(event.key.toUpperCase()) {
             case 'E':
+                if(screenOpen)
+                    break;
                 event.preventDefault();
                 editButtonClick();
             break;
             case 'A':
-                if(isEditingRef.current)
-                    editButtonClick(); 
+                if(currentlyEditing || screenOpen) 
+                    break;
                 event.preventDefault(); 
-                if(addLaneButtonRef.current)
-                    addLaneButtonRef.current.click(); 
+                if(addLaneButtonRef.current) addLaneButtonRef.current.click(); 
             break;
             case 'L':
                 event.preventDefault();
@@ -191,8 +204,13 @@ const RunControls: React.FC<IRunControlsProps> =
     };
 
     useEffect(() => {
+        controlHeld = false; 
         window.addEventListener("keydown", handleKeyDown);
         window.addEventListener("keyup", handleKeyUp);
+        window.addEventListener('blur', () => {
+            controlHeld = false
+            pausedButtonClick(); 
+        });
         return () => { 
             window.removeEventListener("keydown", handleKeyDown); 
             window.removeEventListener("keyup", handleKeyUp); 
@@ -244,13 +262,18 @@ const RunControls: React.FC<IRunControlsProps> =
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-save"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></svg>
                 </button>
 
-                <button id="open_workspace_load_button" title='load workspace'
+                <button id="open_workspace_load_button" title='load session'
                 ref={loadButtonRef}
                 onClick={() => { 
                     closeAllScreens();
                     setSessionLoadScreen(!showSessionLoadScreen); 
                 }}>
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-scroll-text"><path d="M15 12h-5"/><path d="M15 8h-5"/><path d="M19 17V5a2 2 0 0 0-2-2H4"/><path d="M8 21h12a2 2 0 0 0 2-2v-1a1 1 0 0 0-1-1H11a1 1 0 0 0-1 1v1a2 2 0 1 1-4 0V5a2 2 0 1 0-4 0v2a1 1 0 0 0 1 1h3"/></svg>
+
+                {/* <div className="tooltip">
+                    Click here to load a preset session
+                    <div className="tooltip-arrow" />
+                </div> */}
                 </button>
             </div>
 
@@ -272,7 +295,11 @@ const RunControls: React.FC<IRunControlsProps> =
                 }} 
                 />
 
-                <button id="settings_button">
+                <button id="settings_button"
+                onClick={() => {
+                    closeAllScreens(); 
+                    setShowSettingsScreen(!showSettingsScreen);
+                }}>
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-settings"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
                 </button>
                 

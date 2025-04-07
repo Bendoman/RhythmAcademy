@@ -24,6 +24,10 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas }) => {
   const newPatternMeasuresRef = useRef<HTMLInputElement | null>(null);
   const loadPatternSelectRef = useRef<HTMLSelectElement | null>(null);
   const loadPatternMeasuresRef = useRef<HTMLInputElement | null>(null);
+  const keyAliasRef = useRef<HTMLInputElement | null>(null);
+  const wrongNotesInputRef = useRef<HTMLInputElement | null>(null);
+  
+  
   // #endregion
 
   // #region ( STATE )
@@ -34,6 +38,8 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas }) => {
   
   const [editMode, setEditMode] = useState("individual");
   const [metronomeEnabled, setMetronomeEnabled] = useState(false);
+
+  const [noFail, setNoFail] = useState(false); 
   
   const [selectedPattern, setSelectedPattern] = useState<string | null>(null);
   // #endregion
@@ -41,6 +47,8 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas }) => {
   useEffect(() => {
     // Populates list of loadable lanes
     getSavedLanes(); 
+    console.log(lane.maxWrongNotes);
+    setNoFail(lane.noFail); 
 
     if(!laneEditingRef.current)
       return; 
@@ -109,9 +117,16 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas }) => {
     setEditMode('pattern');
     changeEditMode(EDIT_MODES.PATTERN_MODE);
 
+
+    if(lane.repeated) {
+      lane.unrepeatNotes();
+      setRepeated(false); 
+    }
+
+
     // TODO: Keep local list to be updated, do not retrieve it every time.
     // TODO: Move these data retrieval functions out of script
-    let data = await retrieveBucketList('patterns');
+    let data = await retrieveBucketList('patterns', lane.subdivision.toString());
     console.log(data); 
     let patternSelectInnerHTML = '';
     
@@ -215,7 +230,7 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas }) => {
 
     // TODO: Include subdivisions here.
     let content = JSON.stringify({measures: patternMeasures, notePositions: patternInCreationPositions});
-    await uploadToBucket('patterns', `${data.user.id}/${patternName}`, patternName, content);
+    await uploadToBucket('patterns', `${data.user.id}/${lane.subdivision}/${patternName}`, patternName, content);
 
     let bucketList = await retrieveBucketList('patterns');
     let patternSelectInnerHTML = '';
@@ -237,9 +252,18 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas }) => {
     let laneName = saveLaneNameRef.current.value;
 
     // TODO: Disallow repeated notes from being saved here
+    let repeatReverted = false;
+    if(lane.repeated) {
+      lane.unrepeatNotes(); 
+      repeatReverted = true; 
+    }
+
     let content = JSON.stringify({lane: lane, name: laneName})
     await uploadToBucket('lanes', `${data.user.id}/${laneName}`, laneName, content);
     
+    if(repeatReverted)
+      lane.repeatNotes(); 
+
     getSavedLanes();
   }
 
@@ -253,7 +277,9 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas }) => {
     let laneData = await retrieveBucketData('lanes', `${data.user.id}/${newLaneName}`);
 
     remapLane(lane, laneData.lane);
-
+    setCanRepeat(lane.getRatio() < longest_lane.getRatio()); 
+    setRepeated(false); 
+    
     // TODO: Work around using key
     setKey(key + 1);  
   }
@@ -271,7 +297,6 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas }) => {
       onClick={onPatternModeClick}>Pattern mode</button>
     </div>
 
-    { editMode == 'individual' && <>
       <div className="metronome_container">
         <button className={`metronome_button ${lane.metronomeEnabled ? 'selected' : ''}`} 
         onClick={()=>{
@@ -310,17 +335,40 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas }) => {
         defaultValue={lane.bpm} min="1"/>
         <label>BPM</label>
       </div>
-      
+
       <div className="measure_count_container">
         <input className="measure_count_input" type="number" defaultValue={lane.measureCount} min="1"
         onChange={onMeasureCountChange}/>
         <label>measure count</label>
         
+        { editMode == 'individual' && 
+        <>
         <button className={`repeat_button ${repeated ? 'selected' : ''}`} disabled={!canRepeat ? true : false} onClick={onRepeatClick}>repeat</button>
         
         <button className="repeat_question" title="Repeats the notes in this lane up until the height of the longest lane in the session">
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-circle-help-icon lucide-circle-help"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
         </button>
+        </>
+        }
+      </div>
+
+    { editMode == 'individual' && <>
+
+      <div className="wrong_notes_container">
+        <label>Misses allowed</label>
+
+        <div>
+          <input disabled={noFail} ref={wrongNotesInputRef} type="number" className="wrong_notes_input" defaultValue={lane.maxWrongNotes} min={1} onChange={(e) => {
+            lane.maxWrongNotes = parseInt(e.target.value); 
+            saveCurrentSessionLocally(); 
+          }} />
+          <button className={`noFail_button ${noFail ? 'selected' : ''}`} onClick={() => {
+            setNoFail(!noFail); 
+            lane.noFail = !lane.noFail; 
+            console.log(lane.noFail)
+            saveCurrentSessionLocally(); 
+          }}>no fail</button>
+        </div>
       </div>
 
       <div className="precisioun_container">
@@ -335,27 +383,6 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas }) => {
               <option value="4"  selected={lane.hitPrecision == 4 ? true : false}>1/4</option>
           </select>
           <label htmlFor="precision_select">Hit precision</label>
-      </div>
-
-      <div className="time_signature_container">
-        <select className="time_signature_select"        
-        onChange={(event)=>{
-            // TODO: Add coming soon question mark here
-            // TODO: IMPORTANT, actually figure out how time signatures will work
-            let split = event.target.value.split('/');
-            lane.timeSignature = [parseInt(split[0]), parseInt(split[1])];
-            lane.notes = [];
-            lane.translationAmount = 0;
-            // TODO: Review this
-            lane.recalculateHeight();
-            drawSingleLane(lane);
-          }}>
-            <option value="4/4" selected={(lane.timeSignature[0] == 4 && lane.timeSignature[1] == 4) ? true : false}>4/4</option>
-            {/* <option value="2/4" selected={(lane.timeSignature[0] == 2 && lane.timeSignature[1] == 4) ? true : false}>2/4</option>
-            <option value="3/4" selected={(lane.timeSignature[0] == 3 && lane.timeSignature[1] == 4) ? true : false}>3/4</option>
-            <option value="6/8" selected={(lane.timeSignature[0] == 6 && lane.timeSignature[1] == 8) ? true : false}>6/8</option> */}
-        </select>
-        <label htmlFor="time_signature_select">Time signature</label>
       </div>
 
       <div className="subdivision_container">
@@ -417,21 +444,35 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas }) => {
         </select>
         <label htmlFor="lane_sound_select">Lane sound</label>
       </div>
+
+      <div className="key_alias_container">
+        <input type="text" ref={keyAliasRef}/>
+        <button onClick={() => {
+          let value = keyAliasRef.current?.value;
+          if(value) lane.keyAlias = value; 
+        }}>Add alias</button>
+        <button onClick={() => {
+          lane.keyAlias = null; 
+          if(keyAliasRef.current){ keyAliasRef.current.value='' }
+          }}>Remove alias</button>
+      </div>
     </>}
 
     { editMode == 'pattern' && <>    
     </>}
+
+
     <div className={`pattern_loading_container ${editMode == 'pattern' ? 'visible' : ''}`}>
-      <select ref={loadPatternSelectRef} className="load_pattern_select" 
+      {/* <select ref={loadPatternSelectRef} className="load_pattern_select" 
       onChange={(event)=>{setSelectedPattern(event.target.value)}}/>
       <div> 
           <button className="load_pattern" onClick={loadPatternClick}>Add pattern</button>
           <input ref={loadPatternMeasuresRef} className="loaded_pattern_measures" type="number" min="1" defaultValue="1"></input>
           <label htmlFor="loaded_pattern_measures">measures</label>
-      </div>
+      </div> */}
 
       {/* TODO: Change this obviously  */}
-      <PatternEditingPanel lane={lane} patterns={loadedPatterns} visible={editMode == 'pattern'}/>
+      <PatternEditingPanel lane={lane} patterns={loadedPatterns} visible={editMode == 'pattern'} setEditMode={setEditMode}/>
 
       <button className="create_pattern" onClick={onPatternCreationClick}>Create new note pattern</button>
     </div>
@@ -508,6 +549,8 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas }) => {
       deleteLane(lane, canvas); 
       setLongestLane();
       
+      if(lanes.length == 0) 
+        (document.querySelector('#edit_mode_button') as HTMLElement)?.click();
 
       saveCurrentSessionLocally();
     }}>Delete lane</button>

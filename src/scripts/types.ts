@@ -6,6 +6,7 @@ export type selectedPattern = {
     notePositions: number[]; 
 }
 
+// TODO: Change this name; 
 export type StatsObject = {
     lane: string;
     totalNotes: number; 

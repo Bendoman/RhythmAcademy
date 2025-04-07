@@ -167,6 +167,7 @@ export function updateAllLaneSizes() {
 
 
 
+
 function createNewLane(        
   bpm: number, 
   measureCount: number, 
@@ -268,7 +269,6 @@ export function resetLanesEditingStatus() {
   patternInCreationPositions = [];
   editMode = EDIT_MODES.NOTE_MODE;
 
-  console.log(lanes);
   lanes.forEach(lane => {
     lane.canvas.classList.remove('editing');
     lane.canvas.parentElement?.classList.remove('background');
@@ -322,9 +322,15 @@ function closeClick(event: MouseEvent) {
 }
 
 
-export async function retrieveBucketList(bucket: string) {
+export async function retrieveBucketList(bucket: string, folder?: string) {
+  let path = '';
+
   const userId = (await supabase.auth.getUser()).data.user?.id as string;
-  const { data, error } = await supabase.storage.from(bucket).list(userId); 
+  path += userId;
+  if(folder)
+    path += `/${folder}`;
+  
+  const { data, error } = await supabase.storage.from(bucket).list(path); 
   
   if(!error)
       return data; 
@@ -643,16 +649,13 @@ async function handleCanvasClick(event: MouseEvent) {
         } else {
           lane.notes.splice(sortedIndex[0], 0, newNote)
         }
+
+        let y = newNote.getY(lane.noteGap, lane.innerSubdivision, lane.startY); 
+        let currentMeasure = Math.floor((Math.abs(lane.startY - y)/measureHeight)); 
+        
+        if(currentMeasure >= lane.patternStartMeasure)
+          lane.setPatternStartMeasure(currentMeasure + 1);
       }
-
-      let y = newNote.getY(lane.noteGap, lane.innerSubdivision, lane.startY); 
-      let currentMeasure = Math.floor((Math.abs(lane.startY - y)/measureHeight)); 
-      
-      if(currentMeasure >= lane.patternStartMeasure)
-        lane.setPatternStartMeasure(currentMeasure + 1);
-        // lane.patternStartMeasure = currentMeasure + 1; 
-
-      // console.log(`Current measure ${currentMeasure}`);
       drawSingleLane(lane); 
     }
     return;
@@ -839,11 +842,13 @@ function gameLoop(timeStamp: number) {
   ups = (1000/updateTime); 
   upsParagraph!.innerText = ups.toString().substring(0, 6); 
   lastLoop = timeStamp;
-
-  lanes.forEach(lane => {
-  })
-  
+ 
   for(let lane of lanes) {
+
+    if(!lane.noFail && lane.notesMissed.length + lane.wrongNotes.length >= lane.maxWrongNotes) {
+      (document.querySelector('#session_stop_button') as HTMLElement)?.click();
+    }
+
     if(paused) {
       lane.drawInputVisual(); // So that when paused an in edit mode you can verify that your input mode works
       continue;
@@ -953,10 +958,6 @@ export function onStopButtonClick(): StatsObject[] {
 
   // TODO: Put this in own function
   lanes.forEach(lane => {
-    console.log(`${lane.canvas.id}_lane stats:\nTotal Notes: ${lane.notes.length}\nNotes hit: ${lane.notesHit.length}\nNotes missed: ${lane.notesMissed.length}`);
-    console.log(lane.notesHit);
-    console.log(lane.notesMissed);
-
     stats[stats.length] = {
       lane: lane.inputKey, 
       totalNotes: lane.notes.length * lane.loopCount, 
@@ -966,17 +967,12 @@ export function onStopButtonClick(): StatsObject[] {
     };
   })
 
-  console.log(stats); 
-
   resetLanes();
   lanes.forEach(lane => { drawSingleLane(lane); });
   return stats;
 }
 
 export function onEditButtonClick() {
-  console.log("On edit button click");
-
-  console.log('edit')
   paused = true;
   editing = !editing;
   offsetY = null;
@@ -1064,8 +1060,6 @@ export function resetLongestLane() {
 }
 
 export function setLongestLane() {   
-  console.log(longest_lane)
-  
   lanes.forEach(curr => {
     if(longest_lane == null){
       longest_lane = curr; 
@@ -1079,8 +1073,6 @@ export function setLongestLane() {
       curr.unrepeatNotes();
     }
   })
-
-  console.log(longest_lane);
 }
 
 export function toggleLooping() { looping = !looping; console.log(looping)}
@@ -1115,6 +1107,8 @@ export function remapLane(target: Lane, reference: Lane) {
   target.translationAmount = 0;
   target.nextNoteIndex = 0; 
 
+  target.noFail = reference.noFail; 
+
   // TODO: Optimize this for lower load times
   reference.notes.forEach((note) => { target.notes.push(new Note(note.index)) });
   
@@ -1126,4 +1120,20 @@ export function remapLane(target: Lane, reference: Lane) {
   drawSingleLane(target); 
 
   setLongestLane();
+}
+
+
+export function getEditMode() { return editMode }
+
+
+export function setPatternInCreation(notePositions: number[]) {
+  patternInCreationNotes = [];
+  patternInCreationPositions = [];
+
+  notePositions.forEach(position => {
+    patternInCreationPositions.push(position); 
+    patternInCreationNotes.push(new Note(position));
+  });
+
+  
 }

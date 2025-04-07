@@ -1,5 +1,5 @@
  /* TODO: Refactor this name */
-.session_load_screen, .session_save_screen, .profile_screen, .notifications_screen {
+.session_load_screen, .session_save_screen, .profile_screen, .notifications_screen, .settings_screen {
     position: absolute;
 
     top: 2em; 

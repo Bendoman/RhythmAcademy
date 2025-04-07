@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react'
 import Lane from '../scripts/Lane';
 import { PatternModeSection } from '../scripts/types';
+import { getEditMode } from '../scripts/main';
+import { EDIT_MODES } from '../scripts/constants';
 
 interface IndividualNoteSectionProps {
     id: string; 
@@ -67,34 +69,6 @@ const IndividualNoteSection: React.FC<IndividualNoteSectionProps> = ({ lane, set
 
         updatePattern({start: startMeasureRef.current, length: currentOccurances.current});
         console.debug(id, startMeasureRef.current, currentOccurances.current);
-        
-        // console.debug('measureChange from notes', startMeasure, measureDifference);
-
-        // if(measureDifference < 0 && startMeasure < startMeasureRef.current) {
-            
-        //     startMeasureRef.current = startMeasureRef.current + measureDifference;
-        //     statsRef.current[0] = startMeasureRef.current;
-
-        //     // individualNotesSectionRef.current[index][0] = startMeasureRef.current;
-            
-
-        //     setStartMeasure(startMeasureRef.current + 1);
-        //     setEndMeasure(startMeasureRef.current + statsRef.current[1]);
-
-            
-        // } else if(startMeasure < startMeasureRef.current) {
-        //     console.log('in here', startMeasureRef.current)
-
-        //     startMeasureRef.current += measureDifference;
-        //     statsRef.current[0] = startMeasureRef.current;
-
-        //     console.log('in here', startMeasureRef.current)
-        //     setStartMeasure(startMeasureRef.current + 1);
-        //     setEndMeasure(startMeasureRef.current + statsRef.current[1]);
-        // }
-
-        // console.debug('measureChange from notes after', statsRef.current);
-
     }
 
     const onDeleteClick = () => {
@@ -114,6 +88,12 @@ const IndividualNoteSection: React.FC<IndividualNoteSectionProps> = ({ lane, set
         <div>IndividualNoteSection</div>
         <div>{`Measures ${startMeasure} - ${startMeasure + occuranceState - 1}`}</div>
         <button onClick={onDeleteClick}>delete</button>
+
+        { startMeasureRef.current > 0 && 
+        <div className="spacer_container">
+            <div className="spacer"></div>
+            <div className="spacer"></div>
+        </div>}
     </div>)
 }
 

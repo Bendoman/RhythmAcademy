@@ -1,8 +1,9 @@
 import React, { ChangeEvent, useEffect, useRef, useState } from 'react'
 import Lane from '../scripts/Lane';
 import { supabase } from '../scripts/supa-client';
-import { retrieveBucketData } from '../scripts/main';
+import { getEditMode, retrieveBucketData } from '../scripts/main';
 import { PatternModeSection } from '../scripts/types';
+import { EDIT_MODES } from '../scripts/constants';
 
 interface IDroppedPatternProps {
     lane: Lane;
@@ -47,22 +48,14 @@ const DroppedPattern: React.FC<IDroppedPatternProps> = ({ lane, name, start, occ
     };
 
     const patternStartMeasureChange = (e: number) => {
-        if(e <= startMeasureRef.current) {
-            console.log('pattern is gone');
-            removePattern();
-        } 
+        if(e <= startMeasureRef.current) { removePattern(); } 
     }
-    
 
-    const measureChange = (startMeasure: number, measureDifference: number) => {
-        console.log(`measure difference ${measureDifference}`);
-        
+    const measureChange = (startMeasure: number, measureDifference: number) => {        
         if(measureDifference < 0) {
             if(startMeasure == startMeasureRef.current) {
                 currentOccurances.current += measureDifference;
                 setOccuranceState(currentOccurances.current);
-                console.log(currentOccurances);
-
             } else if(startMeasure < startMeasureRef.current) {
                 startMeasureRef.current = startMeasureRef.current + measureDifference;
                 setStartMeasure(startMeasureRef.current + 1);
@@ -71,7 +64,6 @@ const DroppedPattern: React.FC<IDroppedPatternProps> = ({ lane, name, start, occ
             startMeasureRef.current += measureDifference;
             setStartMeasure(startMeasureRef.current + 1);
         }
-
         updatePattern({start: startMeasureRef.current, length: currentOccurances.current});
         console.debug(id, startMeasureRef.current, currentOccurances.current);
     }
@@ -129,8 +121,6 @@ const DroppedPattern: React.FC<IDroppedPatternProps> = ({ lane, name, start, occ
         <button onClick={onDeleteClick}>delete</button>
         <button onClick={onReloadClick}>reload</button>
 
-
-
         <div>{`Measures ${startMeasure} - ${startMeasure + occuranceState - 1}`}</div>
         {/* <div>{`Measures ${startMeasure} - ${startMeasure + occuranceState - 1}`}</div> */}
 
@@ -138,8 +128,7 @@ const DroppedPattern: React.FC<IDroppedPatternProps> = ({ lane, name, start, occ
         <div className="spacer_container">
             <div className="spacer"></div>
             <div className="spacer"></div>
-        </div>
-        }
+        </div>}
     </div>)
 }
 
