@@ -472,7 +472,6 @@ export default class Lane {
     }
 
     public loadPattern(selectedPattern: selectedPattern, measures: number, startMeasure?: number, spliceIndex?: number, difference?: number) {
-
         if(startMeasure == undefined && this.patternStartMeasure + (measures * selectedPattern.measures) > this.measureCount) {
             console.error("Loading this pattern will exceed the lane's measure limit", measures, selectedPattern.measures, this.measureCount);
             return -1; 
@@ -683,7 +682,7 @@ export default class Lane {
                 continue;
             } 
         }
-        console.log('before load ', this.notes[0], newOccurnaces, startMeasure, spliceIndex)
+        console.log('before load ', patternData, this.notes[0], newOccurnaces, startMeasure, spliceIndex)
 
         this.loadPattern(patternData, newOccurnaces, startMeasure, spliceIndex, measureDifference);
         console.log('loaded returning 0');

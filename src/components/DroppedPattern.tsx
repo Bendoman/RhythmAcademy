@@ -2,36 +2,55 @@ import React, { ChangeEvent, useEffect, useRef, useState } from 'react'
 import Lane from '../scripts/Lane';
 import { supabase } from '../scripts/supa-client';
 import { retrieveBucketData } from '../scripts/main';
+import { PatternModeSection } from '../scripts/types';
 
 interface IDroppedPatternProps {
     lane: Lane;
     name: string; 
+    start: number;
     occurances: number;
-    unmount: () => void; 
+    // unmount: () => void | null; 
     setMessage: React.Dispatch<React.SetStateAction<string>>;
-    topPatternMeasureRef: React.RefObject<number[][]>; 
+    // topPatternMeasureRef: React.RefObject<number[][]> | null; 
+    setDroppedPatterns: React.Dispatch<React.SetStateAction<PatternModeSection[]>>;
+    id: string; 
+    data: JSON;
+
+    droppedPatternsRef: React.RefObject<PatternModeSection[]>;
+    
 }
 
-
-const DroppedPattern: React.FC<IDroppedPatternProps> = ({ lane, name, occurances, unmount, setMessage, topPatternMeasureRef }) => {
-    let startMeasureRef = useRef(0);
-    const [startMeasure, setStartMeasure] = useState(0); 
-
-    let patternIndex = useRef(0); 
+const DroppedPattern: React.FC<IDroppedPatternProps> = ({ lane, name, start, occurances, setMessage, setDroppedPatterns, id, data, droppedPatternsRef }) => {
+    let startMeasureRef = useRef(start);
+    const [startMeasure, setStartMeasure] = useState(startMeasureRef.current + 1); 
 
     let currentOccurances = useRef(occurances);
     const [occuranceState, setOccuranceState] = useState(currentOccurances.current);
 
-    let dataRef = useRef(Object); 
+    const updatePattern = (updatedData: Partial<{ start: number; length: number }>) => {
+        setDroppedPatterns(prev => {
+            const updated = prev.map(pattern =>
+                pattern.id === id ? { ...pattern, ...updatedData } : pattern
+            )
+            droppedPatternsRef.current = updated; 
+            return updated;
+        }
+    );};
+
+    const removePattern = () => {
+        setDroppedPatterns(prev => {
+            const updated = prev.filter(pattern => pattern.id !== id);
+            droppedPatternsRef.current = updated; 
+            return updated;
+        }
+        );
+    };
 
     const patternStartMeasureChange = (e: number) => {
-        // console.log('changed to ', e); 
         if(e <= startMeasureRef.current) {
             console.log('pattern is gone');
-            topPatternMeasureRef.current.splice(patternIndex.current, 1);
-            unmount();
+            removePattern();
         } 
-        console.log(startMeasureRef.current - e);
     }
     
 
@@ -53,70 +72,52 @@ const DroppedPattern: React.FC<IDroppedPatternProps> = ({ lane, name, occurances
             setStartMeasure(startMeasureRef.current + 1);
         }
 
-        topPatternMeasureRef.current[patternIndex.current] = [startMeasureRef.current, currentOccurances.current];
+        updatePattern({start: startMeasureRef.current, length: currentOccurances.current});
+        console.debug(id, startMeasureRef.current, currentOccurances.current);
     }
 
     const onDeleteClick = () => {
+        console.debug(id, startMeasureRef.current, currentOccurances.current);
+        removePattern();
         lane.reducePatternOccuances(startMeasureRef.current, currentOccurances.current, 0); 
-        topPatternMeasureRef.current.splice(patternIndex.current, 1);
-        unmount(); 
-
-        // .push([startMeasureRef.current, currentOccurances.current]);
     }
 
     const onReloadClick = () => {
-        console.log(startMeasureRef.current);
-        lane.increasePatternOccurances(startMeasureRef.current, currentOccurances.current, currentOccurances.current, dataRef.current)
+        lane.increasePatternOccurances(startMeasureRef.current, currentOccurances.current, currentOccurances.current, data)
     }
     
     const onOccuranceInputChange = (e: ChangeEvent<HTMLInputElement>) => {
         let newOccurances = parseInt(e.target.value); 
         let code = 0; 
 
+        // updatePattern({start: startMeasureRef.current, length: newOccurances});
+        
         if(newOccurances < currentOccurances.current) {
             lane.reducePatternOccuances(startMeasureRef.current, currentOccurances.current, newOccurances);
         } else {
-            code = lane.increasePatternOccurances(startMeasureRef.current, currentOccurances.current, newOccurances, dataRef.current);
-            console.log(code);
+            code = lane.increasePatternOccurances(startMeasureRef.current, currentOccurances.current, newOccurances, data);
         }
-
-        console.log('code ', code);
-        if(code == 0) {
+        
+        console.debug('code ', code);
+        if(code == 0) {            
             currentOccurances.current = newOccurances;
             setOccuranceState(currentOccurances.current);
+            updatePattern({start: startMeasureRef.current, length: currentOccurances.current});
 
-            topPatternMeasureRef.current[patternIndex.current] = [startMeasureRef.current, currentOccurances.current];
-        } else 
+        } else {
             e.target.value = currentOccurances.current.toString();
+        }
     }
-    
-    async function loadPattern() {
-        // TODO: Allow for local loading. 
-        const userId = (await supabase.auth.getUser()).data.user?.id as string;
-        let patternData = await retrieveBucketData('patterns', `${userId}/${name}`);
-        dataRef.current = patternData; 
 
-        console.log(patternData);
-        if(lane.loadPattern(patternData, currentOccurances.current) == -1) {
-            setMessage('will overflow')
-            unmount();
-        } 
-        
-    }
-    
     useEffect(() => {        
-        loadPattern(); 
+        currentOccurances.current = occurances;
+        setOccuranceState(currentOccurances.current);
+
+
         lane.onPatternStartChange(patternStartMeasureChange);
         lane.onPatternChange(measureChange);
-        
-        startMeasureRef.current = lane.patternStartMeasure; 
-        setStartMeasure(startMeasureRef.current + 1);
 
-        topPatternMeasureRef.current.push([startMeasureRef.current, currentOccurances.current]);
-        patternIndex.current = topPatternMeasureRef.current.length - 1; 
-        
         return () => {
-            console.log('unmounting')
             lane.removePatternStartChange(patternStartMeasureChange);
             lane.removeOnPatternChange(measureChange);
         }
@@ -128,7 +129,10 @@ const DroppedPattern: React.FC<IDroppedPatternProps> = ({ lane, name, occurances
         <button onClick={onDeleteClick}>delete</button>
         <button onClick={onReloadClick}>reload</button>
 
+
+
         <div>{`Measures ${startMeasure} - ${startMeasure + occuranceState - 1}`}</div>
+        {/* <div>{`Measures ${startMeasure} - ${startMeasure + occuranceState - 1}`}</div> */}
 
         { startMeasureRef.current > 0 && 
         <div className="spacer_container">

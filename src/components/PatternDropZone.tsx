@@ -3,14 +3,25 @@ import Lane from '../scripts/Lane';
 import { createRoot } from 'react-dom/client';
 import DroppedPattern from './DroppedPattern';
 import IndividualNoteSection from './IndividualNoteSection';
+import { PatternModeSection } from '../scripts/types';
+import { supabase } from '../scripts/supa-client';
+import { retrieveBucketData } from '../scripts/main';
 
 interface IPatternDropZoneProps {
     lane: Lane; 
     setMessage: React.Dispatch<React.SetStateAction<string>>;
+
+    droppedPatterns: PatternModeSection[];
+    setDroppedPatterns: React.Dispatch<React.SetStateAction<PatternModeSection[]>>;
+
+    droppedPatternsRef: React.RefObject<PatternModeSection[]>;
 }
 
+
+
 // TODO: Allow for clicking pattern to drop them herer too
-const PatternDropZone: React.FC<IPatternDropZoneProps> = ({ lane, setMessage }) => {       
+const PatternDropZone: React.FC<IPatternDropZoneProps> 
+= ({ lane, setMessage, droppedPatterns, setDroppedPatterns, droppedPatternsRef }) => {       
     
     let topPatternMeasureRef = useRef<number[][]>([]);
     let individualNotesSectionRef = useRef<number[][]>([]);
@@ -19,6 +30,43 @@ const PatternDropZone: React.FC<IPatternDropZoneProps> = ({ lane, setMessage }) 
 
     let containerRef = useRef<HTMLDivElement | null>(null); 
 
+    let patternID = crypto.randomUUID(); 
+
+    const updatePattern = (id: string, updatedData: Partial<{ start: number; length: number }>) => {
+        setDroppedPatterns(prev => {
+            const updated = prev.map(pattern =>
+                pattern.id === id ? { ...pattern, ...updatedData } : pattern
+            )
+            droppedPatternsRef.current = updated; 
+            return updated;
+        }
+    );};
+
+
+    
+
+    async function loadPattern(occurances: number, patternName: string) {
+        // TODO: Allow for local loading. 
+        let pattern = {id: patternID, start: lane.patternStartMeasure, length: occurances, name: patternName, data: null}
+
+        const userId = (await supabase.auth.getUser()).data.user?.id as string;
+        let patternData = await retrieveBucketData('patterns', `${userId}/${patternName}`);
+    
+        console.log(patternData);
+        pattern.data = patternData; 
+
+        setDroppedPatterns(prev => {
+            const updated = [pattern, ...prev];
+            droppedPatternsRef.current = updated; 
+            return updated; 
+        });
+
+        if(lane.loadPattern(patternData, occurances) == -1) {
+            setMessage('will overflow')
+            // unmount();
+        }  
+    }
+
     const patternStartMeasureChange = (e: number) => {
         setTimeout(() => {
             // console.log('changed to ', e); 
@@ -26,12 +74,12 @@ const PatternDropZone: React.FC<IPatternDropZoneProps> = ({ lane, setMessage }) 
             // console.log(topPatternMeasureRef.current[topPatternMeasureRef.current.length - 1])
 
             let topPattern = topPatternMeasureRef.current[topPatternMeasureRef.current.length - 1];
-            console.debug(topPatternMeasureRef.current);
+            // console.debug(topPatternMeasureRef.current);
 
             for(let i = 0; i < topPatternMeasureRef.current.length; i++) {
                 let pattern = topPatternMeasureRef.current[i];
 
-                console.debug(pattern);
+                // console.debug(pattern);
                 if(i == 0 && pattern[0] != 0) {
                     console.log('there be notes before first pattern'); 
                     console.log()
@@ -60,10 +108,10 @@ const PatternDropZone: React.FC<IPatternDropZoneProps> = ({ lane, setMessage }) 
                             individualSection?.remove(); 
                         }
         
-                        root.render(<IndividualNoteSection lane={lane} unmount={unmount} individualNotesSectionRef={individualNotesSectionRef} index={index} setMessage={setMessage} />)
+                        // root.render(<IndividualNoteSection lane={lane} unmount={unmount} individualNotesSectionRef={individualNotesSectionRef} index={index} setMessage={setMessage} />)
                         
-                        containerRef.current?.appendChild(individualSection);
-                        console.debug('pushing individual notes bit ', sectionInfo);
+                        // containerRef.current?.appendChild(individualSection);
+                        // console.debug('pushing individual notes bit ', sectionInfo);
 
                     }
                     console.log(individualNotesSectionRef.current);
@@ -95,10 +143,10 @@ const PatternDropZone: React.FC<IPatternDropZoneProps> = ({ lane, setMessage }) 
                         individualSection?.remove(); 
                     }
     
-                    root.render(<IndividualNoteSection lane={lane} unmount={unmount} individualNotesSectionRef={individualNotesSectionRef} index={index} setMessage={setMessage} />)
+                    // root.render(<IndividualNoteSection lane={lane} unmount={unmount} individualNotesSectionRef={individualNotesSectionRef} index={index} setMessage={setMessage} />)
                     
-                    containerRef.current?.insertBefore(individualSection, containerRef.current?.childNodes[1]); 
-                    console.debug('pushing individual notes bit ', sectionInfo);
+                    // containerRef.current?.insertBefore(individualSection, containerRef.current?.childNodes[1]); 
+                    // console.debug('pushing individual notes bit ', sectionInfo);
 
                 }
             }   
@@ -154,13 +202,23 @@ const PatternDropZone: React.FC<IPatternDropZoneProps> = ({ lane, setMessage }) 
             droppedPattern?.remove(); 
         }
 
-        root.render(<DroppedPattern 
-            lane={lane} name={data.name} occurances={data.measures} 
-            unmount={unmount} setMessage={setMessage} topPatternMeasureRef={topPatternMeasureRef}/>);
+        // root.render(<DroppedPattern 
+        //     lane={lane} name={data.name} occurances={data.measures} 
+        //     unmount={unmount} setMessage={setMessage} topPatternMeasureRef={topPatternMeasureRef}/>);
         
+
+        loadPattern(data.measures, data.name); 
+
+
+
+        // updatePattern(patternID, {start: 100, length: 100});
         // container?.prepend(droppedPattern); 
 
-        container?.insertBefore(droppedPattern, container.childNodes[1]); 
+        // container?.insertBefore(droppedPattern, container.childNodes[1]); 
+
+        
+
+
     }}>
         <p>
             Next pattern from measure ({startMeasure + 1})
