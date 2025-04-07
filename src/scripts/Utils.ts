@@ -48,11 +48,11 @@ export function getNoteFill(currentZone: string, hitStatus: string): string {
 
 // TODO Extrapolate Y values from index
 export function findSortedIndex(notes: Note[], newNoteIndex: number, lane: Lane): number[] {
-    let newNoteY = ((newNoteIndex * (lane.noteGap/lane.timeSignature[1])) - lane.startY) * -1;
+    let newNoteY = ((newNoteIndex * (lane.noteGap/lane.innerSubdivision)) - lane.startY) * -1;
 
     for(let i = 0; i < notes.length; i++) {
         if(i == 0) {
-            let y = notes[0].getY(lane.noteGap, lane.timeSignature[1], lane.startY);
+            let y = notes[0].getY(lane.noteGap, lane.innerSubdivision, lane.startY);
             if(y < newNoteY)
                 return [0, 0]; 
             if(y == newNoteY)
@@ -61,8 +61,8 @@ export function findSortedIndex(notes: Note[], newNoteIndex: number, lane: Lane)
             continue; 
         }
 
-        let iMinusOneY = notes[i - 1].getY(lane.noteGap, lane.timeSignature[1], lane.startY);
-        let iY = notes[i].getY(lane.noteGap, lane.timeSignature[1], lane.startY);
+        let iMinusOneY = notes[i - 1].getY(lane.noteGap, lane.innerSubdivision, lane.startY);
+        let iY = notes[i].getY(lane.noteGap, lane.innerSubdivision, lane.startY);
     
         if(iMinusOneY > newNoteY && iY < newNoteY)
             return [i, 0]; 

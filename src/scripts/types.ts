@@ -31,3 +31,5 @@ export type LoadedLanePreview = {
     timeSignatures: number[][]; 
     // difficulty: number; 
 }
+
+export type PatternModeSection = { id: string; start: number; length: number, name?: string, data?: any};

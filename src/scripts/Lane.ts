@@ -10,9 +10,11 @@ import { COLORS, EDIT_MODES, HIT_STATUSES, ZONE_NAMES } from "./constants";
 export default class Lane {
     public bpm: number;
     public measureCount: number; 
-    public subdivision: number; 
     public timeSignature: number[]; // Index 0 will be the upper numeral, index 1 the lower
     public metronomeEnabled: boolean; 
+
+    public subdivision: number; 
+    public innerSubdivision: number; 
 
     // Defines the distance between full* notes
     public noteGap: number; 
@@ -68,7 +70,9 @@ export default class Lane {
         this.bpm = bpm; 
         this.measureCount = measureCount;
         this.timeSignature = timeSignature;
+
         this.subdivision = 4; 
+        this.innerSubdivision = 4; 
 
         this.notes = notes; 
         this.repeated = false; 
@@ -115,6 +119,14 @@ export default class Lane {
 
     public recalculateNoteGap() {
         this.noteGap = measureHeight / this.subdivision;
+
+        if(this.subdivision < 4) {
+            this.innerSubdivision = 6;
+        } else if(this.subdivision < 7) {
+            this.innerSubdivision = 4;
+        } else {
+            this.innerSubdivision = 2; 
+        }
     }
 
     public recalculateHeight() {
@@ -135,14 +147,13 @@ export default class Lane {
         return this.startY - this.height; 
     }   
 
-    public calcualteTopOfMeasuresN(n: number) {
+    public calculateTopOfMeasuresN(n: number) {
         return this.startY - (measureHeight * n); 
     }
 
     public getRatio() {
         return this.height / this.bpm; 
     }
-    
 
     // TODO: Give this better name and have one that also removes all notes 
     public resetLane(overshoot?: number) { 
@@ -249,7 +260,7 @@ export default class Lane {
             else
                 note = this.notes[i]; 
             
-            let effectiveY = note.getY(this.noteGap, this.timeSignature[1], this.startY) + this.translationAmount;
+            let effectiveY = note.getY(this.noteGap, this.innerSubdivision, this.startY) + this.translationAmount;
             // Reduces time spent drawing notes that have scrolled passed the bottom of the screen
             if(effectiveY > this.canvas.height)
                 continue;
@@ -295,7 +306,7 @@ export default class Lane {
     // Updates the hitzone and hitstatus of a specific note
     public updateNote(note: Note, y: number, ups: number, translationSpeed: number) {
         // TODO: Change for new note object
-        let distanceToPerfectHitzone = ((this.hitzone.perfect_hit_y - this.translationAmount) - note.getY(this.noteGap, this.timeSignature[1], this.startY))
+        let distanceToPerfectHitzone = ((this.hitzone.perfect_hit_y - this.translationAmount) - note.getY(this.noteGap, this.innerSubdivision, this.startY))
 
         // TODO: Review if this can be done cleaner
         if(note.hitStatus == 'unhit')
@@ -331,7 +342,7 @@ export default class Lane {
 
         let topOfLane = this.calculateTopOfLane(this.repeated);
         if(newPatternMeasures && editMode && editMode == EDIT_MODES.CREATE_PATTERN_MODE)
-            topOfLane = this.calcualteTopOfMeasuresN(newPatternMeasures)
+            topOfLane = this.calculateTopOfMeasuresN(newPatternMeasures)
 
         for(let y = this.startY; y > topOfLane; y -= this.noteGap) {
             // Optimisation so that only the measure lines actually visible on the page need to be drawn
@@ -400,7 +411,7 @@ export default class Lane {
     public calculateHitzone(): Hitzone {
         // TODO: Decide if this level of dynamic sizing is even necessary.
         let nonPerfectHitArea = ((measureHeight/this.timeSignature[1]) / ((this.hitPrecision*2) / this.timeSignature[1])) /2; //TODO: Write justifcation for this
-        let perfectHitArea = ((measureHeight/this.timeSignature[1]) / (32/this.timeSignature[1]))/2;
+        let perfectHitArea = ((measureHeight/this.timeSignature[1]) / (32/this.timeSignature[1])) / 2;
 
         let perfect_hit_y = this.calculatePerfectHitY();
         let early_hit_y = perfect_hit_y - nonPerfectHitArea
@@ -417,12 +428,15 @@ export default class Lane {
         let length = this.notes.length; 
         this.repeatedNotes = 0; 
 
+        if(this.notes.length == 0)
+            return; 
+
         let repeatedHeight = longest_lane.getRatio() * this.bpm;
         while(highestNoteY >= this.startY - repeatedHeight) {
             for(let i = 0; i < length; i++) {
             
-                let newNoteY = this.notes[i].getY(this.noteGap, this.timeSignature[1], this.startY) - (this.height * l)
-                let newNoteIndex = (this.startY - newNoteY) / (this.noteGap/this.timeSignature[1]);
+                let newNoteY = this.notes[i].getY(this.noteGap, this.innerSubdivision, this.startY) - (this.height * l)
+                let newNoteIndex = (this.startY - newNoteY) / (this.noteGap/this.innerSubdivision);
                 highestNoteY = newNoteY; 
                 console.log(highestNoteY);
 
@@ -452,34 +466,65 @@ export default class Lane {
         for(let i = this.notes.length - 1; i >= 0; i--) {
             console.log(this.notes[i]);
 
-            if(this.notes[i].getY(this.noteGap, this.timeSignature[1], this.startY) <= this.calculateTopOfLane(false))
+            if(this.notes[i].getY(this.noteGap, this.innerSubdivision, this.startY) <= this.calculateTopOfLane(false))
                 this.notes.splice(i, 1); 
         }
     }
 
-    public loadPattern(selectedPattern: selectedPattern, measures: number) {
-        if(this.patternStartMeasure + (measures * selectedPattern.measures) > this.measureCount) {
+    public loadPattern(selectedPattern: selectedPattern, measures: number, startMeasure?: number, spliceIndex?: number, difference?: number) {
+        if(startMeasure == undefined && this.patternStartMeasure + (measures * selectedPattern.measures) > this.measureCount) {
             console.error("Loading this pattern will exceed the lane's measure limit", measures, selectedPattern.measures, this.measureCount);
-            return; 
+            return -1; 
         }
 
+        let startingMeasure; 
+        if(startMeasure != undefined)
+            startingMeasure = startMeasure 
+        else 
+            startingMeasure = this.patternStartMeasure;
+
+        // console.log(`startingMeasure ${startingMeasure}`);
+
         let notePositions = selectedPattern.notePositions;
-        console.log(notePositions, measures);
-        
-        let divider = 16/this.timeSignature[1]; 
-        let height = this.noteGap/divider; 
-        
+        // console.log(notePositions, measures);
+        let newNotes = []; 
+        let startingNotesLength = this.notes.length; 
         for(let i = 0; i < measures; i++) {
-            let patternStartY = this.startY - (this.patternStartMeasure * (this.noteGap * this.timeSignature[1]));
+            let patternStartY = this.startY - (startingMeasure * (this.noteGap * this.subdivision));
+            let patternStartIndex = Math.round(parseInt(((this.startY - patternStartY) / (this.noteGap/this.innerSubdivision)).toFixed(1)));
+
             for(let x = 0; x < notePositions.length; x++) {
-                let y = patternStartY - (height * -notePositions[x])
+                let newNote = new Note(patternStartIndex + notePositions[x]);
+                let y = newNote.getY(this.noteGap, this.innerSubdivision, this.startY);
+                
                 if(y <= this.calculateTopOfLane(false))
                     return; // So that notes in patterns longer than the lane's measure length won't overfill it
-                let newNoteIndex = (this.startY - y) / (this.noteGap/this.timeSignature[1]);
 
-                this.notes.push(new Note(newNoteIndex)); 
+                
+                if(spliceIndex != undefined && startingNotesLength > 0)
+                    newNotes.push(newNote);
+                else 
+                    this.notes.push(newNote); 
+
+                // console.log('Newnote from pattern: ', newNote);
+
             }
-            this.patternStartMeasure += 1; 
+            startingMeasure += 1;
+        }
+
+        // console.log(newNotes)
+        if(spliceIndex != undefined) {
+            for(let i = 0; i < newNotes.length; i++) {
+                this.notes.splice(spliceIndex + i, 0, newNotes[i]); 
+            }
+        }
+
+        // console.log(this.notes)
+        if(startMeasure == undefined) {
+            console.log('setting measures')
+            this.setPatternStartMeasure(startingMeasure);
+        } else {
+            this.setPatternStartMeasure(this.patternStartMeasure + difference!);
         }
     }    
 
@@ -499,4 +544,158 @@ export default class Lane {
         this.inputAreaHeight = this.canvas.height - this.topOfInputVisual;
         this.hitzone = this.calculateHitzone(); 
     }
+
+    private patternStartListeners: ((newValue: number) => void)[] = [];
+    // Custom event listeners 
+    public setPatternStartMeasure(value: number) {
+        if (this.patternStartMeasure !== value) {
+            this.patternStartMeasure = value;
+            this.notifyPatternStartChange();
+        }
+    }
+
+    private notifyPatternStartChange() {
+        for (const listener of this.patternStartListeners) {
+            listener(this.patternStartMeasure);
+        }
+    }
+
+    // Allow external code to listen for changes
+    public onPatternStartChange(callback: (value: number) => void) {
+        this.patternStartListeners.push(callback);
+    }
+
+    // Optional cleanup
+    public removePatternStartChange(callback: (value: number) => void) {
+        this.patternStartListeners = this.patternStartListeners.filter(cb => cb !== callback);
+    }
+
+    private patternChangeListeners: ((startMeasure: number, measureDifference: number) => void)[] = [];
+    public onPatternChange(callback: (startMeasure: number, measureDifference: number) => void) {
+        this.patternChangeListeners.push(callback); 
+    }
+
+    public removeOnPatternChange(callback: (startMeasure: number, measureDifference: number) => void) {
+        this.patternChangeListeners = this.patternChangeListeners.filter(cb => cb !== callback);
+    }
+
+    private notifyPatternChange(startMeasure: number, measureDifference: number) {
+        for (const listener of this.patternChangeListeners) {
+            listener(startMeasure, measureDifference);
+        }
+    }
+
+    public reducePatternOccuances(startMeasure: number, oldOccurances: number, newOccurnaces: number) {
+        if(newOccurnaces > oldOccurances)
+            return; 
+        
+        let revertRepeat = false;
+        if(this.repeated) {
+            this.unrepeatNotes();
+            revertRepeat = true;
+        }
+        
+        let measureDifference = oldOccurances - newOccurnaces; 
+        console.log(measureDifference, oldOccurances, newOccurnaces);
+        
+        let patternStartY = this.startY - (startMeasure * (this.noteGap * this.subdivision));
+        let patternStartIndex = Math.round(parseInt(((this.startY - patternStartY) / (this.noteGap/this.innerSubdivision)).toFixed(1)));
+
+        let notesInMeasure = this.innerSubdivision * this.subdivision;
+        
+        let lastPossibleIndex = patternStartIndex + (notesInMeasure * oldOccurances) - 1; 
+        if(newOccurnaces > 0)
+            patternStartIndex = lastPossibleIndex - (measureDifference * notesInMeasure);
+        
+        console.log(patternStartY, patternStartIndex, lastPossibleIndex);
+        for(let i = this.notes.length - 1; i >= 0; i--) {
+            if(this.notes[i].index < patternStartIndex) 
+                break; 
+            else if(this.notes[i].index > lastPossibleIndex) {
+                console.log('reached past pattern')
+                // break;
+                this.notes[i].index -= (measureDifference * notesInMeasure); 
+                continue;
+            } else {
+                // Notes within the pattern
+                console.log(this.notes[i].index)
+                this.notes.splice(i, 1);
+            }
+        }
+
+        this.notifyPatternChange(startMeasure, -measureDifference);
+
+        let newPatternStartMeasure = this.patternStartMeasure - measureDifference;
+        console.log('newPattenrmeapouhsdf', newPatternStartMeasure);
+        this.setPatternStartMeasure(newPatternStartMeasure < 0 ? 0 : newPatternStartMeasure);
+
+        if(this.notes.length == 0)
+            this.setPatternStartMeasure(0);
+
+        
+        if(revertRepeat)
+            this.repeatNotes();
+    }
+
+    public increasePatternOccurances(startMeasure: number, oldOccurances: number, newOccurnaces: number, patternData: Object): number {        
+        console.log(startMeasure,' from in here');
+        if(newOccurnaces < oldOccurances)
+            return -1; 
+
+        let revertRepeat = false;
+        if(this.repeated) {
+            this.unrepeatNotes();
+            revertRepeat = true;
+        }
+
+        let measureDifference = newOccurnaces - oldOccurances; 
+        console.log(measureDifference);
+
+        if(this.patternStartMeasure + measureDifference > this.measureCount) {
+            console.log('will overflow');
+            return -1; 
+        }
+        
+        let patternStartY = this.startY - (startMeasure * (this.noteGap * this.subdivision));
+        let patternStartIndex = Math.round(parseInt(((this.startY - patternStartY) / (this.noteGap/this.innerSubdivision)).toFixed(1)));
+
+
+        let notesInMeasure = this.innerSubdivision * this.subdivision;
+
+        let spliceIndex; 
+
+        let lastPossibleIndex = patternStartIndex + (notesInMeasure * oldOccurances) - 1; 
+        for(let i = this.notes.length - 1; i >= 0; i--) {
+            if(this.notes[i].index < lastPossibleIndex && this.notes[i].index >= patternStartIndex) {
+                // Inside pattern
+                spliceIndex = i; 
+                this.notes.splice(i, 1);
+            } else if(this.notes[i].index < patternStartIndex && spliceIndex == undefined) {
+                spliceIndex = i + 1; 
+                break; 
+            } else if(i == 0 && spliceIndex == undefined) {
+                spliceIndex = 0; 
+            } else if(this.notes[i].index > lastPossibleIndex && measureDifference > 0) {
+                console.log('past pattern')
+                // break;
+                this.notes[i].index += (measureDifference * notesInMeasure); 
+                continue;
+            } 
+        }
+        console.log('before load ', patternData, this.notes[0], newOccurnaces, startMeasure, spliceIndex)
+
+        this.loadPattern(patternData, newOccurnaces, startMeasure, spliceIndex, measureDifference);
+        console.log('loaded returning 0');
+
+
+        this.notifyPatternChange(startMeasure, measureDifference);
+
+
+        if(revertRepeat)
+            this.repeatNotes();
+        
+        return 0; 
+    }
+
+
 }

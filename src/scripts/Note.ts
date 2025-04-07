@@ -26,8 +26,8 @@ export default class Note {
         this.hitStatus = 'unhit';
     }
 
-    public getY(noteGap: number, timeSignature: number, laneStartY: number) {
-        return ((this.index * (noteGap/timeSignature)) - laneStartY) * -1;
+    public getY(noteGap: number, innerSubdivision: number, laneStartY: number) {
+        return ((this.index * (noteGap/innerSubdivision)) - laneStartY) * -1;
     }
 
     public startAnimation(type: string) {
