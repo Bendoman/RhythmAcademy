@@ -33,9 +33,6 @@ interface IRunControlsProps {
     
     setStats: React.Dispatch<React.SetStateAction<StatsObject[]>>;
     setShowStats: React.Dispatch<React.SetStateAction<boolean>>;
-
-
-    
 }
 
 // TODO: Refactor this name
@@ -209,7 +206,7 @@ const RunControls: React.FC<IRunControlsProps> =
         window.addEventListener("keyup", handleKeyUp);
         window.addEventListener('blur', () => {
             controlHeld = false
-            pausedButtonClick(); 
+            // pausedButtonClick(); 
         });
         return () => { 
             window.removeEventListener("keydown", handleKeyDown); 

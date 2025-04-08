@@ -13,6 +13,7 @@ export type StatsObject = {
     notesHit: Note[]; 
     notesMissed: Note[]; 
     wrongNotes: Note[];
+    runTotalTime: number; 
 }
 
 export type FriendRequest = {
@@ -34,3 +35,17 @@ export type LoadedLanePreview = {
 }
 
 export type PatternModeSection = { id: string; start: number; length: number, name?: string, data?: any};
+
+export type statGraphData = {
+    interval: string, 
+    deviation: number,
+    occurances: number
+}
+
+export type statGraphData2 = {
+    interval: string, 
+    hitPercentage: number,
+    hitNotes: number,
+    missedNotes: number,
+    wrongNotes: number,
+}

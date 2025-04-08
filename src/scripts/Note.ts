@@ -8,7 +8,8 @@ export default class Note {
     timeToZone: number; 
     animationHeight: number; 
     animationColour: string; 
-
+    timeHit: number; 
+    
     constructor(index: number) {
         this.index = index; 
         // Default value before calculations can be made and when scrolling is paused
@@ -19,6 +20,8 @@ export default class Note {
 
         this.animationHeight = 0; 
         this.animationColour = '';
+
+        this.timeHit = 0; 
     }
 
     public resetNote() { 
@@ -36,9 +39,5 @@ export default class Note {
         } else if(type == 'hit') {
             this.animationHeight = 20; 
         }
-    }
-
-    public deprecateAnimation(type: string) {
-
     }
 }

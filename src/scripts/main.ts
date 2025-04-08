@@ -26,6 +26,8 @@ export let startY = 800;
 
 let ups = 0; 
 let translationAmount = 0; 
+export let currentTime = 0; 
+
 
 let paused = true; 
 let editing = false;
@@ -838,6 +840,9 @@ function gameLoop(timeStamp: number) {
   // Calculating the number of updates per second
   // Relevant for determining the time it will take for notes to reach the hitzone 
   let interval = timeStamp - lastLoop; 
+  if(!paused)
+    currentTime += interval;
+
   updateTime += (interval - updateTime) / filterStrength; 
   ups = (1000/updateTime); 
   upsParagraph!.innerText = ups.toString().substring(0, 6); 
@@ -846,6 +851,7 @@ function gameLoop(timeStamp: number) {
   for(let lane of lanes) {
 
     if(!lane.noFail && lane.notesMissed.length + lane.wrongNotes.length >= lane.maxWrongNotes) {
+      console.log(lane);
       (document.querySelector('#session_stop_button') as HTMLElement)?.click();
     }
 
@@ -953,9 +959,9 @@ export function onStopButtonClick(): StatsObject[] {
     return [];
   
   paused = true 
-
+  
   let stats: StatsObject[] = [];
-
+  
   // TODO: Put this in own function
   lanes.forEach(lane => {
     stats[stats.length] = {
@@ -963,9 +969,11 @@ export function onStopButtonClick(): StatsObject[] {
       totalNotes: lane.notes.length * lane.loopCount, 
       notesHit: lane.notesHit, 
       notesMissed: lane.notesMissed, 
-      wrongNotes: lane.wrongNotes
+      wrongNotes: lane.wrongNotes,
+      runTotalTime: currentTime
     };
   })
+  currentTime = 0; 
 
   resetLanes();
   lanes.forEach(lane => { drawSingleLane(lane); });

@@ -1,6 +1,6 @@
 import Note from "./Note.ts";
 import Hitzone from "./Hitzone.ts";
-import { longest_lane, measureHeight } from "./main.ts";
+import { currentTime, longest_lane, measureHeight } from "./main.ts";
 import AudioSprite from "./AudioSprite.ts";
 import { selectedPattern } from "./types.ts";
 import { drawLine, getNoteFill } from "./Utils";
@@ -199,6 +199,7 @@ export default class Lane {
         switch(nextNote.currentZone) {
             case ZONE_NAMES.EARLY_ZONE:
                 console.log(`Wrong note:\nTime to zone: ${nextNote.timeToZone}\nZone: ${nextNote.currentZone}`);
+                noteCopy.timeHit = parseInt(currentTime.toFixed(0));
                 this.wrongNotes.push(noteCopy); 
                 break;
             case ZONE_NAMES.EARLY_HIT_ZONE:
@@ -207,6 +208,7 @@ export default class Lane {
                     this.audioSprite.play(this.hitsound);
                 nextNote.hitStatus = 'hit';
                 noteCopy.hitStatus = 'hit';
+                noteCopy.timeHit = parseInt(currentTime.toFixed(0));
                 this.notesHit.push(noteCopy);
                 this.nextNoteIndex++;
                 nextNote.startAnimation('hit'); 
@@ -217,6 +219,7 @@ export default class Lane {
                     this.audioSprite.play(this.hitsound);
                 nextNote.hitStatus = 'hit';
                 noteCopy.hitStatus = 'hit';
+                noteCopy.timeHit = parseInt(currentTime.toFixed(0));
                 this.notesHit.push(noteCopy);
                 this.nextNoteIndex++;
                 nextNote.startAnimation('perfect_hit'); 
@@ -227,6 +230,7 @@ export default class Lane {
                     this.audioSprite.play(this.hitsound);
                 nextNote.hitStatus = 'hit';
                 noteCopy.hitStatus = 'hit';
+                noteCopy.timeHit = parseInt(currentTime.toFixed(0));
                 this.notesHit.push(noteCopy);
                 this.nextNoteIndex++;
                 nextNote.startAnimation('hit'); 
@@ -329,6 +333,7 @@ export default class Lane {
                 let noteCopy = new Note(note.index);
                 noteCopy.currentZone = note.currentZone;
                 noteCopy.hitStatus = note.hitStatus;
+                noteCopy.timeHit = parseInt(currentTime.toFixed(0));
                 this.notesMissed.push(noteCopy); 
             }
         }

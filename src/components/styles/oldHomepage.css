@@ -388,6 +388,8 @@
   z-index: 1;
 
   color: var(--lane_background);
+  display: flex;
+  flex-direction: column;
 }
 
 .closeContainer:hover {
@@ -436,8 +438,46 @@
   color: #131B23;
 }
 
+.statContentContainer {
+  flex: 1;
+  overflow-x: scroll;
+  margin-top: 2.5em;
+
+  scroll-behavior: auto;
+  scroll-snap-type: none;
+
+  display: flex;
+  justify-content: safe center;
+
+}
+
 .statContent {
-  padding: 2.25em;
+  display: flex;
+  flex-shrink: 0;
+  width: max-content;
+}
+
+.stats {
+  /* background-color: blue; */
+  min-width: 15em;
+}
+
+.graph {
+  /* background-color: red; */
+  /* min-width: 40em; */
+  box-sizing: border-box;
+  height: fit-content;
+  border: 1px solid #ECDFCC;
+  min-width: 15em;
+  padding-top: .5em;
+  border-radius: 10px;
+
+
+  padding-left: 1em;
+  padding-right: 1em;
+  max-width: 35em;
+  overflow-x: scroll;
+  overflow-y: hidden;
 }
 
 .statsScreen {
@@ -445,3 +485,6 @@
 }
 
 
+.graph_container p {
+  text-align: center;
+}
