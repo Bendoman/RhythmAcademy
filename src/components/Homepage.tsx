@@ -23,6 +23,7 @@ import { loadFromLocalStorage, saveToLocalStorage } from '../scripts/Utils.ts';
 import { startLoop, handleMIDIMessage, lanes, remapLane, setLongestLane } from '../scripts/main.ts';
 import { retrieveFriendsList, sendFriendRequest } from '../scripts/SupaUtils.ts';
 import SettingsScreen from './SettingsScreen.tsx';
+import { useAppContext } from './AppContextProvider.tsx';
 
 export let midiAccess: MIDIAccess; 
 const Homepage = () => {
@@ -69,8 +70,7 @@ const Homepage = () => {
         }
     }
 
-    const [pendingFriendRequests, setPendingFriendRequests] = useState<string[][]>([]);
-    const [acceptedFriends, setAcceptedFriends] = useState<string[][]>([]);
+
 
     useEffect(() => {
         // TODO: UPDATE THIS SO THAT ACCOUNT CHANGES MID SESSION ARE HANDLED
@@ -88,9 +88,12 @@ const Homepage = () => {
                     // setLongestLane();
                 });
             }
+            setShowToolTips(false);
         } else {
             // Overwriting current_session on startup
             saveToLocalStorage('current_session', '');
+            saveToLocalStorage('stats', '');
+            setShowToolTips(true);
         }
         
         // Reload the page on auth state change 
@@ -142,19 +145,34 @@ const Homepage = () => {
     const [signupDisplay, setSignupDisplay] = useState('none'); 
     const [loginDisplay, setLoginDisplay] = useState('none'); 
 
-    const [showStats, setShowStats] = useState(false); 
-    const [stats, setStats] = useState<StatsObject[]>([]);
 
-    const [showSessionLoadScreen, setSessionLoadScreen] = useState(false); 
-    const [showSessionSaveScreen, setSessionSaveScreen] = useState(false); 
-    const [showSettingsScreen, setShowSettingsScreen] = useState(false); 
 
-    const [showProfileScreen, setShowProfileScreen] = useState(false);
-    const [showNotificationsScreen, setShowNotificationsScreen] = useState(false);
-    const [notificationsNumber, setNotificationsNumber] = useState(0);
 
-    const [friendRequestStatus, setFriendRequestStatus] = useState(''); 
+    // const [showStats, setShowStats] = useState(false); 
+    // const [stats, setStats] = useState<StatsObject[]>([]);
+    // const [showSessionLoadScreen, setSessionLoadScreen] = useState(false); 
+    // const [showSessionSaveScreen, setSessionSaveScreen] = useState(false); 
+    // const [showSettingsScreen, setShowSettingsScreen] = useState(false); 
+    // const [showProfileScreen, setShowProfileScreen] = useState(false);
+    // const [showNotificationsScreen, setShowNotificationsScreen] = useState(false);
+    // const [notificationsNumber, setNotificationsNumber] = useState(0);
+    // const [friendRequestStatus, setFriendRequestStatus] = useState(''); 
+    // const [showToolTips, setShowToolTips] = useState(false);
 
+    const {
+        showStats, setShowStats,
+        stats, setStats,
+        showSessionLoadScreen, setSessionLoadScreen,
+        showSessionSaveScreen, setSessionSaveScreen,
+        showProfileScreen, setShowProfileScreen,
+        showNotificationsScreen, setShowNotificationsScreen,
+        notificationsNumber, setNotificationsNumber,
+        showSettingsScreen, setShowSettingsScreen,
+        friendRequestStatus, setFriendRequestStatus,
+        showToolTips, setShowToolTips,
+        pendingFriendRequests, setPendingFriendRequests,
+        acceptedFriends, setAcceptedFriends
+      } = useAppContext();
 
     async function requestFriend() {
         if(friendEmailRef.current && friendEmailRef.current.value != '') {
@@ -258,20 +276,13 @@ const Homepage = () => {
         </div>
 
         <section id='content'>
-            <RunControls 
-            setStats={setStats} setShowStats={setShowStats} setSessionLoadScreen={setSessionLoadScreen} setSessionSaveScreen={setSessionSaveScreen} showSessionLoadScreen={showSessionLoadScreen} showSessionSaveScreen={showSessionSaveScreen} showProfileScreen={showProfileScreen} 
-            setShowProfileScreen={setShowProfileScreen} showNotificationsScreen={showNotificationsScreen}
-            notificationsNumber={notificationsNumber} setShowNotificationsScreen={setShowNotificationsScreen} 
-            showSettingsScreen={showSettingsScreen} setShowSettingsScreen={setShowSettingsScreen}
-            ></RunControls>
-
-            { showStats && <StatsScreen stats={stats} setShowStats={setShowStats}/> }
-            { showSessionLoadScreen && <SessionLoadScreen setSessionLoadScreen={setSessionLoadScreen}/>}
-            { showSessionSaveScreen && <SessionSaveScreen setSessionSaveScreen={setSessionSaveScreen}/>}
-            { showProfileScreen && <ProfileScreen setShowProfileScreen={setShowProfileScreen} acceptedFriends={acceptedFriends}/> }
-            { showNotificationsScreen && <NotificationsScreen setNotificationsNumber={setNotificationsNumber}setShowNotificationsScreen={setShowNotificationsScreen} pendingFriendRequests={pendingFriendRequests}/>}
-            { showSettingsScreen && <SettingsScreen setShowSettingsScreen={setShowSettingsScreen}/>}
-
+            <RunControls />
+            { showStats && <StatsScreen/> }
+            { showSessionLoadScreen && <SessionLoadScreen/>}
+            { showSessionSaveScreen && <SessionSaveScreen/>}
+            { showProfileScreen && <ProfileScreen/> }
+            { showNotificationsScreen && <NotificationsScreen/>}
+            { showSettingsScreen && <SettingsScreen/>}
             <div id="lane_container"/>
         </section>
     </>)

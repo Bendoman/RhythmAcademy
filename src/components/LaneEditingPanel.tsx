@@ -27,7 +27,8 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas }) => {
   const keyAliasRef = useRef<HTMLInputElement | null>(null);
   const wrongNotesInputRef = useRef<HTMLInputElement | null>(null);
   
-  
+  const [showSaveBubble, setShowSaveBubble] = useState(false);
+
   // #endregion
 
   // #region ( STATE )
@@ -241,6 +242,9 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas }) => {
       loadPatternSelectRef.current.innerHTML = patternSelectInnerHTML;
 
     setSelectedPattern(patternName);
+
+    setShowSaveBubble(true);
+    setTimeout(() => setShowSaveBubble(false), 1500); // hide after 1.5s
     // TODO: Add visual feedback that save was successful
   }
 
@@ -494,7 +498,9 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas }) => {
       <button className="save_pattern" 
       onClick={onSavePatternClick}>
         Save note pattern
+        {showSaveBubble && ( <div className="confirmation_popup">Pattern saved</div> )}
       </button>
+
       <button className="close_pattern" onClick={()=>{
         resetPatternInCreation();
         onPatternModeClick();

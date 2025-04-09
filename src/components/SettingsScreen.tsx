@@ -1,11 +1,10 @@
 import React, { useEffect, useState } from 'react'
 import './styles/session_screen.css';// TODO: Refactor this name
+import { useAppContext } from './AppContextProvider';
 
-interface ISettingsScreenProps {
-    setShowSettingsScreen: React.Dispatch<React.SetStateAction<boolean>>;
-}
 
-const SettingsScreen: React.FC<ISettingsScreenProps> = ({ setShowSettingsScreen }) => {
+const SettingsScreen = () => {
+    const { setShowSettingsScreen } = useAppContext(); 
     const [selectedTab, setSelectedTab] = useState('public');
     
     const handleKeyDown = (event: KeyboardEvent) => {

@@ -895,7 +895,7 @@ function gameLoop(timeStamp: number) {
         lane.updateAndDrawNotes(true, ups, translationSpeed);      
       }
       lane.translationAmount = oldTranslationAmount
-    }
+    } 
   
     if(lane == longest_lane) {
       // console.log(lane.inputKey);
@@ -1040,6 +1040,10 @@ export function findLaneFromCanvas(canvas: HTMLCanvasElement) {
 if (typeof window !== 'undefined') {
   // @ts-ignore
   window.findLaneFromCanvas = findLaneFromCanvas;
+  // @ts-ignore
+  window.lanes = lanes; 
+  // @ts-ignore
+  window.longest_lane = longest_lane; 
 }
 
 
@@ -1049,9 +1053,10 @@ export function setNewPatternMeasures(measures: number) {
 }
 
 export function assignLaneInput(lane: Lane, inputKey: string) {
-  if(Object.keys(input_lane_pairs).includes(inputKey)) {
+  console.log(input_lane_pairs, inputKey)
+  if(Object.keys(input_lane_pairs).includes(inputKey.toUpperCase())) {
     console.error('Input key already in use');
-    return;
+    return -1;
   }
 
   delete input_lane_pairs[lane.inputKey.toUpperCase()];
@@ -1061,6 +1066,7 @@ export function assignLaneInput(lane: Lane, inputKey: string) {
   drawSingleLane(lane); 
   
   saveCurrentSessionLocally(); 
+  return 0;
 }
 
 export function resetLongestLane() {
@@ -1068,10 +1074,11 @@ export function resetLongestLane() {
 }
 
 export function setLongestLane() {   
+  if(lanes.length > 0) 
+    longest_lane = lanes[0]; 
+    
   lanes.forEach(curr => {
-    if(longest_lane == null){
-      longest_lane = curr; 
-    } else if(curr.getRatio() > longest_lane.getRatio()) {
+    if(curr.getRatio() > longest_lane.getRatio()) {
       longest_lane = curr; 
     }
   });
@@ -1094,6 +1101,8 @@ export function saveCurrentSessionLocally() {
 
 // TODO: Make sure this is complete
 export function remapLane(target: Lane, reference: Lane) {
+  console.log('remap called');
+  
   target.bpm =  reference.bpm; 
   target.noteGap = reference.noteGap; 
   target.hitsound = reference.hitsound; 

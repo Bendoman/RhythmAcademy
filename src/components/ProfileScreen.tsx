@@ -2,13 +2,11 @@ import React, { useEffect, useState } from 'react'
 // TODO: Refactor this name
 import './styles/session_screen.css';
 import { modifyFriend } from '../scripts/SupaUtils';
+import { useAppContext } from './AppContextProvider';
 
-interface IProfileScreenProps {
-    setShowProfileScreen: React.Dispatch<React.SetStateAction<boolean>>;
-    acceptedFriends: string[][];
-}
+const ProfileScreen = () => {
+    const { setShowProfileScreen, acceptedFriends } = useAppContext(); 
 
-const ProfileScreen: React.FC<IProfileScreenProps> = ({ setShowProfileScreen, acceptedFriends }) => {
     const handleKeyDown = (event: KeyboardEvent) => {
         if(event.key != 'Escape')
             return; 

@@ -309,7 +309,7 @@ body {
     position: relative;
 }
 
-  .tooltip-arrow {
+.tooltip-arrow {
     position: absolute;
     left: -15px;
     top: 50%;
@@ -319,7 +319,136 @@ body {
     border-top: 5px solid transparent;
     border-bottom: 5px solid transparent;
     border-right: 15px solid #ECDFCC;
+}
+
+.input_key_tooltip {
+    left: -290%;
+}
+
+.input_key_tooltip .tooltip-arrow {
+
+    left: auto;
+    right: -15px;
+
+    border-top: 5px solid transparent;
+    border-bottom: 5px solid transparent;
+    border-left: 15px solid #ECDFCC;
+    border-right: none;
+}
+
+
+.graphControls{
+    gap: .5em;
+    display: flex;
+    justify-content: safe center;
+    align-items: safe center;
+}
+
+.graphControls button {
+    text-decoration: none;
+    background-color: #ECDFCC;
+    border: 1px solid transparent;
+    display: flex;
+    align-items: safe center;
+    padding: .25em;
+    border-radius: 10px;
+}
+
+.graphControls button:hover {
+    color: #ECDFCC;
+    background-color: #ecdfcc54;
+    border: 1px solid #ECDFCC;
+}
+
+.graphControls button:disabled {
+    background-color: #ecdfcc91;
+}
+
+
+/* Entire scrollbar */
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px; /* for horizontal scroll */
   }
   
-
+  /* Scrollbar track (background) */
+  ::-webkit-scrollbar-track {
+    background: #1a1a1a;
+    border-radius: 5px;
+  }
   
+  /* Scrollbar thumb (the draggable part) */
+  ::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 5px;
+    border: 2px solid #1a1a1a; /* Creates space around thumb */
+  }
+  
+  /* On hover */
+  ::-webkit-scrollbar-thumb:hover {
+    background: #aaa;
+}
+
+
+.confirmation_popup {
+    
+    background-color: #2ecc71;
+    animation: riseAndFade 1.5s ease-out forwards;
+}
+
+.error_popup {
+    background-color: #cc2e2e;
+    animation: shakeFade 1.5s ease-out forwards;
+
+  }
+
+  .confirmation_popup, .error_popup {
+    position: absolute;
+    top: -30px; /* adjust as needed */
+    left: 50%;
+    transform: translateX(-50%);
+    color: white;
+    padding: 6px 12px;
+    border-radius: 10px;
+    font-size: 0.85rem;
+    pointer-events: none;
+    opacity: 0;
+    z-index: 10;
+  }
+  
+  @keyframes riseAndFade {
+    0% {
+      transform: translate(-50%, 0);
+      opacity: 1;
+    }
+    100% {
+      transform: translate(-50%, -30px);
+      opacity: 0;
+    }
+  }
+
+  @keyframes shakeFade {
+    0%   { transform: translateX(-50%) translateX(0); opacity: 1; }
+    5%   { transform: translateX(-50%) translateX(-5px); }
+    10%  { transform: translateX(-50%) translateX(5px); }
+    15%  { transform: translateX(-50%) translateX(-5px); }
+    20%  { transform: translateX(-50%) translateX(5px); }
+    25%  { transform: translateX(-50%) translateX(-3px); }
+    30%  { transform: translateX(-50%) translateX(3px); }
+    35%  { transform: translateX(-50%) translateX(0); }
+  
+    /* Now fade out smoothly */
+    50%  { opacity: 1; }
+    100% { opacity: 0; }
+  }
+
+.tab.disabled {
+    background-color: red;
+}
+
+.input_key_error {
+    width: fit-content;
+    top: -60px; /* adjust as needed */
+    /* right: -60px; */
+}
+

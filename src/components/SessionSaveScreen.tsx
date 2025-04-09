@@ -5,13 +5,10 @@ import { uploadToBucket } from '../scripts/main';
 import { lanes } from '../scripts/main';
 import { supabase } from '../scripts/supa-client.ts';
 import Lane from '../scripts/Lane';
+import { useAppContext } from './AppContextProvider.tsx';
 
-interface ISessionSaveScreenProps {
-    setSessionSaveScreen: React.Dispatch<React.SetStateAction<boolean>>;
-}
-
-const SessionSaveScreen: React.FC<ISessionSaveScreenProps> 
-= ({ setSessionSaveScreen }) => {
+const SessionSaveScreen = () => {
+    const { setSessionSaveScreen } = useAppContext();
     let sessionName = useRef<string>('');
     let save_bucket_ref = useRef<HTMLSelectElement>(null); 
     let friends_checkbox_ref = useRef<HTMLInputElement>(null); 
@@ -32,7 +29,7 @@ const SessionSaveScreen: React.FC<ISessionSaveScreenProps>
     const onSaveSessionClick = async (sessionName: string) => {
         const { data, error } = await supabase.auth.getUser();
 
-        if(!data || !data.user || !save_bucket_ref.current){
+        if(!data || !data.user){
             setSavedStatus('Error getting user info');
             return;  
         }
@@ -51,7 +48,7 @@ const SessionSaveScreen: React.FC<ISessionSaveScreenProps>
         console.log(sessionObject.lanes);
         let content = JSON.stringify(sessionObject);
 
-        await uploadToBucket(`${save_bucket_ref.current.value}_sessions`, `${data.user.id}/${sessionName}`, sessionName,content);
+        await uploadToBucket('private_sessions', `${data.user.id}/${sessionName}`, sessionName,content);
 
         if(friends_checkbox_ref.current?.checked) {
             await uploadToBucket(`friend_sessions`, `${data.user.id}/${sessionName}`, sessionName,content);
@@ -77,11 +74,11 @@ const SessionSaveScreen: React.FC<ISessionSaveScreenProps>
                 onSaveSessionClick(sessionName.current);
             }}>Save</button>
 
-            <select ref={save_bucket_ref} name="bucket" id="save_bucket">
+            {/* <select ref={save_bucket_ref} name="bucket" id="save_bucket">
                 <option value="public">public</option>
                 <option value="private">private</option>
-                {/* <option value="friend">friend</option> */}
-            </select>
+                <option value="friend">friend</option>
+            </select> */}
 
             
             <label htmlFor="visible_to_friends_check">Visible to friends:</label>

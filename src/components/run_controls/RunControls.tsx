@@ -12,35 +12,24 @@ import { lanes, onEditButtonClick, onPauseButtonClick, onPlayButtonClick, onStop
 import NotificationsButton from './NotificationsButton.tsx';
 import Lane from '../../scripts/Lane.ts';
 import { saveToLocalStorage } from '../../scripts/Utils.ts';
+import { useAppContext } from '../AppContextProvider.tsx';
 
-// TODO: See if these can be reduced
-interface IRunControlsProps {
-    showSessionLoadScreen: boolean; 
-    setSessionLoadScreen: React.Dispatch<React.SetStateAction<boolean>>;
-    
-    showSessionSaveScreen: boolean; 
-    setSessionSaveScreen: React.Dispatch<React.SetStateAction<boolean>>;
-    
-    showProfileScreen: boolean; 
-    setShowProfileScreen: React.Dispatch<React.SetStateAction<boolean>>;
-    
-    showSettingsScreen: boolean; 
-    setShowSettingsScreen: React.Dispatch<React.SetStateAction<boolean>>;
+const RunControls = () => {
+    const {
+        showStats, setShowStats,
+        stats, setStats,
+        showSessionLoadScreen, setSessionLoadScreen,
+        showSessionSaveScreen, setSessionSaveScreen,
+        showProfileScreen, setShowProfileScreen,
+        showNotificationsScreen, setShowNotificationsScreen,
+        notificationsNumber, setNotificationsNumber,
+        showSettingsScreen, setShowSettingsScreen,
+        showToolTips, setShowToolTips,
+        currentSessionName, setCurrentSessionName,
+        currentSessionAltered, setCurrentSessionAltered, 
+        setShowSessionToolTip
+    } = useAppContext(); 
 
-    showNotificationsScreen: boolean; 
-    notificationsNumber: number;
-    setShowNotificationsScreen: React.Dispatch<React.SetStateAction<boolean>>;
-    
-    setStats: React.Dispatch<React.SetStateAction<StatsObject[]>>;
-    setShowStats: React.Dispatch<React.SetStateAction<boolean>>;
-}
-
-// TODO: Refactor this name
-const RunControls: React.FC<IRunControlsProps> = 
-({ setShowStats, setSessionLoadScreen, setSessionSaveScreen, 
-    setStats, showSessionLoadScreen, showSessionSaveScreen, 
-    showProfileScreen, setShowProfileScreen, showNotificationsScreen,
-    setShowNotificationsScreen, notificationsNumber, showSettingsScreen, setShowSettingsScreen }) => {
     const [looping, setLooping] = useState(false);
     
     const [isPaused, setIsPaused] = useState(false); 
@@ -64,7 +53,7 @@ const RunControls: React.FC<IRunControlsProps> =
     let loadButtonRef = useRef<HTMLButtonElement | null>(null); 
 
     const closeAllScreens = () => {
-        setShowStats(false);
+        setShowStats(false);        
         setSessionSaveScreen(false); 
         setSessionLoadScreen(false);
         setShowProfileScreen(false); 
@@ -73,6 +62,13 @@ const RunControls: React.FC<IRunControlsProps> =
 
     const editButtonClick = () => {
         if(!isPlayingRef.current) {
+            setCurrentSessionAltered(true); 
+            saveToLocalStorage('stats', '');
+            
+            setCurrentSessionName('');
+
+            setShowSessionToolTip(false); 
+
             isEditingRef.current = !isEditingRef.current; 
             setIsEditing(isEditingRef.current);
 
@@ -206,7 +202,8 @@ const RunControls: React.FC<IRunControlsProps> =
         window.addEventListener("keyup", handleKeyUp);
         window.addEventListener('blur', () => {
             controlHeld = false
-            // pausedButtonClick(); 
+            if(isPlayingRef.current)
+                pausedButtonClick(); 
         });
         return () => { 
             window.removeEventListener("keydown", handleKeyDown); 
@@ -263,14 +260,21 @@ const RunControls: React.FC<IRunControlsProps> =
                 ref={loadButtonRef}
                 onClick={() => { 
                     closeAllScreens();
+                    if(isEditingRef.current) {
+                        editButtonClick(); 
+                    }
                     setSessionLoadScreen(!showSessionLoadScreen); 
+                    setShowToolTips(false); 
                 }}>
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-scroll-text"><path d="M15 12h-5"/><path d="M15 8h-5"/><path d="M19 17V5a2 2 0 0 0-2-2H4"/><path d="M8 21h12a2 2 0 0 0 2-2v-1a1 1 0 0 0-1-1H11a1 1 0 0 0-1 1v1a2 2 0 1 1-4 0V5a2 2 0 1 0-4 0v2a1 1 0 0 0 1 1h3"/></svg>
 
-                {/* <div className="tooltip">
+
+                { showToolTips && 
+                <div className="tooltip">
                     Click here to load a preset session
                     <div className="tooltip-arrow" />
-                </div> */}
+                </div> }
+
                 </button>
             </div>
 

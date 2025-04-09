@@ -10,7 +10,7 @@
 }
 
 .change_lane_key button {
-  border: none;
+  border: 1px solid transparent;
   padding: 0.25em;
   border-radius: 5px;
   text-decoration: none;

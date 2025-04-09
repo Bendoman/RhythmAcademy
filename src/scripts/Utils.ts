@@ -100,3 +100,5 @@ export function loadFromLocalStorage<T = any>(key: string): T | null {
 export const prohibitedKeysList = [
     ' ', 'Backspace', 'Escape', 'Control', 'Enter'
 ];
+
+

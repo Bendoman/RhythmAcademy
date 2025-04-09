@@ -13,6 +13,17 @@ const userId = (await supabase.auth.getUser()).data.user?.id as string;
 }
 
 // TODO: Merge these two and add pagination handling to friends bucket
+export async function retrievePublicBucketList() {
+    const { data, error } = await supabase.storage
+    .from('public_sessions')
+    .download(`fileManifest.json?cb=${Date.now()}`);
+
+    const list = JSON.parse(await data?.text() ?? '[]');
+    return list; 
+    console.log(list); 
+}
+
+
 export async function newnewRetrieveBucketList(bucket: string) {
     const userId = (await supabase.auth.getUser()).data.user?.id as string;
 
@@ -185,4 +196,33 @@ export async function modifyFriend(currentStatus: string, newStatus: string, sen
 
     // TODO: Handle this
     console.log(data, error);
+}
+
+
+export async function newUploadToBucket(bucket: string, filePath: string, fileName: string, content: string) {
+    const jsonBlob = new Blob([content], {type: "application/json"});
+    const jsonFile = new File([jsonBlob], fileName, {type: "application/json"});
+  
+    const {data, error} = await supabase.storage
+    .from(bucket)
+    .upload(filePath, jsonFile, {upsert: true});
+  
+    if(error) {
+      console.log('upload error ', error); 
+    } else {
+      console.log('upload succsesful from new function', data);
+    }
+  }
+
+
+export async function newRetrieveBucketData(bucket: string, path: string) {
+    const { data, error } = await supabase
+    .storage
+    .from(bucket)
+    .download(`${path}?t=${Date.now()}`);
+  
+    console.log(error); 
+  
+    if(!error)
+      return data.text().then(JSON.parse); 
 }

@@ -1,20 +1,22 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { statGraphData, statGraphData2, StatsObject } from '../scripts/types';
+import { DeviationGraphData, HitPercentageGraphData, StatsObject } from '../scripts/types';
 
 import { LineChart, Line, Tooltip, CartesianGrid, XAxis, YAxis, Legend } from 'recharts';
+import { useAppContext } from './AppContextProvider';
+import { newRetrieveBucketData, newRetrieveBucketList, newUploadToBucket } from '../scripts/SupaUtils';
+import { supabase } from '../scripts/supa-client';
+import { loadFromLocalStorage, saveToLocalStorage } from '../scripts/Utils';
 
-interface IStatsScreenProps {
-    setShowStats: React.Dispatch<React.SetStateAction<boolean>>;
-    stats: StatsObject[];
-}
-
-const StatsScreen: React.FC<IStatsScreenProps> = ({ setShowStats, stats }) => {
+const StatsScreen = () => {
+    const { setShowStats, stats, currentSessionName, currentSessionAltered, setCurrentSessionAltered } = useAppContext(); 
     const [selectedTab, setSelectedTab] = useState(-1);
 
     let notesHitRef = useRef<number>(0); 
     let wrongNotesRef = useRef<number>(0); 
     let totalNotesRef = useRef<number>(0); 
     let notesMissedRef = useRef<number>(0); 
+    let totalHitPercentageRef = useRef<number>(0); 
+    let notesPlayedRef = useRef<number>(0); 
     // let notesPlayedRef = useRef<number>(0);
 
     const [notesHit, setNotesHit] = useState(0);
@@ -22,6 +24,7 @@ const StatsScreen: React.FC<IStatsScreenProps> = ({ setShowStats, stats }) => {
     const [wrongNotes, setWrongNotes] = useState(0);
     const [notesMissed, setNotesMissed] = useState(0);
     const [notesPlayed, setNotesPlayed] = useState(0);
+    const [personalBest, setPersonalBest] = useState(false);
     const [previousBestMode, setPreviousBestMode] = useState(false); 
     
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -30,107 +33,140 @@ const StatsScreen: React.FC<IStatsScreenProps> = ({ setShowStats, stats }) => {
         setShowStats(false);
     }
     
-    // const data = [
-    //     {name: 'Page A', uv: 400, pv: 2400, amt: 2400}, 
-    //     {name: 'Page B', uv: 300, pv: 2400, amt: 2400}
-    // ];
+    let divisionRef = useRef(0);
 
 
-    const [data, setData] = useState<statGraphData[]>(); 
-    const [data2, setData2] = useState<statGraphData2[]>(); 
-    const [division, setDivision] = useState(0); 
 
-    useEffect(()=>{
+    const [data, setData] = useState<DeviationGraphData[] | HitPercentageGraphData[]>(); 
+
+
+    let previousBestStatsRef = useRef<StatsObject[]>([]);
+    const [previousBestStats, setPreviousBestStatsRef] = useState<StatsObject[]>([]);
+
+    const [currentStats, setCurrentStats] = useState<StatsObject[]>(stats);
+
+    async function saveStats() {
+        // TODO: Safeguard against non authenticated requests everywhere
+        if(!currentSessionAltered && currentSessionName) {
+            console.log('check stats for', currentSessionName);
+
+            const userId = (await supabase.auth.getUser()).data.user?.id as string;
+            
+            let content = {
+                statsObjectArray: stats, 
+                totalHitPercentage: totalHitPercentageRef.current
+            }
+
+            const data = await newRetrieveBucketData('stats', `${userId}/${currentSessionName}`);
+            if(!data) {
+                if(notesPlayedRef.current == totalNotesRef.current) {
+                    setPersonalBest(true);
+                    console.log('must upload new');
+                    newUploadToBucket('stats', `${userId}/${currentSessionName}`, currentSessionName, JSON.stringify(content)); 
+                }
+            } else {
+                console.log('must compare');
+                const data = await newRetrieveBucketData('stats', `${userId}/${currentSessionName}`);
+                console.log(data);      
+                if(data.totalHitPercentage! < content.totalHitPercentage && notesPlayedRef.current == totalNotesRef.current) {
+                    console.log('new pb, uploading')
+                    setPersonalBest(true);
+                    newUploadToBucket('stats', `${userId}/${currentSessionName}`, currentSessionName, JSON.stringify(content)); 
+                } else {
+                    previousBestStatsRef.current = data.statsObjectArray;
+                    setPreviousBestStatsRef(previousBestStatsRef.current);
+                    console.log('setting previous best', data);
+                }
+            }
+            // console.log(newRetrieveBucketData('stats', currentSessionName));
+        } else if(!currentSessionAltered) {
+            // Local storage
+            let content = {
+                statsObjectArray: stats, 
+                totalHitPercentage: totalHitPercentageRef.current
+            }
+
+            const previousStats = loadFromLocalStorage('stats'); 
+            console.log(previousStats);
+            if(!previousStats) {
+                if(notesPlayedRef.current == totalNotesRef.current) {
+                    console.log('must upload new');
+                    setPersonalBest(true);
+
+                    saveToLocalStorage('stats', JSON.stringify(content));
+                }
+            } else {
+                console.log('must compare');
+                console.log(previousStats);
+                if(previousStats.totalHitPercentage! < content.totalHitPercentage && notesPlayedRef.current == totalNotesRef.current) {
+                    setPersonalBest(true);
+                    console.log('new pb, uploading')
+                    saveToLocalStorage('stats', JSON.stringify(content));
+                } else {
+                    previousBestStatsRef.current = previousStats.statsObjectArray;
+                    console.log('setting previous best', previousStats);
+                    setPreviousBestStatsRef(previousBestStatsRef.current);
+                }
+            }
+        }
+    }
+
+
+
+    function populateStats(statsArray: StatsObject[]) {
         // Rounds to the nearest second
-        let maxTime = Math.ceil(stats[0].runTotalTime / 1000) * 1000; 
+        let maxTime = Math.ceil(statsArray[0].runTotalTime / 1000) * 1000; 
         let divisions = maxTime/1000; 
-        setDivision(divisions); 
+        divisionRef.current = divisions;
 
-        const datafoo = Array.from({ length: divisions }, (_, i) => ({
-            interval: `${(i + 1)}s`, // or `${cutoffs[i]}` if you store them
-            deviation: 0,
-            occurances: 0
-        }));
-
-        const datafoo2 = Array.from({ length: divisions }, (_, i) => ({
-            interval: `${(i + 1)}s`, // or `${cutoffs[i]}` if you store them
-            hitPercentage: 0,
-            hitNotes: 0,
-            missedNotes: 0,
-            wrongNotes: 0
-        }));
+        console.log(divisionRef.current);
         
+
         notesHitRef.current = 0; 
         wrongNotesRef.current = 0;
         totalNotesRef.current = 0; 
         notesMissedRef.current = 0;
 
-        stats.forEach(statObject => {
+        statsArray.forEach(statObject => {
             totalNotesRef.current = totalNotesRef.current + statObject.totalNotes;
             notesHitRef.current = notesHitRef.current + statObject.notesHit.length;
             wrongNotesRef.current = wrongNotesRef.current + statObject.wrongNotes.length; 
             notesMissedRef.current = notesMissedRef.current + statObject.notesMissed.length;
-            
-            console.log(datafoo[0].deviation);
-
-            // TODO: Have graph for each lane and graph for total
-            statObject.notesHit.forEach(note => {
-                const index = Math.floor(note.timeHit / 1000)
-                datafoo[index].deviation += note.timeToZone;
-                datafoo[index].occurances++;
-
-                datafoo2[index].hitNotes++;
-            });
-
-            statObject.wrongNotes.forEach(note => {
-                const index = Math.floor(note.timeHit / 1000)
-                datafoo[index].deviation += note.timeToZone;
-                datafoo[index].occurances++;
-
-                datafoo2[index].wrongNotes++;
-            });
-
-            statObject.notesMissed.forEach(note => {
-                const index = Math.floor(note.timeHit / 1000)
-                datafoo2[index].missedNotes++;
-            });
-
         });
 
-        datafoo.forEach(node => {
-            if(node.occurances > 0)
-                node.deviation = parseInt((node.deviation / node.occurances).toFixed(2));
-        });
-
-        datafoo2.forEach((node, index) => {
-            if(index > 0) {
-                node.hitNotes += datafoo2[index - 1].hitNotes;
-                node.missedNotes += datafoo2[index - 1].missedNotes;
-                node.wrongNotes += datafoo2[index - 1].wrongNotes;
-            }
-            node.hitPercentage = parseInt(((node.hitNotes / (node.missedNotes + node.wrongNotes + node.hitNotes)) * 100).toFixed(2)); 
-        });
-        console.log(datafoo2); 
-
-        setData(datafoo);
-        setData2(datafoo2);
-        
         setNotesHit(notesHitRef.current);
         setWrongNotes(wrongNotesRef.current);
         setTotalNotes(totalNotesRef.current);
         setNotesMissed(notesMissedRef.current);
         setNotesPlayed(notesHitRef.current + notesMissedRef.current)
+        notesPlayedRef.current = notesHitRef.current + notesMissedRef.current;
 
+        totalHitPercentageRef.current = parseInt(((notesHitRef.current/(notesHitRef.current + notesMissedRef.current)) * 100).toFixed(2))
+    }
+
+    useEffect(() => {
+        populateStats(currentStats); 
+    }, [currentStats])
+
+    useEffect(()=>{
         window.addEventListener('keydown', handleKeyDown);
-        return () => { window.removeEventListener('keydown', handleKeyDown); }
+        populateStats(currentStats); 
+        saveStats(); 
+        console.log(previousBestStatsRef.current);
+
+        return () => { 
+            window.removeEventListener('keydown', handleKeyDown); 
+            setCurrentSessionAltered(false); 
+        }
+
     }, []);
 
     // TODO: Change this from mean to some form of medium
-    const getAverageDeviation = () => {
+    const getAverageDeviation = (statsArray: StatsObject[]) => {
         let average = 0; 
         if(selectedTab < 0) {
             let trueLength = 0; 
-            stats.forEach(statObject => {
+            statsArray.forEach(statObject => {
                 let hits = statObject.notesHit;
                 if(hits.length > 0)
                     trueLength++; 
@@ -139,24 +175,24 @@ const StatsScreen: React.FC<IStatsScreenProps> = ({ setShowStats, stats }) => {
             
             average = average/trueLength; 
         } else {
-            let hits = stats[selectedTab].notesHit;
+            let hits = statsArray[selectedTab].notesHit;
             if (hits.length === 0) return "N/A";
             average = hits.length > 0 ? hits.reduce((sum, note) => sum + note.timeToZone, 0) / hits.length : 0; 
         }
         
-        return average > 0 ? `${Math.abs(average).toFixed(2)}ms early` : `${Math.abs(average).toFixed(2)}ms late`; 
+        return average > 0 ? `${Math.abs(average).toFixed(0)}ms early` : `${Math.abs(average).toFixed(0)}ms late`; 
     }
 
-    const getMedianDeviation = () => {
+    const getMedianDeviation = (statsArray: StatsObject[]) => {
         let allDeviations: number[] = [];
     
         if (selectedTab < 0) {
-            stats.forEach(statObject => {
+            statsArray.forEach(statObject => {
                 const deviations = statObject.notesHit.map(note => note.timeToZone);
                 allDeviations.push(...deviations);
             });
         } else {
-            allDeviations = stats[selectedTab].notesHit.map(note => note.timeToZone);
+            allDeviations = statsArray[selectedTab].notesHit.map(note => note.timeToZone);
         }
     
         if (allDeviations.length === 0) return "N/A";
@@ -172,33 +208,216 @@ const StatsScreen: React.FC<IStatsScreenProps> = ({ setShowStats, stats }) => {
         } else {
             median = allDeviations[middle];
         }
-    
-        return median > 0 ? `${Math.abs(median).toFixed(2)}ms early` : `${Math.abs(median).toFixed(2)}ms late`;
+        return median > 0 ? `${Math.abs(median).toFixed(0)}ms early` : `${Math.abs(median).toFixed(0)}ms late`;
     };
 
-    const getMeanAverageDeviation = () => {
+    const getRoundedModeDeviation = (statsArray: StatsObject[]) => {
         let deviations: number[] = [];
     
         if (selectedTab < 0) {
-            stats.forEach(statObject => {
-                const hits = statObject.notesHit.map(note => note.timeToZone);
-                deviations.push(...hits);
+            statsArray.forEach(statObject => {
+                deviations.push(...statObject.notesHit.map(note => note.timeToZone));
             });
         } else {
-            deviations = stats[selectedTab].notesHit.map(note => note.timeToZone);
+            deviations = statsArray[selectedTab].notesHit.map(note => note.timeToZone);
         }
     
         if (deviations.length === 0) return "N/A";
     
-        // First, compute the mean
-        const mean = deviations.reduce((sum, val) => sum + val, 0) / deviations.length;
+        // Round to nearest ms and build frequency map
+        const frequencyMap: Record<string, number> = {};
+        deviations.forEach(dev => {
+            const rounded = Math.round(dev).toString(); // or: dev.toFixed(0)
+            frequencyMap[rounded] = (frequencyMap[rounded] || 0) + 1;
+        });
     
-        // Then compute the average of absolute deviations from the mean
-        const meanAbsoluteDeviation = 
-            deviations.reduce((sum, val) => sum + Math.abs(val - mean), 0) / deviations.length;
+        // Find mode
+        let mode = null;
+        let maxCount = 0;
+        for (const [value, count] of Object.entries(frequencyMap)) {
+            if (count > maxCount) {
+                maxCount = count;
+                mode = Number(value);
+            }
+        }
     
-        return `${meanAbsoluteDeviation.toFixed(2)}ms`;
+        return mode !== null
+            ? `${Math.abs(mode).toFixed(0)}ms ${mode > 0 ? 'early' : 'late'}`
+            : "N/A";
     };
+    
+
+    const [currentChart, setCurrentChart] = useState(0);
+    let chartNames = [
+        'Deviation over time',
+        'Hit percentage over time',
+        'Hits and Misses over time'
+    ]
+
+    const getChart = (statsArray: StatsObject[]) => {       
+        let maxTime = Math.ceil(statsArray[0].runTotalTime / 1000) * 1000; 
+        let divisions = maxTime/1000; 
+
+        let deviationGraphData = (Array.from({ length: divisions }, (_, i) => ({
+            interval: `${(i + 1)}s`, // or `${cutoffs[i]}` if you store them
+            deviation: 0,
+            occurances: 0
+        })));
+
+        let hitPercentageGraphData = (Array.from({ length: divisions }, (_, i) => ({
+            interval: `${(i + 1)}s`, // or `${cutoffs[i]}` if you store them
+            hitPercentage: 0,
+            hitNotes: 0,
+            missedNotes: 0,
+            wrongNotes: 0
+        })))
+
+        let hitsAndMissesGraphData = (Array.from({ length: divisions }, (_, i) => ({
+            interval: `${(i + 1)}s`, // or `${cutoffs[i]}` if you store them
+            hitNotes: 0,
+            missedNotes: 0,
+            wrongNotes: 0
+        })))
+        
+
+        if(selectedTab == -1) {
+            // Create graph combining all lane data
+            statsArray.forEach(statObject => {
+                statObject.notesHit.forEach(note => {
+                    const index = Math.floor(note.timeHit / 1000)
+                    console.log(index, deviationGraphData);
+                    deviationGraphData[index].deviation += note.timeToZone;
+                    deviationGraphData[index].occurances++;
+    
+                    hitPercentageGraphData[index].hitNotes++;
+
+                    hitsAndMissesGraphData[index].hitNotes++;
+                });
+    
+                statObject.notesMissed.forEach(note => {
+                    const index = Math.floor(note.timeHit / 1000)
+                    hitPercentageGraphData[index].missedNotes++;
+                    hitsAndMissesGraphData[index].missedNotes++;
+                });
+
+                    
+                statObject.wrongNotes.forEach(note => {
+                    const index = Math.floor(note.timeHit / 1000)
+                    hitsAndMissesGraphData[index].wrongNotes++;
+                });
+            });
+        } else {
+            // Create graph only for selected lane
+            statsArray[selectedTab].notesHit.forEach(note => {
+                const index = Math.floor(note.timeHit / 1000)
+                console.log(index, deviationGraphData);
+                deviationGraphData[index].deviation += note.timeToZone;
+                deviationGraphData[index].occurances++;
+
+                hitPercentageGraphData[index].hitNotes++;
+
+                hitsAndMissesGraphData[index].hitNotes++;
+            });
+
+            statsArray[selectedTab].notesMissed.forEach(note => {
+                const index = Math.floor(note.timeHit / 1000)
+                hitPercentageGraphData[index].missedNotes++;
+                hitsAndMissesGraphData[index].missedNotes++;
+            });
+
+            statsArray[selectedTab].wrongNotes.forEach(note => {
+                const index = Math.floor(note.timeHit / 1000)
+                hitsAndMissesGraphData[index].wrongNotes++;
+            });
+        }
+
+        console.log(hitsAndMissesGraphData);
+
+        deviationGraphData.forEach(node => {
+            if(node.occurances > 0)
+                node.deviation = parseInt((node.deviation / node.occurances).toFixed(2));
+        });
+
+        hitPercentageGraphData.forEach((node, index) => {
+            if(index > 0) {
+                node.hitNotes += hitPercentageGraphData[index - 1].hitNotes;
+                node.missedNotes += hitPercentageGraphData[index - 1].missedNotes;
+                node.wrongNotes += hitPercentageGraphData[index - 1].wrongNotes;
+            }
+            node.hitPercentage = parseInt(((node.hitNotes / (node.missedNotes + node.hitNotes)) * 100).toFixed(2)); 
+        });
+
+        hitsAndMissesGraphData.forEach((node, index) => {
+            if(index > 0) {
+                node.hitNotes += hitsAndMissesGraphData[index - 1].hitNotes;
+                node.missedNotes += hitsAndMissesGraphData[index - 1].missedNotes;
+                node.wrongNotes += hitsAndMissesGraphData[index - 1].wrongNotes;
+            }
+        });
+
+        let data; 
+        let unit = ''; 
+        let linekey = ''; 
+        let axisKey = ''; 
+
+        let secondLine = false; 
+        let secondLineKey = '';
+        let thirdLineKey = '';
+        
+        let stroke = '#8884d8';
+        let secondStroke = ''
+        let thirdStroke = ''
+
+        let legend = false; 
+
+        if(currentChart == 0) {
+            data = deviationGraphData; 
+            linekey = 'deviation';
+            axisKey = 'interval';
+            unit = 'ms';
+        }
+        else if(currentChart == 1) {
+            data = hitPercentageGraphData; 
+            linekey = 'hitPercentage';
+            axisKey = 'interval';
+            unit = '%';
+        } else if(currentChart == 2) {
+            data = hitsAndMissesGraphData; 
+            secondLine = true; 
+            
+            unit = '';
+            linekey = 'hitNotes';
+            stroke = '#39d641'
+
+
+            secondLineKey = 'missedNotes'
+            secondStroke = '#b83822'
+
+
+            thirdStroke = '#dfd21f';
+            thirdLineKey = 'wrongNotes'
+
+            axisKey = 'interval';
+
+            legend = true; 
+        }
+
+        let minWidth = 400;
+
+        return (
+            <LineChart width={divisionRef.current*50 > minWidth ? divisionRef.current*50 : minWidth} height={300} data={data} margin={{ top: 5, right: 20, bottom: 5, left: -20 }}>
+            
+            <Line type="monotone" dataKey={linekey} stroke={stroke} />
+            { secondLine && <Line type="monotone" dataKey={secondLineKey} stroke={secondStroke} /> }
+            { secondLine && <Line type="monotone" dataKey={thirdLineKey} stroke={thirdStroke} /> }
+
+            <CartesianGrid stroke="#ecdfcc3b" strokeDasharray="5 5" />
+            <XAxis dataKey={axisKey}  />
+            <YAxis tickFormatter={(value) => `${value}${unit}`}/>
+            <Tooltip />
+            </LineChart>
+        )
+    }
 
     return (
     <>
@@ -218,56 +437,73 @@ const StatsScreen: React.FC<IStatsScreenProps> = ({ setShowStats, stats }) => {
                 </div>
             ))}
 
-            <div className={`tab ${previousBestMode ? 'selected' : ''}`}
-            onClick={()=>{setPreviousBestMode(!previousBestMode)}}>Previous best</div>
+            <div 
+            className={`tab ${previousBestMode ? 'selected' : ''} ${previousBestStats.length == 0 ? 'disabled' : ''}`}
+            onClick={()=>{
+                if(previousBestStats.length == 0) 
+                    return; 
+                setPreviousBestMode(!previousBestMode); 
+                setCurrentStats(!previousBestMode ? previousBestStatsRef.current : stats)
+            }
+                }>Previous best</div>
         </div>
 
         <div className="statContentContainer">
             <div className="statContent">
                 <div className="stats">
+                    { currentSessionName && currentSessionName } <br/>
+                    { `${currentSessionAltered}` } <br/>
+                    { notesPlayed < totalNotes && 'incomplete run' } <br/>
+                    { personalBest && 'PEROSNAL BERST!!!'}
+
                     {/* TODO: Change the percentages to be relative to notes played not total notes */}
-                    <p>Total notes:  {selectedTab < 0 ? totalNotes : stats[selectedTab].totalNotes}</p>
-                    <p>Notes played: {selectedTab < 0 ? notesPlayed : stats[selectedTab].notesHit.length + stats[selectedTab].notesMissed.length}</p><br/>
+                    <p>Total notes:  {selectedTab < 0 ? totalNotes : currentStats[selectedTab].totalNotes}</p>
+                    <p>Notes played: {selectedTab < 0 ? notesPlayed : currentStats[selectedTab].notesHit.length + currentStats[selectedTab].notesMissed.length}</p><br/>
 
-                    <p>Notes hit:    {selectedTab < 0 ? notesHit : stats[selectedTab].notesHit.length}</p>
+                    <p>Notes hit:    {selectedTab < 0 ? notesHit : currentStats[selectedTab].notesHit.length}</p>
                     <p>Hit percentage:    {selectedTab < 0 ? ((notesHit/notesPlayed) * 100).toFixed(2) : 
-                    ((stats[selectedTab].notesHit.length/
-                    (stats[selectedTab].notesMissed.length + stats[selectedTab].notesHit.length))*100).toFixed(2)}
+                    ((currentStats[selectedTab].notesHit.length/
+                    (currentStats[selectedTab].notesMissed.length + currentStats[selectedTab].notesHit.length))*100).toFixed(2)}
                     %</p><br/>
 
-                    <p>Notes missed: {selectedTab < 0 ? notesMissed : stats[selectedTab].notesMissed.length}</p>
+                    <p>Notes missed: {selectedTab < 0 ? notesMissed : currentStats[selectedTab].notesMissed.length}</p>
                     <p>Missed percentage: {selectedTab < 0 ? ((notesMissed/notesPlayed) * 100).toFixed(2) : 
-                    ((stats[selectedTab].notesMissed.length/(stats[selectedTab].notesMissed.length + stats[selectedTab].notesHit.length))*100).toFixed(2)}
+                    ((currentStats[selectedTab].notesMissed.length/(currentStats[selectedTab].notesMissed.length + currentStats[selectedTab].notesHit.length))*100).toFixed(2)}
                     %</p><br/>
 
-                    <p>Wrong notes played:  {selectedTab < 0 ? wrongNotes : stats[selectedTab].wrongNotes.length}</p><br/>
+                    <p>Wrong notes played:  {selectedTab < 0 ? wrongNotes : currentStats[selectedTab].wrongNotes.length}</p><br/>
 
-                    <p>Hits mean deviation: { getAverageDeviation() }</p>
-                    <p>Hits median deviation: {  getMedianDeviation() }</p>
-                    <p>Hits mean average deviation: {  getMeanAverageDeviation() }</p>
+                    <p>Mean hit deviation: { getAverageDeviation(currentStats) }</p>
+                    <p>Median hit deviation: {  getMedianDeviation(currentStats) }</p>
+                    <p>Mode hit deviation: {  getRoundedModeDeviation(currentStats) }</p>
                 </div>
+
+
+                    {/* Save stags to bucket. if loaded session, globval session name. save to that. if edit mode is enteredc. session name is set to null. if session name is null. save to local. if eddit mode is opened. set local to null. set to null on lane additions too. compelte and incompelte runs for when played notes less than total notes. only save on complete runs. complete named runs. profile screen shows average hit% for complete runs of preset sessions. daily challenge screen. same rules as for other preset sessions. have tooltip telling you that making additions will disqualify stats. share link for preset sessions  */}
 
                 <div className="graph_container">
-                <div className="graph">
-                    <LineChart width={division*50} height={300} data={data} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
-                        <Line type="monotone" dataKey="deviation" stroke="#8884d8" />
-                        <CartesianGrid stroke="#ecdfcc3b" strokeDasharray="5 5" />
-                        <XAxis dataKey="interval" />
-                        <YAxis tickFormatter={(value) => `${value}ms`}/>
-                        <Tooltip />
-                    </LineChart>
+                        
+                    <div className="graph">
+                        { divisionRef.current > 0 && getChart(currentStats) }
+                    </div>
 
-                    <LineChart width={division*50} height={300} data={data2} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
-                        <Line type="monotone" dataKey="hitPercentage" stroke="#8884d8" />
-                        <CartesianGrid stroke="#ecdfcc3b" strokeDasharray="5 5" />
-                        <XAxis dataKey="interval" />
-                        <YAxis tickFormatter={(value) => `${value}%`}/>
-                        <Tooltip />
-                    </LineChart>
-                </div>
-
-
-                <p>deviation over time</p>
+                    <div className="graphControls">
+                        <button
+                        disabled={currentChart == 0} 
+                        onClick={() => {
+                            setCurrentChart(currentChart-1);
+                        }}>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="lucide lucide-arrow-left-icon lucide-arrow-left"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
+                        </button>
+                        <p>{chartNames[currentChart]}</p>
+                        <button 
+                        disabled={currentChart == chartNames.length - 1}
+                        onClick={() => {
+                            setCurrentChart(currentChart+1);
+                        }}>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="lucide lucide-arrow-right-icon lucide-arrow-right"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                        </button>
+                    </div>
                 </div>
             </div>    
         </div>

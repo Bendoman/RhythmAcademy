@@ -287,11 +287,16 @@
     border: none;
     padding: 0.25em; 
     border-radius: 10px;
+    position: relative;
   }
   
   .edit_mode_button.selected {
     background-color: #131B23;
     color: #ECDFCC;
+  }
+
+  #edit_mode_button {
+    position: relative;
   }
   
   /* .save_pattern { display: none; }
@@ -407,6 +412,7 @@
 }
 
 .tabs {
+  user-select: none;
   padding-top: 2em;
   padding-left: 1em;
   align-items: center;

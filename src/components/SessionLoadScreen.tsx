@@ -8,14 +8,12 @@ import ChangeLaneKey from './run_controls/ChangeLaneKey';
 
 import { supabase } from '../scripts/supa-client';
 import { createRoot } from 'react-dom/client';
-import { newnewRetrieveBucketList, newRetrieveBucketList, retrieveFriendBucketList } from '../scripts/SupaUtils';
+import { newnewRetrieveBucketList, newRetrieveBucketList, retrieveFriendBucketList, retrievePublicBucketList } from '../scripts/SupaUtils';
 import { deleteLane, drawSingleLane, lanes, onAddLaneButtonClick, remapLane, retrieveBucketData, retrieveBucketList, saveCurrentSessionLocally, setLongestLane, updateAllLaneSizes } from '../scripts/main'; // TODO: Refactor this name
 import { FileObject } from '@supabase/storage-js';
 import { LoadedLanePreview } from '../scripts/types';
-
-interface ISessionLoadScreenProps {
-    setSessionLoadScreen: React.Dispatch<React.SetStateAction<boolean>>;
-}
+import { useAppContext } from './AppContextProvider';
+import { saveToLocalStorage } from '../scripts/Utils';
 
 export const createNewLane = (inputKey: string) => {
     const canvasContainer = onAddLaneButtonClick(inputKey); 
@@ -45,8 +43,9 @@ export const createNewLane = (inputKey: string) => {
     canvasContainer.appendChild(laneContent);
 }
 
-const SessionLoadScreen: React.FC<ISessionLoadScreenProps> 
-= ({ setSessionLoadScreen }) => {
+const SessionLoadScreen = () => {
+    const { setSessionLoadScreen, currentSessionName, setCurrentSessionName, setShowSessionToolTip } = useAppContext(); 
+    
     let sessionName = useRef<string>('');
     const [loadStatus, setLoadStatus] = useState(''); 
     const loadSessionSelectRef = useRef<HTMLSelectElement | null>(null);
@@ -66,10 +65,10 @@ const SessionLoadScreen: React.FC<ISessionLoadScreenProps>
         return () => { window.removeEventListener('keydown', handleKeyDown); }
     }, []);
     
-    const onLoadSessionClick = async (sessionName: string) => {
+    const onLoadSessionClick = async (folderName: string, sessionName: string) => {
         const { data, error } = await supabase.auth.getUser();
 
-        if(!data.user) {
+        if(folderName != 'public' && !data.user) {
             setLoadStatus('Error retrieving user');
             return; 
         }
@@ -84,7 +83,10 @@ const SessionLoadScreen: React.FC<ISessionLoadScreenProps>
         }
         console.log(sessionName);
 
-        let sessionData = await retrieveBucketData(`${selectedTab}_sessions`, `${sessionName}`);
+        let sessionData = await retrieveBucketData(`${selectedTab}_sessions`, 
+            selectedTab == 'public' ? sessionName : `${folderName}/${sessionName}`);
+
+
         let newLanes = sessionData.lanes as Lane[];
         
         newLanes.forEach(newLane => {
@@ -95,12 +97,19 @@ const SessionLoadScreen: React.FC<ISessionLoadScreenProps>
         // setLongestLane();
         saveCurrentSessionLocally(); 
         setLoadStatus(`Session: ${sessionName} loaded!`);
+
+        //TODO:  Combine id with name in here instead of splitting after
+        setCurrentSessionName(sessionName);
+        saveToLocalStorage('stats', '');
+        
+
+        setShowSessionToolTip(true); 
     }
 
     const [expanded, setExpanded] = useState<{ [key: string ]: boolean }>({}); 
     const [hoveredSession, setHoveredSession] = useState<LoadedLanePreview | null>(null); 
     
-    const changeHoveredSession = async(sessionName?: string) => {
+    const changeHoveredSession = async(folderName?: string, sessionName?: string) => {
         if(!sessionName) {
             console.log('here')
             setHoveredSession(null); 
@@ -112,7 +121,12 @@ const SessionLoadScreen: React.FC<ISessionLoadScreenProps>
         let numberOfLanes = 0; 
         let timeSignatures: number[][] = [];
         
-        let sessionData = await retrieveBucketData(`${selectedTab}_sessions`, sessionName);
+        let sessionData;
+        if(folderName == 'public')
+            sessionData = await retrieveBucketData(`${selectedTab}_sessions`, sessionName);
+        else 
+            sessionData = await retrieveBucketData(`${selectedTab}_sessions`, `${folderName}/${sessionName}`);
+
         let sessionLanes = sessionData.lanes as Lane[];
         sessionLanes.forEach(lane => {
             numberOfLanes++;
@@ -138,29 +152,33 @@ const SessionLoadScreen: React.FC<ISessionLoadScreenProps>
 
         if(selectedTab == 'friend')
             data = await retrieveFriendBucketList(`${selectedTab}_sessions`);
+        else if(selectedTab == 'public')
+            data = await retrievePublicBucketList();
         else
             data = await newnewRetrieveBucketList(`${selectedTab}_sessions`);
 
         let loadedSessions: [string,string][] = []; 
+
+
+        
         if(data) {
+            console.log(selectedTab, data);
             for(const folder of data) {
-                for(const session of folder.data) {
-                    // console.log(session, folder);             
-                    loadedSessions.push([folder.ownerid, session.name]);
+                console.log(folder);
+                if(folder.data) {
+                    for(const session of folder.data) {
+                        // console.log(session, folder);             
+                        loadedSessions.push([folder.ownerid, session.name]);
+                    }
+                } else {
+                    loadedSessions.push(['public', folder]);
                 }
             }
         }
 
+
         if(loadedSessions)
             setLoadedSessions(loadedSessions);
-        
-
-        // data?.forEach(folder => {
-        //     folder?.data.forEach(session => {
-        //         // sessionSelectInnerHTML += `<option value="${folder.ownerid}/${session.name}">${session.name}</option>`;
-        //     });
-        // });
-        // loadSessionSelectRef.current.innerHTML = sessionSelectInnerHTML; 
     }
 
     useEffect(() => {
@@ -216,9 +234,7 @@ const SessionLoadScreen: React.FC<ISessionLoadScreenProps>
                 // onMouseLeave={() => {
                 //     changeHoveredSession();
                 // }}
-                onClick={() => {onLoadSessionClick(`${session[0]}/${session[1]}`)}}
-                >
-
+                onClick={() => {onLoadSessionClick(session[0], session[1])}}>
                 <p>{session[1]}</p>
                 { hoveredSession && hoveredSession.sessionName === `${session[0]}/${session[1]}` && 
                 <>
@@ -228,7 +244,7 @@ const SessionLoadScreen: React.FC<ISessionLoadScreenProps>
                     <button onClick={(e) => {e.stopPropagation(); changeHoveredSession();}}>Hide info</button>
                 </>}
 
-                { <button onClick={(e) => {e.stopPropagation(); changeHoveredSession(`${session[0]}/${session[1]}`);}}>Info</button>}
+                { <button onClick={(e) => {e.stopPropagation(); changeHoveredSession(session[0], session[1]);}}>Info</button>}
                 </div>
            })}
            

@@ -27,6 +27,8 @@ export default class Note {
     public resetNote() { 
         this.currentZone = ZONE_NAMES.EARLY_ZONE; 
         this.hitStatus = 'unhit';
+        this.animationHeight = 0; 
+        this.animationColour = ''; 
     }
 
     public getY(noteGap: number, innerSubdivision: number, laneStartY: number) {

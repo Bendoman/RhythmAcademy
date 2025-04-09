@@ -128,6 +128,11 @@ values
 insert into storage.buckets
   (id, name, public)
 values
+  ('stats', 'stats', false);
+
+insert into storage.buckets
+  (id, name, public)
+values
   ('private_sessions', 'private_sessions', false);
 
 insert into storage.buckets
@@ -137,6 +142,15 @@ values
 
 -- RLS 
 -- Patterns bucket rules 
+create policy "Allow authenticated uploads for stats bucket"
+on storage.objects
+for insert
+to authenticated
+with check (
+  bucket_id = 'stats' and
+  (storage.foldername(name))[1] = (select auth.uid()::text)
+);
+
 create policy "Allow authenticated uploads for patterns bucket"
 on storage.objects
 for insert
@@ -155,14 +169,14 @@ with check (
   (storage.foldername(name))[1] = (select auth.uid()::text)
 );
 
-create policy "Allow authenticated uploads for public sessions bucket"
-on storage.objects
-for insert
-to authenticated
-with check (
-  bucket_id = 'public_sessions' and
-  (storage.foldername(name))[1] = (select auth.uid()::text)
-);
+-- create policy "Allow authenticated uploads for public sessions bucket"
+-- on storage.objects
+-- for insert
+-- to authenticated
+-- with check (
+--   bucket_id = 'public_sessions' and
+--   (storage.foldername(name))[1] = (select auth.uid()::text)
+-- );
 
 create policy "Allow authenticated uploads for private sessions bucket"
 on storage.objects
