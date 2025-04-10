@@ -1,5 +1,5 @@
 import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react'
-import LaneEditingPanel from '../LaneEditingPanel.tsx'
+import LaneEditingPanel from '../lane_editing/LaneEditingPanel.tsx'
 import { lanes, onAddLaneButtonClick, saveCurrentSessionLocally } from '../../scripts/main.ts'
 import { createRoot } from 'react-dom/client';
 import ChangeLaneKey from './ChangeLaneKey.tsx';
@@ -46,7 +46,7 @@ const AddLaneButton = forwardRef<HTMLButtonElement>((props, ref) => {
     console.log(event); 
   })
 
-  const { currentSessionAltered, setCurrentSessionAltered, showSessionToolTip, setCurrentSessionName } = useAppContext(); 
+  const { setShowLogo, setCurrentSessionAltered, showSessionToolTip, setCurrentSessionName } = useAppContext(); 
 
   const handleOnClick = () => {
     setCurrentSessionAltered(true); 
@@ -76,17 +76,22 @@ const AddLaneButton = forwardRef<HTMLButtonElement>((props, ref) => {
     const contentRoot = createRoot(laneContent);
 
     const laneCanvas = canvasContainer.querySelector('canvas') as HTMLCanvasElement
+    
+    root.render(
+      
+    <LaneEditingPanel canvas={laneCanvas} setShowLogo={setShowLogo}/>
+  );
 
-    root.render(<LaneEditingPanel canvas={laneCanvas}/>);
 
     // TODO: Refactor name
     laneContent.classList.add('lane_content');
     laneContent.innerText = "testing";
     contentRoot.render(<ChangeLaneKey canvas={laneCanvas}/>)
-  
+    
     canvasContainer.appendChild(laneContent);
     saveCurrentSessionLocally();
-
+    
+    setShowLogo(false);
     setShowToolTips(false); 
   }
 

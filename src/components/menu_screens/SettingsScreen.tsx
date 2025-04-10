@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react'
-import './styles/session_screen.css';// TODO: Refactor this name
-import { useAppContext } from './AppContextProvider';
+import '../styles/session_screen.css';// TODO: Refactor this name
+import '../styles/menu_screens.css';
+
+import { useAppContext } from '../AppContextProvider';
 
 
 const SettingsScreen = () => {
@@ -26,11 +28,11 @@ const SettingsScreen = () => {
 
             <div className="tabs">
                 <div className={`tab ${selectedTab == 'public' ? 'selected' : ''}`} 
-                onClick={()=>{setSelectedTab('public')}}><p>Public</p></div>
-                <div className={`tab ${selectedTab == 'private' ? 'selected' : ''}`} 
+                onClick={()=>{setSelectedTab('public')}}><p>Coming soon</p></div>
+                {/* <div className={`tab ${selectedTab == 'private' ? 'selected' : ''}`} 
                 onClick={()=>{setSelectedTab('private')}}>Private</div>
                 <div className={`tab ${selectedTab == 'friend' ? 'selected' : ''}`} 
-                onClick={()=>{setSelectedTab('friend')}}>Friend's</div>
+                onClick={()=>{setSelectedTab('friend')}}>Friend's</div> */}
             </div>
         </div>
     </>)

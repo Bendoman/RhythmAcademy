@@ -12,16 +12,18 @@
 
     border-radius: 15px;
     border: 3px solid #ECDFCC;
-    background-color: var(--site_background);
+    background-color: var(--site_secondary);
   
     transform: translateX(-50%);
   
     z-index: 1;
   
-    color: var(--lane_background);   
+    color: var(--site_primary);   
 
     display: flex;
     flex-direction: column;
+
+    overflow: auto;
 }
 
 .save_content, .load_content, .notifications_content, .profile_content {
@@ -42,9 +44,7 @@
     flex-shrink: 1;
 }
 
-.session_load_screen .tab {
-    padding: 0 0.25em 0 0.25em;
-}
+
 
 #notifications_button {
     position: relative;
@@ -113,38 +113,105 @@
 }
 
 
-.load_content {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: .5em;
-    cursor: pointer;
-    user-select: none;
 
-    overflow: auto;
-}
 
 .loaded_session_info {
     padding: .25em; 
     border-radius: 5px;
     border: 1px solid #ECDFCC;
     display: flex;
+    position: relative;
+
+    gap: .25em;
+    flex-direction: column;
+
+    /* overflow-x: auto; */
+
 }
+
+
+.loaded_session_info.nofolders {
+    width: 100%;
+}
+
+.loaded_session_info button {
+    max-width: 5em;
+}
+
 
 .loaded_session_info:hover {
-    background-color: red;
+    background-color: #ecdfcc56;
+    color: #ECDFCC;
 
 }
-
 
 .drop_down:hover {
-    background-color: red;
+    background-color: #ECDFCC;
+    color: #131B23;
+    
+}
+
+.drop_down {
+    background-color: #131B23;
+
+
+    cursor: pointer;
+    border-bottom: 1px solid #ECDFCC;
+    padding: .25em;
+    width: 100%;
+
+    border: 1px solid #ecdfcc2f;
+
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+
+}
+
+.drop_down_container {
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+
+    width: 100%;
+    background-color: #ecdfcc2d;
 }
 
 
-.drop_down {
-    cursor: pointer;
-    border: 1px solid #ECDFCC;
-    padding: .25em;
+.load_content {
 
+    border-radius: 0;
+    border-bottom-left-radius: 10px;
+    border-bottom-right-radius: 10px;
+
+    display: flex;
+    flex-direction: column;
+    align-items: safe center;
+    
+    /* justify-self: center; */
+    position: relative;
+    left: 50%;
+    transform: translateX(-50%);
+
+
+    gap: .5em;
+    cursor: pointer;
+    user-select: none;
+
+    overflow: auto;
+    
+}
+
+.hoveredInfo {
+    display: flex;
+    /* justify-content: space-between; */
+
+    gap: 2em;
+    
+}
+
+.info_button_container {
+
+}
+
+#save_session_button {
+    padding: .25em;
 }

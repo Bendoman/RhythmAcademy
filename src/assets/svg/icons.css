@@ -1,0 +1,29 @@
+@import '../../components/styles/variables.css';
+
+svg {
+    display: flex;
+}
+
+.questionContainer:hover {
+    border-radius: 10px;
+    background-color: var(--site_secondary_dim);
+}
+
+.questionTooltip {
+    z-index: 100;
+    padding: .5em;
+    border-radius: 10px;
+    
+    position: fixed;
+    background-color: var(--site_secondary);
+    border: 1px solid var(--site_primary);
+
+    transform: translateX(-45%);
+}
+
+.questionTooltip p {
+    max-width: 10em;
+    text-align: center;
+}
+
+

@@ -1,0 +1,97 @@
+@import './variables.css';
+
+.profile_screen button {
+    border: none;
+    padding: .25em;
+    font-size: 1em;
+    text-decoration: none;
+
+    color: var(--site_secondary);
+    background-color: var(--site_primary_dim);
+
+    border-radius: 5px;
+}
+
+.profile_screen button:hover {
+    cursor: pointer;
+}
+
+.profile_screen button:hover, .button_container .selected {
+    color: var(--site_secondary);
+    background-color: var(--site_primary);
+}
+
+.session_info {
+    gap: .5em;
+    display: flex;
+    align-items: safe center;
+}
+
+.authentication_form_container {
+    padding: .5em;     
+    border-radius: 15px;
+
+    border: 1px solid var(--site_primary);
+}
+
+.button_container {
+    gap: .5em;
+    display: flex;
+    justify-content: center;
+
+    border-bottom: 1px solid var(--site_primary);
+}
+
+.button_container button {    
+    border-top-left-radius: 5px;
+    border-top-left-radius: 5px;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.auth-form-label {
+  color: var(--site_primary) !important;
+}
+
+.auth-form-input {
+    color: var(--site_primary) !important;
+}
+
+.auth-form-button {
+    font-size: 1em !important;
+    font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif !important;
+    
+    color: var(--site_secondary) !important;
+    background-color: var(--site_primary) !important;
+
+    border: 2px solid transparent !important;  
+}
+
+.auth-form-button:hover {
+    color: var(--site_primary) !important;
+    background-color: var(--site_primary_very_dim) !important;
+    
+    border: 2px solid var(--site_primary) !important;  
+}
+
+.friends_tab {
+    display: flex;
+    flex-direction: column;
+}
+
+.request_form_container {
+    margin-bottom: 1em;
+    padding-bottom: 1em;
+    border-bottom: 1px solid var(--site_primary);
+}
+
+.request_form_container form {
+    display: flex;
+    flex-direction: column;
+    gap: .25em;
+}
+
+.form_submit {
+    display: flex;
+    gap: .25em;
+}

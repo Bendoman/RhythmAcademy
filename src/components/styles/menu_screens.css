@@ -1,0 +1,28 @@
+@import './variables.css';
+
+.tab {
+    min-width: 3em;
+    text-align: center;
+
+    padding: 0 0.25em 0 0.25em;
+    border-top-left-radius: 3px;
+    border-top-right-radius: 12px;
+    
+    color: var(--site_secondary);
+    background-color: var(--site_primary_dim);
+}
+
+.tab.disabled {
+    color: var(--site_primary_dim);
+    background-color: var(--site_primary_very_dim);
+}
+
+.tab.selected, .tab:not(.disabled):hover {
+    cursor: pointer;
+    color: var(--site_secondary);
+    background-color: var(--site_primary);
+}
+
+.session_load_screen .tab {
+    padding: 0 0.25em 0 0.25em;
+}

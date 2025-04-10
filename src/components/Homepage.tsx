@@ -1,38 +1,41 @@
-// React
-import React, { useEffect, useState, useContext, useRef } from 'react';
-// Supabase
-import { Auth } from '@supabase/auth-ui-react';
+// #region ( Imports )
+import { useEffect, useContext } from 'react';
 import { supabase } from '../scripts/supa-client.ts';
-import { ThemeSupa } from "@supabase/auth-ui-shared";
 // Custom components
-
-// Custom scripts and styles
-import './styles/homepage.css';
-import './styles/oldHomepage.css';
-
 import Lane from '../scripts/Lane.ts';
 import { UserContext } from "./App.tsx";
-import StatsScreen from './StatsScreen.tsx';
-import ProfileScreen from './ProfileScreen.tsx';
-import { StatsObject } from '../scripts/types.ts';
-import SessionSaveScreen from './SessionSaveScreen.tsx';
-import RunControls from './run_controls/RunControls.tsx';
-import NotificationsScreen from './NotificationsScreen.tsx';
-import SessionLoadScreen, { createNewLane } from './SessionLoadScreen.tsx';
-import { loadFromLocalStorage, saveToLocalStorage } from '../scripts/Utils.ts';
-import { startLoop, handleMIDIMessage, lanes, remapLane, setLongestLane } from '../scripts/main.ts';
-import { retrieveFriendsList, sendFriendRequest } from '../scripts/SupaUtils.ts';
-import SettingsScreen from './SettingsScreen.tsx';
 import { useAppContext } from './AppContextProvider.tsx';
+import StatsScreen from './menu_screens/StatsScreen.tsx';
+import RunControls from './run_controls/RunControls.tsx';
+import ProfileScreen from './menu_screens/ProfileScreen.tsx';
+import SettingsScreen from './menu_screens/SettingsScreen.tsx';
+import SessionSaveScreen from './menu_screens/SessionSaveScreen.tsx';
+import NotificationsScreen from './menu_screens/NotificationsScreen.tsx';
+import SessionLoadScreen, { createNewLane } from './menu_screens/SessionLoadScreen.tsx';
+// Custom scripts and styles
+import './styles/homepage.css';
+import './styles/variables.css';
+import './styles/oldHomepage.css';
+import { loadFromLocalStorage, saveToLocalStorage } from '../scripts/Utils.ts';
+import { retrieveFriendsList } from '../scripts/SupaUtils.ts';
+import { startLoop, handleMIDIMessage, lanes, remapLane } from '../scripts/main.ts';
+import Logo from '../assets/svg/Logo.tsx';
+// #endregion
 
 export let midiAccess: MIDIAccess; 
 const Homepage = () => {
-    const processMidiMessage = (input: MIDIMessageEvent) => {
-        handleMIDIMessage(input);
-    }
+    const { session } = useContext(UserContext);
+    const { 
+        showStats, showSessionLoadScreen, showSessionSaveScreen, 
+        setShowToolTips, setPendingFriendRequests, setAcceptedFriends,
+        showSettingsScreen, showProfileScreen, showNotificationsScreen, 
+        setNotificationsNumber, showLogo, setShowLogo, isEditingRef
+    } = useAppContext();
+   
+    // #region ( MIDI Setup )
+    const processMidiMessage = (input: MIDIMessageEvent) => { handleMIDIMessage(input) }
 
     const updateDevices = (event: MIDIConnectionEvent) => { 
-        // TODO: Implement hotswapping of MIDI devices here
         if(event.port?.state == 'connected' && event.port.type === 'input') {
             const input = midiAccess.inputs.get(event.port.id);
             if(input) {
@@ -40,7 +43,7 @@ const Homepage = () => {
             }
         }
     } 
-    
+
     const midi_connection_success = (access: MIDIAccess) => {
         midiAccess = access; 
         midiAccess.onstatechange = updateDevices;
@@ -49,12 +52,13 @@ const Homepage = () => {
         inputs.forEach(input => { input.addEventListener('midimessage', processMidiMessage); });
     }
 
-    const midi_connection_failure = (error: Error) => {
-        console.error("MIDI Connection failure: ", error);
-    }
+    const midi_connection_failure = (error: Error) => { console.error("MIDI Connection failure: ", error) }
+    // #endregion
 
+    // #region ( Friend Handling)
     const fetchFriendsList = async (status: string) => {
         let data = await retrieveFriendsList(status);
+
         if(data) {
             let requestInfo: string[][] = []; 
             data.forEach(request => {
@@ -69,211 +73,83 @@ const Homepage = () => {
             }
         }
     }
+    // #endregion
 
-
-
+    // #region ( useEffects )
     useEffect(() => {
-        // TODO: UPDATE THIS SO THAT ACCOUNT CHANGES MID SESSION ARE HANDLED
+        // Runs on component mount
         startLoop();
 
+        setShowLogo(true); 
         const navEntries = performance.getEntriesByType("navigation") as PerformanceNavigationTiming[];
         if (navEntries.length > 0 && navEntries[0].type === "reload") {
             // Page reloaded
-            // loadSessionFromLocalStorage();
             let current_session: {lanes: Lane[]} | null = loadFromLocalStorage<{lanes: Lane[]}>('current_session');
             if(current_session) {
+                // Loads current session from local storage if it is present
                 current_session.lanes.forEach(lane => {
-                    createNewLane(lane.inputKey);
+                    createNewLane(lane.inputKey, setShowLogo);
                     remapLane(lanes[lanes.length - 1], lane);
-                    // setLongestLane();
+                    setShowLogo(false); 
                 });
             }
             setShowToolTips(false);
         } else {
-            // Overwriting current_session on startup
-            saveToLocalStorage('current_session', '');
-            saveToLocalStorage('stats', '');
+            // Overwriting current_session on first startup
             setShowToolTips(true);
+            saveToLocalStorage('stats', '');
+            saveToLocalStorage('current_session', '');
         }
         
-        // Reload the page on auth state change 
-        const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
-            if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
-                // TODO: See if reloading is necessary at all
-                // window.location.reload(); 
-            } 
-            
+        const { data: listener } = supabase.auth.onAuthStateChange((event) => {
+            if(isEditingRef.current) {
+                // Ensures that saved pattern and lane data is repopulated correctly after auth change
+                // window.location.reload();
+            }
+
             if(event === 'SIGNED_OUT') {
+                setAcceptedFriends([]);
                 setNotificationsNumber(0); 
                 setPendingFriendRequests([]);
-                setAcceptedFriends([]);
             }
         });   
 
-        if(navigator.requestMIDIAccess) // Ensures that MIDI access is enabled in the current browser
+        // Ensures that MIDI access is enabled in the current browser
+        if(navigator.requestMIDIAccess) {
             navigator.requestMIDIAccess({ sysex: false }).then(midi_connection_success, midi_connection_failure);
-        else
+        } else {
             console.log("MIDI Access not supported on current browser");
+        }
+
+        // Detects when lane_container is empty
+
 
         return () => { listener.subscription.unsubscribe(); };
     }, []);
 
-    const { session } = useContext(UserContext);
     useEffect(() => {
         if(session) {
+            // Rerequests friends list on session change
             fetchFriendsList('pending');
             fetchFriendsList('accepted');
             const channel = supabase
             .channel('incoming_friend_requests')
-            .on(
-                'postgres_changes',
-                {
-                    event: '*',
-                    schema: 'public',
-                    table: 'friend_requests',
-                    filter: `receiver_id=eq.${session?.user.id}`, // listen only to requests for this user
-                },
-                () => { fetchFriendsList('pending'); fetchFriendsList('accepted'); }
-            )
-            .subscribe();
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'friend_requests',
+                filter: `receiver_id=eq.${session?.user.id}`, // listen only to requests for this user
+            }, () => { fetchFriendsList('pending'); fetchFriendsList('accepted'); }).subscribe();
             return () => { supabase.removeChannel(channel); };
         }
-    }, [session])
-
-    const friendEmailRef = useRef<HTMLInputElement | null>(null);
-
-    const [signupDisplay, setSignupDisplay] = useState('none'); 
-    const [loginDisplay, setLoginDisplay] = useState('none'); 
-
-
-
-
-    // const [showStats, setShowStats] = useState(false); 
-    // const [stats, setStats] = useState<StatsObject[]>([]);
-    // const [showSessionLoadScreen, setSessionLoadScreen] = useState(false); 
-    // const [showSessionSaveScreen, setSessionSaveScreen] = useState(false); 
-    // const [showSettingsScreen, setShowSettingsScreen] = useState(false); 
-    // const [showProfileScreen, setShowProfileScreen] = useState(false);
-    // const [showNotificationsScreen, setShowNotificationsScreen] = useState(false);
-    // const [notificationsNumber, setNotificationsNumber] = useState(0);
-    // const [friendRequestStatus, setFriendRequestStatus] = useState(''); 
-    // const [showToolTips, setShowToolTips] = useState(false);
-
-    const {
-        showStats, setShowStats,
-        stats, setStats,
-        showSessionLoadScreen, setSessionLoadScreen,
-        showSessionSaveScreen, setSessionSaveScreen,
-        showProfileScreen, setShowProfileScreen,
-        showNotificationsScreen, setShowNotificationsScreen,
-        notificationsNumber, setNotificationsNumber,
-        showSettingsScreen, setShowSettingsScreen,
-        friendRequestStatus, setFriendRequestStatus,
-        showToolTips, setShowToolTips,
-        pendingFriendRequests, setPendingFriendRequests,
-        acceptedFriends, setAcceptedFriends
-      } = useAppContext();
-
-    async function requestFriend() {
-        if(friendEmailRef.current && friendEmailRef.current.value != '') {
-            console.log(friendRequestStatus)
-            let status = await sendFriendRequest(friendEmailRef.current.value);
-            setFriendRequestStatus(status); 
-        } else {
-            setFriendRequestStatus('No email provided');
-        }
-    }
+    }, [session]);
+    // #endregion
 
     return (<>
-        { session?.user &&
-        <div className='session_info'>
-            <p>User {session?.user.email} logged in</p>
-            <p>User ID = {session?.user.id}</p>
-            <button onClick={() => { supabase.auth.signOut(); }}>Signout</button>
-
-            <form onSubmit={(e) => {
-                e.preventDefault();
-                requestFriend();
-            }}>
-                <label htmlFor="friend_email_input">Friend request</label>
-                <input ref={friendEmailRef} id="friend_email_input" type="text" placeholder='Email'/>
-                <button type='submit'>send</button>
-                <p>{friendRequestStatus && friendRequestStatus}</p>
-            </form>
-        </div> }
-
-        { !session?.user &&
-        <div className='session_info'>
-            {/* <Link to='login'>Login</Link> */}
-            <a onClick={() => {
-                setLoginDisplay(loginDisplay == 'none' ? 'block' : 'none');  
-                if(signupDisplay == 'block')
-                    setSignupDisplay('none');             
-            }}>Login</a>
-
-            {/* <Link to='signup'>Signup</Link> */}
-            <a onClick={() => {
-                setSignupDisplay(signupDisplay == 'none' ? 'block' : 'none');     
-                if(loginDisplay == 'block')
-                    setLoginDisplay('none');          
-                }}>Signup</a>
-            <div className="signup" style={{display: signupDisplay}}>
-            <Auth
-                supabaseClient={supabase}
-                appearance={{
-                    theme: ThemeSupa,
-                    className: {
-                    container: "signup-form-container",
-                    label: "signup-form-label",
-                    button: "signup-form-button",
-                    input: "signup-form-input",
-                    },
-                }}
-                providers={[]}
-                view={'sign_up'}
-                showLinks={false}
-            />
-          </div>
-
-          <div className="login" style={{display: loginDisplay}}>
-                <Auth
-                    supabaseClient={supabase}
-                    appearance={{
-                        theme: ThemeSupa,
-                        className: {
-                        container: "signup-form-container",
-                        label: "signup-form-label",
-                        button: "signup-form-button",
-                        input: "signup-form-input",
-                        },
-                        variables: {
-                        default: {
-                            colors: {
-                            brand: 'blue',
-                            brandAccent: 'var(--primary-light)',
-                            },
-                        },
-                        },
-                    }}
-                    providers={[]}
-                    view={'sign_in'}
-                    showLinks={false}
-                />
-            </div>  
-        </div> }
-        
-        <div id="debug_text">
+        {/* <div id="debug_text">
             <p id="ups_paragraph">0</p>
             <button id="enable_audio">Enable audio</button>
-        </div>
-
-        <div id="settings_panel">
-            <div id="workspace_measure_count_container">
-            <label htmlFor="workspace_measure_count">Session length (measures)</label>
-            <input type="number" id="workspace_measure_count" defaultValue="400" min="1"/>
-            </div>
-            <button id="settings_panel_close">close</button>
-        </div>
+        </div> */}
 
         <section id='content'>
             <RunControls />
@@ -283,7 +159,10 @@ const Homepage = () => {
             { showProfileScreen && <ProfileScreen/> }
             { showNotificationsScreen && <NotificationsScreen/>}
             { showSettingsScreen && <SettingsScreen/>}
-            <div id="lane_container"/>
+
+            <div id="lane_container"> 
+                { showLogo && <Logo/>}
+            </div>
         </section>
     </>)
 }

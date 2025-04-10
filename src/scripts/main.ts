@@ -8,6 +8,8 @@ import { findSortedIndex, saveToLocalStorage } from "./Utils.ts";
 import { COLORS, EDIT_MODES } from "./constants.ts";
 import { getPatternOptionHTML } from "./elements.ts";
 import { supabase } from '../scripts/supa-client.ts';
+import { retrieveBucketList } from "./SupaUtils.ts";
+import AudioSpriteData from "../assets/sounds/AudioSpriteData.ts";
 // #endregion
 
 // #region ( Global variables )
@@ -245,12 +247,7 @@ function createNewLane(
   } else {
     setLongestLane(); 
   }
-  
-  // else if(new_lane.topOfLane < longest_lane.topOfLane) {
-  //   longest_lane = new_lane;
-  // }
 
-  // return laneEditingSection;
   return canvasContainer; 
 }
 
@@ -324,33 +321,7 @@ function closeClick(event: MouseEvent) {
 }
 
 
-export async function retrieveBucketList(bucket: string, folder?: string) {
-  let path = '';
 
-  const userId = (await supabase.auth.getUser()).data.user?.id as string;
-  path += userId;
-  if(folder)
-    path += `/${folder}`;
-  
-  const { data, error } = await supabase.storage.from(bucket).list(path); 
-  
-  if(!error)
-      return data; 
-}
-
-export async function retrieveBucketData(bucket: string, path: string) {
-  const { data, error } = await supabase
-  .storage
-  .from(bucket)
-  .download(`${path}?t=${Date.now()}`);
-
-  console.log(error); 
-
-  if(!error)
-    return data.text().then(JSON.parse); 
-
-
-}
 
 export function deleteLane(lane: Lane, canvas: HTMLCanvasElement) {
   resetLanesEditingStatus();
@@ -363,21 +334,13 @@ export function deleteLane(lane: Lane, canvas: HTMLCanvasElement) {
     resetLongestLane();
 
   delete input_lane_pairs[lane.inputKey];
-  console.log(lanes);
   lanes.splice(lanes.indexOf(lane), 1);
-  console.log(lanes);
   delete canvas_lane_pairs[canvas.id];
   
+  associatedCanvasContainer.remove();  
   setLongestLane();
 
-
-  console.log(canvas_lane_pairs);
-  console.log(input_lane_pairs);
-
-  associatedCanvasContainer.remove();
-
   laneCount--; 
-  
   lanes.forEach(lane => {
     lane.canvas.classList.remove('editing');
     lane.canvas.parentElement?.classList.remove('background');
@@ -389,22 +352,6 @@ export function deleteLane(lane: Lane, canvas: HTMLCanvasElement) {
   })
 
   updateAllLaneSizes(); 
-}
-
-// TODO: Put this in utils
-export async function uploadToBucket(bucket: string, filePath: string, fileName: string, content: string) {
-  const jsonBlob = new Blob([content], {type: "application/json"});
-  const jsonFile = new File([jsonBlob], fileName, {type: "application/json"});
-
-  const {data, error} = await supabase.storage
-  .from(bucket)
-  .upload(filePath, jsonFile, {upsert: true});
-
-  if(error) {
-    console.log('upload error ', error); 
-  } else {
-    console.log('upload succsesful from new function', data);
-  }
 }
 
 
@@ -440,90 +387,112 @@ function enableAudio() {
     return;
 
   // TODO:  Combine these into one sprite and remove metronome sprite from lane 
+  // audioSprite = new AudioSprite({
+  //   "src": [
+  //     "src/assets/sounds/drums.mp3"
+  //   ],
+  //   "sprite": {
+  //     "clap": [
+  //       0,
+  //       734.2630385487529
+  //     ],
+  //     "closed-hihat": [
+  //       2000,
+  //       445.94104308390035
+  //     ],
+  //     "crash": [
+  //       4000,
+  //       1978.6848072562354
+  //     ],
+  //     "kick": [
+  //       7000,
+  //       553.0839002267571
+  //     ],
+  //     "open-hihat": [
+  //       9000,
+  //       962.7664399092968
+  //     ],
+  //     "snare": [
+  //       11000,
+  //       354.48979591836684
+  //     ]
+  //   }
+  // });
+
   audioSprite = new AudioSprite({
     "src": [
-      "src/assets/sounds/drums.mp3"
+      "src/assets/sounds/sounds.mp3"
     ],
     "sprite": {
-      "clap": [
-        0,
-        734.2630385487529
-      ],
-      "closed-hihat": [
-        2000,
-        445.94104308390035
-      ],
       "crash": [
+        0,
+        724.37641723356
+      ],
+      "hihat_open_close": [
+        2000,
+        391.3378684807256
+      ],
+      "hihatClose": [
         4000,
-        1978.6848072562354
+        119.13832199546448
       ],
-      "kick": [
-        7000,
-        553.0839002267571
+      "hihatOpen": [
+        6000,
+        457.1428571428573
       ],
-      "open-hihat": [
-        9000,
-        962.7664399092968
+      "kick1": [
+        8000,
+        328.18594104308477
       ],
-      "snare": [
-        11000,
-        354.48979591836684
+      "kick2": [
+        10000,
+        528.0045351473923
+      ],
+      "kick3": [
+        12000,
+        307.3922902494335
+      ],
+      "metronomeOff": [
+        14000,
+        17.142857142857792
+      ],
+      "metronomeOn": [
+        16000,
+        25.328798185942247
+      ],
+      "ride": [
+        18000,
+        807.3922902494317
+      ],
+      "snare1": [
+        20000,
+        292.9024943310665
+      ],
+      "snare2": [
+        22000,
+        196.55328798186034
+      ],
+      "snare3": [
+        24000,
+        310.02267573695974
+      ],
+      "tom": [
+        26000,
+        534.8752834467127
+      ],
+      "wrongNote": [
+        28000,
+        313.0612244897968
       ]
     }
   });
 
-  // let metronomeSprite = new AudioSprite({
-  //   "src": [
-  //     "../metronome/metronome.mp3"
-  //   ],
-  //   "sprite": {
-  //     "metronome1": [
-  //       0,
-  //       100.1360544217687
-  //     ],
-  //     "metronome2": [
-  //       2000,
-  //       100.13605442176888
-  //     ],
-  //     "metronome3": [
-  //       4000,
-  //       100.13605442176842
-  //     ],
-  //     "metronome4": [
-  //       6000,
-  //       100.13605442176842
-  //     ],
-  //     "metronome5": [
-  //       8000,
-  //       100.13605442176932
-  //     ],
-  //     "metronome6": [
-  //       10000,
-  //       100.13605442176932
-  //     ]
-  //   }
-  // });
 
   lanes.forEach(lane => {
     lane.audioSprite = audioSprite;
     // lane.metronomeSprite = metronomeSprite;
   })
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 function canvasMouseWheel(event: WheelEvent) { 
@@ -845,7 +814,7 @@ function gameLoop(timeStamp: number) {
 
   updateTime += (interval - updateTime) / filterStrength; 
   ups = (1000/updateTime); 
-  upsParagraph!.innerText = ups.toString().substring(0, 6); 
+  // upsParagraph!.innerText = ups.toString().substring(0, 6); 
   lastLoop = timeStamp;
  
   for(let lane of lanes) {
@@ -935,7 +904,6 @@ export async function startLoop() {
 // #section ( Run Controls Event Handlers ) 
 // TODO: Look into single lane playing while in edit mode
 export function onPlayButtonClick() {
-  console.log("On play button click");
   if(editing) // Should never be true due to React logic, but here just incase
     return;
   
@@ -1021,7 +989,7 @@ export function onAddLaneButtonClick(inputKey: string) {
   if(!paused || laneCount >= 6)
     return; 
 
-  let canvasContainer = createNewLane(80, 1, 200, 'kick', 3, [], [4, 4], inputKey ? inputKey : "(?)", 16);
+  let canvasContainer = createNewLane(80, 1, 200, 'kick1', 3, [], [4, 4], inputKey ? inputKey : "(?)", 16);
 
   resetLanes();
   drawLanes();
@@ -1044,6 +1012,8 @@ if (typeof window !== 'undefined') {
   window.lanes = lanes; 
   // @ts-ignore
   window.longest_lane = longest_lane; 
+  // @ts-ignore
+  window.input_lane_pairs = input_lane_pairs;
 }
 
 

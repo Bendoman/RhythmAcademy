@@ -1,0 +1,62 @@
+.statContentContainer {
+    flex: 1;
+    overflow-x: scroll;
+    margin-top: 2.5em;
+  
+    scroll-behavior: auto;
+    scroll-snap-type: none;
+  
+    display: flex;
+    justify-content: safe center;
+    
+    align-items: safe start;
+  }
+  
+  .statContent {
+    display: flex;
+    flex-shrink: 0;
+    width: max-content;
+    content: safe center;
+  }
+  
+  .stats {
+    /* background-color: red; */
+    
+    
+    min-width: 15em;
+    
+  }
+  
+  .graph {
+    /* background-color: red; */
+    /* min-width: 40em; */
+    box-sizing: border-box;
+    height: fit-content;
+    border: 1px solid #ECDFCC;
+    min-width: 15em;
+    padding-top: .5em;
+    border-radius: 10px;
+  
+  
+    padding-left: 1em;
+    padding-right: 1em;
+    max-width: 35em;
+    overflow-x: scroll;
+    overflow-y: hidden;
+  }
+  
+  .statsScreen {
+    overflow: auto;
+  }
+  
+  
+  .graph_container p {
+    text-align: center;
+  }
+
+  .stats_title{
+    bottom: 10%;
+    left: 50%;
+    transform: translateX(-50%);
+    position: absolute;
+  }

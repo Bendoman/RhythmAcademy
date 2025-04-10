@@ -1,0 +1,9 @@
+:root {
+    --site_primary: #ECDFCC;
+    --site_primary_dim: #ecdfcc7e;
+    --site_primary_very_dim: #ecdfcc21;
+    
+    --site_secondary: #131B23;
+    --site_secondary_dim: #131b237c;
+    --site_secondary_very_dim: #131b2331;
+}

@@ -5,6 +5,7 @@ export const COLORS = {
     // Note
     NOTE_FILL: "#141414",
     NOTE_SHADOW_FILL: "#rgba(50, 50, 50, 10)",
+    // HIGHLIGHTED_NOTE_FILL: "#FFD700",
     HIGHLIGHTED_NOTE_FILL: "#FFD700",
 
     // Lane

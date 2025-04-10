@@ -28,9 +28,9 @@ export function getNoteFill(currentZone: string, hitStatus: string): string {
     if(currentZone == ZONE_NAMES.EARLY_ZONE)
         fillStyle = COLORS.NOTE_FILL; 
     else if(currentZone == ZONE_NAMES.MISS_ZONE) {
-        fillStyle = 'maroon'; 
+        fillStyle = '#A40606'; 
         if(hitStatus == 'hit')
-            fillStyle = '#317256'; 
+            fillStyle = '#139A43'; 
     }
 
     return fillStyle; 
@@ -77,11 +77,13 @@ export function findSortedIndex(notes: Note[], newNoteIndex: number, lane: Lane)
     return [notes.length, 0];
 }
 
-export function saveToLocalStorage(key: string, content: string) {
+export function saveToLocalStorage(key: string, content: string): number {
     try {
         localStorage.setItem(key, content);
+        return 0;
     } catch (err) {
         console.error('Failed to save to localStorage:', err);
+        return -1; 
     }
 }
 
@@ -97,8 +99,19 @@ export function loadFromLocalStorage<T = any>(key: string): T | null {
     }
 }
 
+export function listLocalStorageFolder(folder: string) {
+    const files: string[] = [];
+
+    for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith(`${folder}/`)) {
+            files.push(key.replace(`${folder}/`, ''));
+        }
+    }
+
+    return files;
+}
+
 export const prohibitedKeysList = [
     ' ', 'Backspace', 'Escape', 'Control', 'Enter'
 ];
-
-

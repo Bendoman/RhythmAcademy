@@ -1,6 +1,6 @@
 #run_controls {
     z-index: 1;
-    border: 2px solid var(--site_background);
+    border: 2px solid var(--site_secondary);
     box-sizing: border-box;
     color: white;
     /* height: 2.5em; */
@@ -10,7 +10,7 @@
     /* left: 50%; */
     /* transform: translateX(-50%); */
     
-    background-color: var(--lane_background);
+    background-color: var(--site_primary);
     /* align-content: center; */
     
     /* display: flex;

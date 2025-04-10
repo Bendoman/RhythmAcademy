@@ -1,23 +1,25 @@
-import React, { useEffect, useRef, useState } from 'react'
-import { DeviationGraphData, HitPercentageGraphData, StatsObject } from '../scripts/types';
-
-import { LineChart, Line, Tooltip, CartesianGrid, XAxis, YAxis, Legend } from 'recharts';
-import { useAppContext } from './AppContextProvider';
-import { newRetrieveBucketData, newRetrieveBucketList, newUploadToBucket } from '../scripts/SupaUtils';
-import { supabase } from '../scripts/supa-client';
-import { loadFromLocalStorage, saveToLocalStorage } from '../scripts/Utils';
+import '../styles/stats_screen.css'
+import { StatsObject } from '../../scripts/types';
+import { useEffect, useRef, useState } from 'react'
+import { supabase } from '../../scripts/supa-client';
+import { useAppContext } from '../AppContextProvider';
+import { loadFromLocalStorage, saveToLocalStorage } from '../../scripts/Utils';
+import { LineChart, Line, Tooltip, CartesianGrid, XAxis, YAxis } from 'recharts';
+import { retrieveBucketData as retrieveBucketData, uploadToBucket } from '../../scripts/SupaUtils';
+import { CloseButtonSVG, LeftArrow, RightArrow } from '../../assets/svg/Icons';
 
 const StatsScreen = () => {
     const { setShowStats, stats, currentSessionName, currentSessionAltered, setCurrentSessionAltered } = useAppContext(); 
     const [selectedTab, setSelectedTab] = useState(-1);
 
+    // #region ( refs and state )
+    let divisionRef = useRef(0);
     let notesHitRef = useRef<number>(0); 
     let wrongNotesRef = useRef<number>(0); 
     let totalNotesRef = useRef<number>(0); 
     let notesMissedRef = useRef<number>(0); 
-    let totalHitPercentageRef = useRef<number>(0); 
     let notesPlayedRef = useRef<number>(0); 
-    // let notesPlayedRef = useRef<number>(0);
+    let totalHitPercentageRef = useRef<number>(0); 
 
     const [notesHit, setNotesHit] = useState(0);
     const [totalNotes, setTotalNotes] = useState(0);
@@ -26,161 +28,86 @@ const StatsScreen = () => {
     const [notesPlayed, setNotesPlayed] = useState(0);
     const [personalBest, setPersonalBest] = useState(false);
     const [previousBestMode, setPreviousBestMode] = useState(false); 
+
+    let currentStatsRef = useRef<StatsObject[]>(stats);
+    const [currentStats, setCurrentStats] = useState<StatsObject[]>(currentStatsRef.current);
     
-    const handleKeyDown = (event: KeyboardEvent) => {
-        if(event.key != 'Escape')
-            return; 
-        setShowStats(false);
-    }
-    
-    let divisionRef = useRef(0);
-
-
-
-    const [data, setData] = useState<DeviationGraphData[] | HitPercentageGraphData[]>(); 
-
-
     let previousBestStatsRef = useRef<StatsObject[]>([]);
     const [previousBestStats, setPreviousBestStatsRef] = useState<StatsObject[]>([]);
+    // #endregion
 
-    const [currentStats, setCurrentStats] = useState<StatsObject[]>(stats);
+    const [currentChart, setCurrentChart] = useState(0);
+    let chartNames = [
+        'Deviation over time',
+        'Hit percentage over time',
+        'Hits and Misses over time'
+    ]
 
-    async function saveStats() {
-        // TODO: Safeguard against non authenticated requests everywhere
-        if(!currentSessionAltered && currentSessionName) {
-            console.log('check stats for', currentSessionName);
+    // #region ( helpers )
+    const handleKeyDown = (event: KeyboardEvent) => {
+        if(event.key != 'Escape') { return }; 
+        setShowStats(false);
+    }
+   
+    function getHitPercentage(tab: number) {
+        if(tab < 0 && notesHitRef.current > 0) {
+            return ((notesHitRef.current/notesPlayedRef.current) * 100).toFixed(2);
+        } else if(tab >= 0 && currentStats[tab].notesHit.length > 0) {
+            let notesHit = currentStats[selectedTab].notesHit.length;
+            let notesMissed =currentStats[selectedTab].notesMissed.length;
 
-            const userId = (await supabase.auth.getUser()).data.user?.id as string;
-            
-            let content = {
-                statsObjectArray: stats, 
-                totalHitPercentage: totalHitPercentageRef.current
-            }
-
-            const data = await newRetrieveBucketData('stats', `${userId}/${currentSessionName}`);
-            if(!data) {
-                if(notesPlayedRef.current == totalNotesRef.current) {
-                    setPersonalBest(true);
-                    console.log('must upload new');
-                    newUploadToBucket('stats', `${userId}/${currentSessionName}`, currentSessionName, JSON.stringify(content)); 
-                }
-            } else {
-                console.log('must compare');
-                const data = await newRetrieveBucketData('stats', `${userId}/${currentSessionName}`);
-                console.log(data);      
-                if(data.totalHitPercentage! < content.totalHitPercentage && notesPlayedRef.current == totalNotesRef.current) {
-                    console.log('new pb, uploading')
-                    setPersonalBest(true);
-                    newUploadToBucket('stats', `${userId}/${currentSessionName}`, currentSessionName, JSON.stringify(content)); 
-                } else {
-                    previousBestStatsRef.current = data.statsObjectArray;
-                    setPreviousBestStatsRef(previousBestStatsRef.current);
-                    console.log('setting previous best', data);
-                }
-            }
-            // console.log(newRetrieveBucketData('stats', currentSessionName));
-        } else if(!currentSessionAltered) {
-            // Local storage
-            let content = {
-                statsObjectArray: stats, 
-                totalHitPercentage: totalHitPercentageRef.current
-            }
-
-            const previousStats = loadFromLocalStorage('stats'); 
-            console.log(previousStats);
-            if(!previousStats) {
-                if(notesPlayedRef.current == totalNotesRef.current) {
-                    console.log('must upload new');
-                    setPersonalBest(true);
-
-                    saveToLocalStorage('stats', JSON.stringify(content));
-                }
-            } else {
-                console.log('must compare');
-                console.log(previousStats);
-                if(previousStats.totalHitPercentage! < content.totalHitPercentage && notesPlayedRef.current == totalNotesRef.current) {
-                    setPersonalBest(true);
-                    console.log('new pb, uploading')
-                    saveToLocalStorage('stats', JSON.stringify(content));
-                } else {
-                    previousBestStatsRef.current = previousStats.statsObjectArray;
-                    console.log('setting previous best', previousStats);
-                    setPreviousBestStatsRef(previousBestStatsRef.current);
-                }
-            }
+            return ((notesHit / (notesMissed + notesHit)) * 100).toFixed(2);
+        } else {
+            return 0; 
         }
     }
 
+    function getMissPercentage(tab: number) {
+        if(tab < 0 && notesMissedRef.current > 0) {
+            return ((notesMissedRef.current/notesPlayedRef.current) * 100).toFixed(2);
+        } else if(tab >= 0 && currentStats[tab].notesMissed.length > 0) {
+            let notesHit = currentStats[selectedTab].notesHit.length;
+            let notesMissed =currentStats[selectedTab].notesMissed.length;
 
-
-    function populateStats(statsArray: StatsObject[]) {
-        // Rounds to the nearest second
-        let maxTime = Math.ceil(statsArray[0].runTotalTime / 1000) * 1000; 
-        let divisions = maxTime/1000; 
-        divisionRef.current = divisions;
-
-        console.log(divisionRef.current);
-        
-
-        notesHitRef.current = 0; 
-        wrongNotesRef.current = 0;
-        totalNotesRef.current = 0; 
-        notesMissedRef.current = 0;
-
-        statsArray.forEach(statObject => {
-            totalNotesRef.current = totalNotesRef.current + statObject.totalNotes;
-            notesHitRef.current = notesHitRef.current + statObject.notesHit.length;
-            wrongNotesRef.current = wrongNotesRef.current + statObject.wrongNotes.length; 
-            notesMissedRef.current = notesMissedRef.current + statObject.notesMissed.length;
-        });
-
-        setNotesHit(notesHitRef.current);
-        setWrongNotes(wrongNotesRef.current);
-        setTotalNotes(totalNotesRef.current);
-        setNotesMissed(notesMissedRef.current);
-        setNotesPlayed(notesHitRef.current + notesMissedRef.current)
-        notesPlayedRef.current = notesHitRef.current + notesMissedRef.current;
-
-        totalHitPercentageRef.current = parseInt(((notesHitRef.current/(notesHitRef.current + notesMissedRef.current)) * 100).toFixed(2))
+            return ((notesMissed / (notesHit + notesMissed)) * 100).toFixed(2);
+        } else {
+            return 0; 
+        }
     }
 
-    useEffect(() => {
-        populateStats(currentStats); 
-    }, [currentStats])
-
-    useEffect(()=>{
-        window.addEventListener('keydown', handleKeyDown);
-        populateStats(currentStats); 
-        saveStats(); 
-        console.log(previousBestStatsRef.current);
-
-        return () => { 
-            window.removeEventListener('keydown', handleKeyDown); 
-            setCurrentSessionAltered(false); 
+    function uploadStats(userId: string, payload: string) {
+        if(userId) {
+            uploadToBucket('stats', `${userId}/${currentSessionName}`, currentSessionName, payload); 
+        } else {
+            saveToLocalStorage(`stats/${currentSessionName}`, payload);
         }
+    }
+    // #endregion
 
-    }, []);
-
-    // TODO: Change this from mean to some form of medium
+    // #region ( averages )
     const getAverageDeviation = (statsArray: StatsObject[]) => {
         let average = 0; 
         if(selectedTab < 0) {
             let trueLength = 0; 
             statsArray.forEach(statObject => {
                 let hits = statObject.notesHit;
-                if(hits.length > 0)
-                    trueLength++; 
-                average += hits.length > 0 ? hits.reduce((sum, note) => sum + note.timeToZone, 0) / hits.length : 0; 
+                if(hits.length > 0) { trueLength++ }
+                average += hits.length > 0 
+                ? hits.reduce((sum, note) => sum + note.timeToZone, 0) / hits.length 
+                : 0; 
             });
-            
-            average = average/trueLength; 
+            if (trueLength === 0) return "N/A";
+            average = average > 0 ? average/trueLength : 0; 
         } else {
             let hits = statsArray[selectedTab].notesHit;
             if (hits.length === 0) return "N/A";
-            average = hits.length > 0 ? hits.reduce((sum, note) => sum + note.timeToZone, 0) / hits.length : 0; 
+            average = hits.length > 0 
+            ? hits.reduce((sum, note) => sum + note.timeToZone, 0) / hits.length 
+            : 0; 
         }
-        
-        return average > 0 ? `${Math.abs(average).toFixed(0)}ms early` : `${Math.abs(average).toFixed(0)}ms late`; 
+        return average > 0 
+        ? `${Math.abs(average).toFixed(0)}ms early` 
+        : `${Math.abs(average).toFixed(0)}ms late`; 
     }
 
     const getMedianDeviation = (statsArray: StatsObject[]) => {
@@ -199,7 +126,6 @@ const StatsScreen = () => {
     
         // Sort deviations numerically
         allDeviations.sort((a, b) => a - b);
-    
         const middle = Math.floor(allDeviations.length / 2);
     
         let median = 0;
@@ -208,8 +134,10 @@ const StatsScreen = () => {
         } else {
             median = allDeviations[middle];
         }
-        return median > 0 ? `${Math.abs(median).toFixed(0)}ms early` : `${Math.abs(median).toFixed(0)}ms late`;
-    };
+        return median > 0 
+        ? `${Math.abs(median).toFixed(0)}ms early` 
+        : `${Math.abs(median).toFixed(0)}ms late`;
+    }
 
     const getRoundedModeDeviation = (statsArray: StatsObject[]) => {
         let deviations: number[] = [];
@@ -244,16 +172,10 @@ const StatsScreen = () => {
         return mode !== null
             ? `${Math.abs(mode).toFixed(0)}ms ${mode > 0 ? 'early' : 'late'}`
             : "N/A";
-    };
-    
+    }
+    // #endregion
 
-    const [currentChart, setCurrentChart] = useState(0);
-    let chartNames = [
-        'Deviation over time',
-        'Hit percentage over time',
-        'Hits and Misses over time'
-    ]
-
+    // #region ( chart generation )
     const getChart = (statsArray: StatsObject[]) => {       
         let maxTime = Math.ceil(statsArray[0].runTotalTime / 1000) * 1000; 
         let divisions = maxTime/1000; 
@@ -331,8 +253,6 @@ const StatsScreen = () => {
             });
         }
 
-        console.log(hitsAndMissesGraphData);
-
         deviationGraphData.forEach(node => {
             if(node.occurances > 0)
                 node.deviation = parseInt((node.deviation / node.occurances).toFixed(2));
@@ -344,7 +264,9 @@ const StatsScreen = () => {
                 node.missedNotes += hitPercentageGraphData[index - 1].missedNotes;
                 node.wrongNotes += hitPercentageGraphData[index - 1].wrongNotes;
             }
-            node.hitPercentage = parseInt(((node.hitNotes / (node.missedNotes + node.hitNotes)) * 100).toFixed(2)); 
+            node.hitPercentage = node.hitNotes > 0 
+            ? parseInt(((node.hitNotes / (node.missedNotes + node.hitNotes)) * 100).toFixed(2))
+            : 0; 
         });
 
         hitsAndMissesGraphData.forEach((node, index) => {
@@ -365,10 +287,8 @@ const StatsScreen = () => {
         let thirdLineKey = '';
         
         let stroke = '#8884d8';
-        let secondStroke = ''
-        let thirdStroke = ''
-
-        let legend = false; 
+        let secondStroke = '';
+        let thirdStroke = '';
 
         if(currentChart == 0) {
             data = deviationGraphData; 
@@ -383,29 +303,23 @@ const StatsScreen = () => {
             unit = '%';
         } else if(currentChart == 2) {
             data = hitsAndMissesGraphData; 
+            axisKey = 'interval';
             secondLine = true; 
+
+            linekey = 'hitNotes';
+            secondLineKey = 'missedNotes'
+            thirdLineKey = 'wrongNotes'
             
             unit = '';
-            linekey = 'hitNotes';
             stroke = '#39d641'
-
-
-            secondLineKey = 'missedNotes'
             secondStroke = '#b83822'
-
-
             thirdStroke = '#dfd21f';
-            thirdLineKey = 'wrongNotes'
-
-            axisKey = 'interval';
-
-            legend = true; 
         }
 
         let minWidth = 400;
 
         return (
-            <LineChart width={divisionRef.current*50 > minWidth ? divisionRef.current*50 : minWidth} height={300} data={data} margin={{ top: 5, right: 20, bottom: 5, left: -20 }}>
+            <LineChart width={divisionRef.current*50 > minWidth ? divisionRef.current*50 : minWidth} height={300} data={data} margin={{ top: 5, right: 20, bottom: 5, left: -10 }}>
             
             <Line type="monotone" dataKey={linekey} stroke={stroke} />
             { secondLine && <Line type="monotone" dataKey={secondLineKey} stroke={secondStroke} /> }
@@ -418,13 +332,112 @@ const StatsScreen = () => {
             </LineChart>
         )
     }
+    // #endregion
+
+
+    const saveStats = async () => {
+        const userId = (await supabase.auth.getUser()).data.user?.id as string;
+
+        if(!currentSessionAltered && currentSessionName) {    
+            let content = { statsObjectArray: stats, totalHitPercentage: totalHitPercentageRef.current };
+            let payload = JSON.stringify(content); 
+            
+            let data; 
+            if(userId) {
+                data = await retrieveBucketData('stats', `${userId}/${currentSessionName}`);
+            } else {
+                data = await loadFromLocalStorage(`stats/${currentSessionName}`);
+            }
+            if(!data && notesPlayedRef.current == totalNotesRef.current) {
+                // No previous best exists and run is complete
+                setPersonalBest(true);
+                uploadStats(userId, payload); 
+            } else if(data) {
+                // Previous best exists
+                if(data.totalHitPercentage! < content.totalHitPercentage && notesPlayedRef.current == totalNotesRef.current) {
+                    setPersonalBest(true);
+                    uploadStats(userId, payload); 
+                } else {
+                    // Previous best is better than current
+                    previousBestStatsRef.current = data.statsObjectArray;
+                    setPreviousBestStatsRef(previousBestStatsRef.current);
+                }
+            }
+        } else if(!currentSessionAltered) {
+            // Local storage for non saved sessions
+            let content = {
+                statsObjectArray: stats, 
+                totalHitPercentage: totalHitPercentageRef.current
+            }
+
+            const previousStats = loadFromLocalStorage('stats'); 
+            if(!previousStats && notesPlayedRef.current == totalNotesRef.current) {
+                // Complete run with no previous best
+                setPersonalBest(true);
+                saveToLocalStorage('stats', JSON.stringify(content));
+            } else if(previousStats && notesPlayedRef.current == totalNotesRef.current) {
+                if(content.totalHitPercentage > previousStats.totalHitPercentage!) {
+                    // Complete run better than previous best
+                    setPersonalBest(true);
+                    saveToLocalStorage('stats', JSON.stringify(content));
+                } 
+            } else if(previousStats) {
+                // Previous best better than current
+                previousBestStatsRef.current = previousStats.statsObjectArray;
+                setPreviousBestStatsRef(previousBestStatsRef.current);
+                console.log('local best is better', previousBestStatsRef.current)
+            }
+        }
+    }
+
+    function populateStats(statsArray: StatsObject[]) {
+        // Rounds to the nearest second
+        let maxTime = Math.ceil(statsArray[0].runTotalTime / 1000) * 1000; 
+        let divisions = maxTime/1000; 
+        divisionRef.current = divisions;        
+
+        notesHitRef.current = 0; 
+        wrongNotesRef.current = 0;
+        totalNotesRef.current = 0; 
+        notesMissedRef.current = 0;
+
+        statsArray.forEach(statObject => {
+            totalNotesRef.current = totalNotesRef.current + statObject.totalNotes;
+            notesHitRef.current = notesHitRef.current + statObject.notesHit.length;
+            wrongNotesRef.current = wrongNotesRef.current + statObject.wrongNotes.length; 
+            notesMissedRef.current = notesMissedRef.current + statObject.notesMissed.length;
+        });
+
+        setNotesHit(notesHitRef.current);
+        setWrongNotes(wrongNotesRef.current);
+        setTotalNotes(totalNotesRef.current);
+        setNotesMissed(notesMissedRef.current);
+        setNotesPlayed(notesHitRef.current + notesMissedRef.current)
+        notesPlayedRef.current = notesHitRef.current + notesMissedRef.current;
+
+        totalHitPercentageRef.current = parseInt(((notesHitRef.current/(notesHitRef.current + notesMissedRef.current)) * 100).toFixed(2))
+    }
+
+    useEffect(() => {
+        populateStats(currentStats); 
+    }, [currentStats])
+
+    useEffect(()=>{
+        window.addEventListener('keydown', handleKeyDown);
+        populateStats(currentStats); 
+        saveStats(); 
+        console.log(previousBestStatsRef.current);
+
+        return () => { 
+            window.removeEventListener('keydown', handleKeyDown); 
+            setCurrentSessionAltered(false); 
+        }
+    }, []);
 
     return (
-    <>
     <div className="statsScreen screen">
-        <div className="closeContainer"
-        onClick={()=> { setShowStats(false); }}>
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-circle-x"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>
+        <div className="closeContainer" onClick={()=> { setShowStats(false); }}>
+            <CloseButtonSVG/>
         </div>
 
         <div className="tabs">
@@ -440,36 +453,29 @@ const StatsScreen = () => {
             <div 
             className={`tab ${previousBestMode ? 'selected' : ''} ${previousBestStats.length == 0 ? 'disabled' : ''}`}
             onClick={()=>{
-                if(previousBestStats.length == 0) 
-                    return; 
+                if(previousBestStats.length == 0) { return } 
                 setPreviousBestMode(!previousBestMode); 
-                setCurrentStats(!previousBestMode ? previousBestStatsRef.current : stats)
-            }
-                }>Previous best</div>
+                currentStatsRef.current = !previousBestMode ? previousBestStatsRef.current : stats;
+                setCurrentStats(currentStatsRef.current);
+            }}>Previous best</div>
         </div>
 
         <div className="statContentContainer">
             <div className="statContent">
                 <div className="stats">
-                    { currentSessionName && currentSessionName } <br/>
-                    { `${currentSessionAltered}` } <br/>
-                    { notesPlayed < totalNotes && 'incomplete run' } <br/>
-                    { personalBest && 'PEROSNAL BERST!!!'}
+                    {/* { currentSessionName && <p className='stats_title'>{`Stats for session: "${currentSessionName}"`}</p> }  */}
+                    { personalBest && <><p>New Personal Best!</p><br/></> }  
+                    { notesPlayed < totalNotes && <><p>Incomplete run</p><br/></> }
 
                     {/* TODO: Change the percentages to be relative to notes played not total notes */}
                     <p>Total notes:  {selectedTab < 0 ? totalNotes : currentStats[selectedTab].totalNotes}</p>
                     <p>Notes played: {selectedTab < 0 ? notesPlayed : currentStats[selectedTab].notesHit.length + currentStats[selectedTab].notesMissed.length}</p><br/>
 
                     <p>Notes hit:    {selectedTab < 0 ? notesHit : currentStats[selectedTab].notesHit.length}</p>
-                    <p>Hit percentage:    {selectedTab < 0 ? ((notesHit/notesPlayed) * 100).toFixed(2) : 
-                    ((currentStats[selectedTab].notesHit.length/
-                    (currentStats[selectedTab].notesMissed.length + currentStats[selectedTab].notesHit.length))*100).toFixed(2)}
-                    %</p><br/>
+                    <p>Hit percentage:    {getHitPercentage(selectedTab)}%</p><br/>
 
                     <p>Notes missed: {selectedTab < 0 ? notesMissed : currentStats[selectedTab].notesMissed.length}</p>
-                    <p>Missed percentage: {selectedTab < 0 ? ((notesMissed/notesPlayed) * 100).toFixed(2) : 
-                    ((currentStats[selectedTab].notesMissed.length/(currentStats[selectedTab].notesMissed.length + currentStats[selectedTab].notesHit.length))*100).toFixed(2)}
-                    %</p><br/>
+                    <p>Missed percentage:   {getMissPercentage(selectedTab)}%</p><br/>
 
                     <p>Wrong notes played:  {selectedTab < 0 ? wrongNotes : currentStats[selectedTab].wrongNotes.length}</p><br/>
 
@@ -478,11 +484,7 @@ const StatsScreen = () => {
                     <p>Mode hit deviation: {  getRoundedModeDeviation(currentStats) }</p>
                 </div>
 
-
-                    {/* Save stags to bucket. if loaded session, globval session name. save to that. if edit mode is enteredc. session name is set to null. if session name is null. save to local. if eddit mode is opened. set local to null. set to null on lane additions too. compelte and incompelte runs for when played notes less than total notes. only save on complete runs. complete named runs. profile screen shows average hit% for complete runs of preset sessions. daily challenge screen. same rules as for other preset sessions. have tooltip telling you that making additions will disqualify stats. share link for preset sessions  */}
-
                 <div className="graph_container">
-                        
                     <div className="graph">
                         { divisionRef.current > 0 && getChart(currentStats) }
                     </div>
@@ -490,27 +492,22 @@ const StatsScreen = () => {
                     <div className="graphControls">
                         <button
                         disabled={currentChart == 0} 
-                        onClick={() => {
-                            setCurrentChart(currentChart-1);
-                        }}>
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="lucide lucide-arrow-left-icon lucide-arrow-left"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
+                        onClick={() => { setCurrentChart(currentChart-1) }}>
+                            <LeftArrow/>
                         </button>
+                        
                         <p>{chartNames[currentChart]}</p>
+                        
                         <button 
                         disabled={currentChart == chartNames.length - 1}
-                        onClick={() => {
-                            setCurrentChart(currentChart+1);
-                        }}>
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="lucide lucide-arrow-right-icon lucide-arrow-right"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                        onClick={() => { setCurrentChart(currentChart+1) }}>
+                            <RightArrow/>
                         </button>
                     </div>
                 </div>
             </div>    
         </div>
-    </div>
-
-
-    </>)
+    </div>)
 }
 
 export default StatsScreen

@@ -1,8 +1,9 @@
 import React, { useEffect } from 'react'
 // TODO: Refactor this name
-import './styles/session_screen.css';
-import { modifyFriend } from '../scripts/SupaUtils';
-import { useAppContext } from './AppContextProvider';
+import '../styles/session_screen.css';
+import '../styles/menu_screens.css';
+import { modifyFriend } from '../../scripts/SupaUtils';
+import { useAppContext } from '../AppContextProvider';
 
 const NotificationsScreen = () => {
     const { setShowNotificationsScreen, setNotificationsNumber, pendingFriendRequests} = useAppContext(); 

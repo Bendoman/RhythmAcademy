@@ -27,7 +27,7 @@ const RunControls = () => {
         showToolTips, setShowToolTips,
         currentSessionName, setCurrentSessionName,
         currentSessionAltered, setCurrentSessionAltered, 
-        setShowSessionToolTip
+        setShowSessionToolTip, isEditingRef
     } = useAppContext(); 
 
     const [looping, setLooping] = useState(false);
@@ -42,7 +42,6 @@ const RunControls = () => {
     let isStoppedRef = useRef(true); 
 
     const [isEditing, setIsEditing] = useState(false);
-    let isEditingRef = useRef(false); 
 
     // TODO: Refactor this name
     const [menuHover, setMenuHover] = useState(false);
@@ -286,6 +285,12 @@ const RunControls = () => {
                     setShowProfileScreen(!showProfileScreen); 
                 }}>
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-circle-user-round-icon lucide-circle-user-round"><path d="M18 20a6 6 0 0 0-12 0"/><circle cx="12" cy="10" r="4"/><circle cx="12" cy="12" r="10"/></svg>   
+                
+                {/* { showToolTips && 
+                <div className="tooltip">
+                    Create an account to save your sessions and patterns
+                    <div className="tooltip-arrow" />
+                </div> } */}
                 </button>
 
                 <NotificationsButton 

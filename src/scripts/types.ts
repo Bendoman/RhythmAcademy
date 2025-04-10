@@ -16,8 +16,6 @@ export type StatsObject = {
     runTotalTime: number; 
 }
 
-
-
 export type FriendRequest = {
     id: string, 
     status: string, 
@@ -32,11 +30,18 @@ export type LoadedLanePreview = {
     sessionName: string; 
     totalNotes: number; 
     numberOfLanes: number; 
-    timeSignatures: number[][]; 
+    subdivisions: number[]; 
     // difficulty: number; 
 }
 
-export type PatternModeSection = { id: string; start: number; length: number, name?: string, data?: any};
+export type PatternModeSection = { 
+    id: string; 
+    start: number; 
+    occurances: number, 
+    length: number, 
+    name?: string, 
+    data?: any
+};
 
 export type DeviationGraphData = {
     interval: string, 

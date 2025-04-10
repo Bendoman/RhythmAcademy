@@ -42,6 +42,7 @@ export default class AudioSprite {
     }
 
     public play(sampleName: string, gainValue: number = 1) {
+        console.log(sampleName)
         const startTime = this.samples[sampleName][0] / 1000;
         const duration = this.samples[sampleName][1] / 1000;
 

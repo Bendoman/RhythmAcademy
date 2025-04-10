@@ -2,6 +2,19 @@ import { supabase } from '../scripts/supa-client.ts';
 import { FriendRequest } from './types.ts';
 
 // TODO: Move all supabase data retrieval here.
+export async function retrieveBucketList(bucket: string, folder?: string) {
+  let path = '';
+
+  const userId = (await supabase.auth.getUser()).data.user?.id as string;
+  path += userId;
+  if(folder)
+    path += `/${folder}`;
+  
+  const { data, error } = await supabase.storage.from(bucket).list(path); 
+  
+  if(!error)
+      return data; 
+}
 
 export async function newRetrieveBucketList(bucket: string) {
 const userId = (await supabase.auth.getUser()).data.user?.id as string;
@@ -16,11 +29,11 @@ const userId = (await supabase.auth.getUser()).data.user?.id as string;
 export async function retrievePublicBucketList() {
     const { data, error } = await supabase.storage
     .from('public_sessions')
-    .download(`fileManifest.json?cb=${Date.now()}`);
+    .download(`fileManifest.json?t=${Date.now()}`);
 
     const list = JSON.parse(await data?.text() ?? '[]');
-    return list; 
     console.log(list); 
+    return list; 
 }
 
 
@@ -108,61 +121,52 @@ export async function getEmailFromID(id: string) {
     return profiles.email;
 }
 
-export async function sendFriendRequest(email: string) {
+export async function sendFriendRequest(email: string): Promise<string> {
     const userId = (await supabase.auth.getUser()).data.user?.id as string;
+    if(!userId) { return 'Not logged in'}
 
-    console.log(`Sending friend request to ${email}`);
-
-    // 1. Look up the receiver's user ID by email
+    // Look up the receiver's user ID by email
     const { data: profiles, error: profileError } = await supabase
-    .from('public_profiles')
-    .select('id')
-    .eq('email', email)
-    .single();
-
-    if (profileError || !profiles) 
-        return 'User not found';
+    .from('public_profiles').select('id').eq('email', email).single();
+    if (profileError || !profiles) { 
+        return 'User not found' 
+    };
 
     const receiverId = profiles.id;
+    if(receiverId == userId) { 
+        return 'You can\'t send a friend request to yourself' 
+    };
 
-    if(receiverId == userId)
-        return "You can't send a friend request to yourself";
-
-    // 3. Check if a friend request already exists in either direction
+    // Check if a friend request already exists in either direction
     const { data: existing, error: checkError } = await supabase
-    .from('friend_requests')
-    .select('id, status')
-    .or(
-        `and(sender_id.eq.${userId},receiver_id.eq.${receiverId}),and(sender_id.eq.${receiverId},receiver_id.eq.${userId})`
-    );
-
-    if(checkError)
-        return `Check Error while requesting: ${checkError.message}`; 
+    .from('friend_requests').select('id, status')
+    .or(`and(sender_id.eq.${userId},receiver_id.eq.${receiverId}),and(sender_id.eq.${receiverId},receiver_id.eq.${userId})`);
+    if(checkError) {
+        return 'Error while querying friends table'; 
+    }
 
     if(existing && existing.length > 0) {
-        return existing[0].status == 'pending' ? 'Pending friend request already exists' : 'You are already friends with this user';
+        return existing[0].status == 'pending' 
+        ? 'Pending friend request already exists' 
+        : 'You are already friends with this user';
     }
         
-    // 4. Send the friend request
-    const { error: insertError } = await supabase
-        .from('friend_requests')
-        .insert([{
-            sender_id: userId,
-            receiver_id: receiverId
-        },
-    ]);
+    // Send the friend request
+    const { error: insertError } = await supabase.from('friend_requests')
+    .insert([{sender_id: userId, receiver_id: receiverId}]);
     
-    if(insertError)
-        return `Insert Error while requesting: ${insertError.message}`; 
-
+    if(insertError) {
+        return 'Insert error while sending request'; 
+    }
     return `Friend request sent to ${userId}`;
 }
 
 
 export async function retrieveFriendsList(status: string): Promise<FriendRequest[] | null> {
     const userId = (await supabase.auth.getUser()).data.user?.id as string;
+    if(!userId) { return null}
 
-    const { data, error } = await supabase
+    const { data } = await supabase
     .from('friend_requests')
     .select(`
     id,
@@ -177,7 +181,7 @@ export async function retrieveFriendsList(status: string): Promise<FriendRequest
     .order('created_at', { ascending: false });
 
     if(!data) return null; 
-
+    
     // @ts-ignore 
     return data as FriendRequest[];
 }
@@ -199,30 +203,35 @@ export async function modifyFriend(currentStatus: string, newStatus: string, sen
 }
 
 
-export async function newUploadToBucket(bucket: string, filePath: string, fileName: string, content: string) {
+export async function uploadToBucket(bucket: string, filePath: string, fileName: string, content: string): Promise<number> {
     const jsonBlob = new Blob([content], {type: "application/json"});
     const jsonFile = new File([jsonBlob], fileName, {type: "application/json"});
-  
-    const {data, error} = await supabase.storage
+
+    const { error } = await supabase.storage
     .from(bucket)
     .upload(filePath, jsonFile, {upsert: true});
-  
+
     if(error) {
-      console.log('upload error ', error); 
-    } else {
-      console.log('upload succsesful from new function', data);
-    }
-  }
+        console.warn('upload error: ', error); 
+        return -1;
+    } else { return 0 }
+}
 
 
-export async function newRetrieveBucketData(bucket: string, path: string) {
+export async function retrieveBucketData(bucket: string, path: string) {
     const { data, error } = await supabase
     .storage
     .from(bucket)
     .download(`${path}?t=${Date.now()}`);
-  
-    console.log(error); 
-  
-    if(!error)
-      return data.text().then(JSON.parse); 
+
+    if(error) {
+        console.warn(error)
+        return null; 
+    } else {
+        return data.text().then(JSON.parse); 
+    }
+}
+
+export async function deleteFromBucket(bucket: string, path: string) {
+    // TODO: Implement this
 }
