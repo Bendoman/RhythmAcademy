@@ -27,7 +27,7 @@ const userId = (await supabase.auth.getUser()).data.user?.id as string;
 
 // TODO: Merge these two and add pagination handling to friends bucket
 export async function retrievePublicBucketList() {
-    const { data, error } = await supabase.storage
+    const { data } = await supabase.storage
     .from('public_sessions')
     .download(`fileManifest.json?t=${Date.now()}`);
 
@@ -72,7 +72,7 @@ export async function newnewRetrieveBucketList(bucket: string) {
 export async function retrieveFriendBucketList(bucket: string) {
     const userId = (await supabase.auth.getUser()).data.user?.id as string;
 
-    const { data: friends, error: friendError } = await supabase
+    const { data: friends } = await supabase
     .from('friend_requests')
     .select('sender_id, receiver_id')
     .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
@@ -105,7 +105,7 @@ export async function retrieveFriendBucketList(bucket: string) {
 }
 
 export async function getEmailFromID(id: string) {
-    const userId = (await supabase.auth.getUser()).data.user?.id as string;
+    // const userId = (await supabase.auth.getUser()).data.user?.id as string;
 
     // 1. Look up the receiver's user ID by email
     const { data: profiles, error: profileError } = await supabase
@@ -232,6 +232,6 @@ export async function retrieveBucketData(bucket: string, path: string) {
     }
 }
 
-export async function deleteFromBucket(bucket: string, path: string) {
-    // TODO: Implement this
-}
+// export async function deleteFromBucket(bucket: string, path: string) {
+//     // TODO: Implement this
+// }

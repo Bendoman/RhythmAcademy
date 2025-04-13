@@ -1,7 +1,6 @@
 import Note from "./Note.ts";
 import Hitzone from "./Hitzone.ts";
-import { currentTime, longest_lane, measureHeight } from "./main.ts";
-import AudioSprite from "./AudioSprite.ts";
+import { currentTime, global_volume, longest_lane, measureHeight } from "./main.ts";
 import { selectedPattern } from "./types.ts";
 import { drawLine, getNoteFill } from "./Utils";
 import { COLORS, EDIT_MODES, HIT_STATUSES, ZONE_NAMES } from "./constants";
@@ -53,6 +52,7 @@ export default class Lane {
     public ctx: CanvasRenderingContext2D;
     public translationAmount: number; 
     
+    public volume: number;
     public audioSprite: any;
     public metronomeSprite: any;
     
@@ -121,6 +121,8 @@ export default class Lane {
         this.autoPlayEnabled = false; 
         this.metronomeEnabled = false;
         this.metronomeSound = 'metronome1';
+
+        this.volume = 1; 
     }
 
     public recalculateNoteGap() {
@@ -201,13 +203,15 @@ export default class Lane {
         switch(nextNote.currentZone) {
             case ZONE_NAMES.EARLY_ZONE:
                 console.log(`Wrong note:\nTime to zone: ${nextNote.timeToZone}\nZone: ${nextNote.currentZone}`);
+                if(this.audioSprite)
+                    this.audioSprite.play("wrongNote", global_volume * 0.25);
                 noteCopy.timeHit = parseInt(currentTime.toFixed(0));
                 this.wrongNotes.push(noteCopy); 
                 break;
             case ZONE_NAMES.EARLY_HIT_ZONE:
                 console.log(`Early hit:\nTime to zone: ${nextNote.timeToZone}\nZone: ${nextNote.currentZone}`);
                 if(this.audioSprite)
-                    this.audioSprite.play(this.hitsound);
+                    this.audioSprite.play(this.hitsound, global_volume);
                 nextNote.hitStatus = 'hit';
                 noteCopy.hitStatus = 'hit';
                 noteCopy.timeHit = parseInt(currentTime.toFixed(0));
@@ -218,7 +222,7 @@ export default class Lane {
             case ZONE_NAMES.PERFECT_HIT_ZONE:
                 console.log(`Perfect hit:\nTime to zone: ${nextNote.timeToZone}\nZone: ${nextNote.currentZone}`);
                 if(this.audioSprite)
-                    this.audioSprite.play(this.hitsound);
+                    this.audioSprite.play(this.hitsound, global_volume);
                 nextNote.hitStatus = 'hit';
                 noteCopy.hitStatus = 'hit';
                 noteCopy.timeHit = parseInt(currentTime.toFixed(0));
@@ -229,7 +233,7 @@ export default class Lane {
             case ZONE_NAMES.LATE_HIT_ZONE:
                 console.log(`Late hit:\nTime to zone: ${nextNote.timeToZone}\nZone: ${nextNote.currentZone}`);
                 if(this.audioSprite)
-                    this.audioSprite.play(this.hitsound);
+                    this.audioSprite.play(this.hitsound, global_volume);
                 nextNote.hitStatus = 'hit';
                 noteCopy.hitStatus = 'hit';
                 noteCopy.timeHit = parseInt(currentTime.toFixed(0));
@@ -292,9 +296,6 @@ export default class Lane {
             this.ctx.fillStyle = getNoteFill(note.currentZone, note.hitStatus); 
             if(this.notes.indexOf(note) == this.nextNoteIndex)
                 this.ctx.fillStyle = '#08A4BD';
-            // this.ctx.fillStyle = '#446DF6';
-
-
         }
         
         // TODO: Review this, justify it.
@@ -327,7 +328,7 @@ export default class Lane {
         } else if(y > this.hitzone.perfect_hit_y && note.currentZone == ZONE_NAMES.EARLY_HIT_ZONE) {
             note.currentZone = ZONE_NAMES.PERFECT_HIT_ZONE;
             if(this.audioSprite && this.autoPlayEnabled)
-                this.audioSprite.play(this.hitsound, 0.25);
+                this.audioSprite.play(this.hitsound, global_volume * 0.25);
         } else if(y > this.hitzone.late_hit_y && note.currentZone == ZONE_NAMES.PERFECT_HIT_ZONE) {
             note.currentZone = ZONE_NAMES.LATE_HIT_ZONE;
         } else if(y > this.hitzone.late_hit_y + this.hitzone.late_hit_height && note.currentZone == ZONE_NAMES.LATE_HIT_ZONE) {
@@ -366,8 +367,9 @@ export default class Lane {
             }
             
             // TODO: Add a continue statement here so that measure lines before the currently visible section aren't drawn either. Potentially use an index range?
-            if(y + this.translationAmount < 0)
+            if(y + this.translationAmount < 0){
                 return; 
+            }
 
             // So that the actual y values can be held constant
             let effectiveY = y + this.translationAmount;
@@ -465,6 +467,7 @@ export default class Lane {
     }
 
     public unrepeatNotes() {
+        console.log(this.notes, this.repeatedNotes); 
         this.notes.splice(this.notes.length - this.repeatedNotes, this.repeatedNotes);
         this.repeatedNotes = 0;
         this.repeated = false; 

@@ -15,22 +15,32 @@ const SessionSaveScreen = () => {
     let friends_checkbox_ref = useRef<HTMLInputElement>(null); 
 
     const [savedStatus, setSavedStatus] = useState(''); 
+    const { currentSessionName, currentSessionAltered } = useAppContext(); 
 
+    let saveContentRef = useRef<HTMLInputElement | null>(null); 
+    
     const handleKeyDown = (event: KeyboardEvent) => {
         if(event.key != 'Escape')
             return; 
         setSessionSaveScreen(false);
     }
 
-    const onSaveSessionClick = async (sessionName: string) => {
+    const onSaveSessionClick = async () => {
         const userId = (await supabase.auth.getUser()).data.user?.id as string;
-        
         if(!userId){
             setSavedStatus('Error getting user info');
             return;  
         }
 
-        if(!sessionName) {
+        let name = ''; 
+        if(sessionName.current ) { 
+            name = sessionName.current 
+        } else if(saveContentRef.current 
+            && saveContentRef.current.defaultValue) {
+            name = saveContentRef.current.defaultValue;
+        }
+
+        if(name == '' ) {
             setSavedStatus('enter session name');
             return; 
         }
@@ -41,12 +51,12 @@ const SessionSaveScreen = () => {
         });
 
         let content = JSON.stringify(sessionObject);
-        await uploadToBucket('private_sessions', `${userId}/${sessionName}`, sessionName,content);
+        await uploadToBucket('private_sessions', `${userId}/${name}`, name, content);
         if(friends_checkbox_ref.current?.checked) {
-            await uploadToBucket(`friend_sessions`, `${userId}/${sessionName}`, sessionName,content);
+            await uploadToBucket(`friend_sessions`, `${userId}/${name}`, name, content);
         }
 
-        setSavedStatus(`session: ${sessionName} saved!`);
+        setSavedStatus(`session: ${name} saved!`);
     }
 
     useEffect(() => {
@@ -69,11 +79,12 @@ const SessionSaveScreen = () => {
 
         <div className="save_content">
             <label htmlFor="session_name_input">Session name: </label>
-            <input type="text" id='session_name_input' 
+            <input defaultValue={!currentSessionAltered && currentSessionName ? currentSessionName : ''}
+            type="text" id='session_name_input' ref={saveContentRef}
             onChange={(event) => {sessionName.current = event.target.value}}/>
             
             <button id='save_session_button' onClick={() => {
-                onSaveSessionClick(sessionName.current);
+                onSaveSessionClick();
             }}>Save</button>
 
             <label htmlFor="visible_to_friends_check">Visible to friends:</label>

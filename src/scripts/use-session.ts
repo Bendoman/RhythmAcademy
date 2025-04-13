@@ -1,4 +1,4 @@
-import { RealtimeChannel, Session } from "@supabase/supabase-js";
+import { Session } from "@supabase/supabase-js";
 import { useEffect, useState } from "react";
 import { supabase } from "./supa-client";
 
@@ -17,7 +17,7 @@ export function useSession(): UserInfo {
         profile: null,
         session: null,
     });
-    const [channel, setChannel] = useState<RealtimeChannel | null>(null);
+    // const [channel, setChannel] = useState<RealtimeChannel | null>(null);
     useEffect(() => {
         supabase.auth.getSession().then(({ data: { session } }) => {
             setUserInfo({ ...userInfo, session });

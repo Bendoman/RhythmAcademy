@@ -77,15 +77,9 @@ const AddLaneButton = forwardRef<HTMLButtonElement>((props, ref) => {
 
     const laneCanvas = canvasContainer.querySelector('canvas') as HTMLCanvasElement
     
-    root.render(
-      
-    <LaneEditingPanel canvas={laneCanvas} setShowLogo={setShowLogo}/>
-  );
+    root.render(<LaneEditingPanel canvas={laneCanvas} setShowLogo={setShowLogo}/>);
 
-
-    // TODO: Refactor name
     laneContent.classList.add('lane_content');
-    laneContent.innerText = "testing";
     contentRoot.render(<ChangeLaneKey canvas={laneCanvas}/>)
     
     canvasContainer.appendChild(laneContent);
@@ -141,25 +135,6 @@ const AddLaneButton = forwardRef<HTMLButtonElement>((props, ref) => {
           <div className="tooltip-arrow" />
         </div> }
     </button>
-
-    {/* TODO: See if this should be included */}
-    {/* <input 
-      ref={inputElementRef}
-      readOnly id="new_lane_input" 
-      type="text" 
-      value={inputValue == " " ? "space" : inputValue} 
-      onFocus={() => {
-        setInputValue("Listening...")
-        setListening(true);
-      }}
-      onBlur={() => {
-        if(listeningRef.current) {
-          setInputValue("Input key...")
-          setListening(false);
-          console.log(listening)
-        }
-      }}  
-    /> */}
   </>)
 });
 

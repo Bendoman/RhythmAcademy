@@ -8,25 +8,26 @@ import { StatsObject } from '../../scripts/types.ts';
 
 import '../styles/runControls.css';
 import AddLaneButton from './AddLaneButton.tsx';
-import { lanes, onEditButtonClick, onPauseButtonClick, onPlayButtonClick, onStopButtonClick, saveCurrentSessionLocally, toggleLooping } from '../../scripts/main.ts';
+import { deleteLane, lanes, onEditButtonClick, onPauseButtonClick, onPlayButtonClick, onStopButtonClick, saveCurrentSessionLocally, toggleLooping } from '../../scripts/main.ts';
 import NotificationsButton from './NotificationsButton.tsx';
 import Lane from '../../scripts/Lane.ts';
 import { saveToLocalStorage } from '../../scripts/Utils.ts';
 import { useAppContext } from '../AppContextProvider.tsx';
+import { Eraser } from '../../assets/svg/Icons.tsx';
 
 const RunControls = () => {
     const {
-        showStats, setShowStats,
-        stats, setStats,
+        setShowStats,
+        setStats, setShowLogo,
         showSessionLoadScreen, setSessionLoadScreen,
         showSessionSaveScreen, setSessionSaveScreen,
         showProfileScreen, setShowProfileScreen,
         showNotificationsScreen, setShowNotificationsScreen,
-        notificationsNumber, setNotificationsNumber,
+        notificationsNumber, 
         showSettingsScreen, setShowSettingsScreen,
         showToolTips, setShowToolTips,
-        currentSessionName, setCurrentSessionName,
-        currentSessionAltered, setCurrentSessionAltered, 
+        setCurrentSessionName,
+        setCurrentSessionAltered, 
         setShowSessionToolTip, isEditingRef
     } = useAppContext(); 
 
@@ -65,7 +66,6 @@ const RunControls = () => {
             saveToLocalStorage('stats', '');
             
             setCurrentSessionName('');
-
             setShowSessionToolTip(false); 
 
             isEditingRef.current = !isEditingRef.current; 
@@ -86,7 +86,6 @@ const RunControls = () => {
     }
 
     const stopButtonClick = () => {
-        console.log('in here')
         if(isPlayingRef.current || isPausedRef.current) {
             isStoppedRef.current = !isStoppedRef.current; 
             setIsStopped(isStoppedRef.current);
@@ -99,7 +98,11 @@ const RunControls = () => {
             
             // TODO: Change when this shows up or have seperate button for resetting run
             setShowStats(true);
-            setStats(onStopButtonClick());
+
+            let {stats, statsDisqualified} = onStopButtonClick(); 
+            if(statsDisqualified)
+                setCurrentSessionAltered(true); 
+            setStats(stats);
         } 
     }
 
@@ -275,6 +278,13 @@ const RunControls = () => {
                 </div> }
 
                 </button>
+
+                <button title="clear session" id="clear_session_button" onClick={() => {
+                    for(let i = lanes.length - 1; i >= 0; i--) {
+                        deleteLane(lanes[i], lanes[i].canvas);
+                    }
+                    setShowLogo(true);
+                }}> <Eraser/> </button>
             </div>
 
 

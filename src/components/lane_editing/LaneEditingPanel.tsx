@@ -1,7 +1,7 @@
 import Lane from '../../scripts/Lane.ts';
 import { EDIT_MODES } from '../../scripts/constants.ts';
 import { supabase } from '../../scripts/supa-client.ts';
-import React, { useEffect, useRef, useState } from 'react'
+import React, { act, useEffect, useRef, useState } from 'react'
 
 // TODO: Reduce the number of imports here. There must be a cleaner way.
 import PatternEditingPanel from './PatternEditingPanel.tsx';
@@ -21,6 +21,7 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas, setShowLog
   const lane: Lane = findLaneFromCanvas(canvas);
 
   // #region ( refs )
+  const allBPMRef = useRef<HTMLInputElement | null>(null); 
   const keyAliasRef = useRef<HTMLInputElement | null>(null);
   const laneEditingRef = useRef<HTMLDivElement | null>(null); 
   const saveLaneNameRef = useRef<HTMLInputElement | null>(null);
@@ -43,13 +44,15 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas, setShowLog
   const [toolTipTab, setToolTipTab] = useState(0); 
   const [popupStatus, setPopupStatus] = useState(''); 
 
+  const [activated, setActivated] = useState(false); 
   const [editMode, setEditMode] = useState("individual");
   const [loadedPatterns, setLoadedPatterns] = useState<string[]>([]); 
   const [patternInCreationInputs, setPatternInCreationInputs] = useState<{patternName: string, measures: number} | null>(null); 
   // #endregion
 
   const tooltips = [
-    'right click to delete note',
+    'right click to delete a note',
+    'Use the mouse wheel to scroll up the lane',
     'Patterns can be saved while signed out',
     'Patterns are saved seperately for each subdivision',
     'Hover over most buttons to see what they do'
@@ -143,7 +146,6 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas, setShowLog
     if(lane.repeated) {
       lane.unrepeatNotes(); 
       setRepeated(false);
-      setCanRepeat(false); 
       drawSingleLane(lane); 
     }
 
@@ -156,6 +158,25 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas, setShowLog
         }
       });
     }
+  }
+
+  const onSetAllBPM = () => {
+    if(!allBPMRef.current) { return }
+    let value = parseInt(allBPMRef.current.value);
+    if(!(value > 0)) { return }
+
+    lanes.forEach(lane => {
+      lane.bpm = value; 
+      if(lane.repeated) { lane.unrepeatNotes() }
+      lane.canvas.parentElement
+      ?.querySelector('.lane_editing')
+      ?.classList.add('altered');
+    });
+
+    setLongestLane(); 
+    setRepeated(false);
+    setCanRepeat(lane.getRatio() < longest_lane.getRatio());
+    allBPMRef.current.value = "";
   }
 
   const onMeasureCountChange = (event: React.ChangeEvent<HTMLInputElement>) => {    
@@ -211,7 +232,8 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas, setShowLog
 
   // #region ( click handlers )
   const onRepeatClick = () => {
-    if(!repeated) {
+    console.log('here', repeated)
+    if(!lane.repeated) {
       // if(lane.notes.length > 0) 
       lane.repeatNotes();
     } else {
@@ -330,6 +352,13 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas, setShowLog
       mutations.forEach((mutation) => {
         // Watches for class attribute mutations
         if(mutation.type === 'attributes' && mutation.attributeName === 'class') {
+          setActivated(canvas.classList.contains('editing'));
+          
+          let target = mutation.target as HTMLDivElement;
+          if(target.classList.contains('altered')){
+            setKey(key + 1);  
+          }
+
           let canRepeat = lane.getRatio() < longest_lane.getRatio();
           setCanRepeat(canRepeat);
           // Updates UI based on current lane repeated status 
@@ -353,23 +382,23 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas, setShowLog
   className={`lane_editing ${canvas.classList.contains('editing') ? 'activated' : ''}`}>
     <div className="scroll_container">
     <div className='edit_mode_container'>
-      <button className={`edit_mode_button note_mode_button ${editMode == 'individual' ? 'selected' : ''}`}
+      <button disabled={!activated} className={`edit_mode_button note_mode_button ${editMode == 'individual' ? 'selected' : ''}`} 
       onClick={onIndividualModeClick}>Individual note placement</button>
 
-      <button className={`edit_mode_button pattern_mode_button 
+      <button disabled={!activated} className={`edit_mode_button pattern_mode_button 
         ${editMode == 'pattern' || editMode == 'pattern_creation' ? 'selected' : ''}`} 
       onClick={onPatternModeClick}>Pattern mode</button>
     </div>
 
     <div className="metronome_container">
-      {/* <button className={`metronome_button ${metronomeEnabled ? 'selected' : ''}`} 
+      <button className={`metronome_button ${metronomeEnabled ? 'selected' : ''}`} 
       title='Enable lane metronome'
       onClick={()=>{
         lane.metronomeEnabled = !lane.metronomeEnabled;
         setMetronomeEnabled(!metronomeEnabled);
-      }}> <Metronome/> </button> */}
+      }}> <Metronome/> </button>
 
-      <button 
+      <button disabled={!activated}
       title='Autoplays the lanes hitsound when notes enter the perfect zone. Useful for hearing timings'
       className={`autoplay_button ${autoPlayEnabled ? 'selected' : ''}`}
       onClick={()=>{
@@ -380,20 +409,35 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas, setShowLog
     </div>
       
     <div className="bpm_container">
-      <input className="bpm_input" type="number" 
+      <input disabled={!activated}
+      className="bpm_input" type="number" 
       onChange={onBpmChange} 
       defaultValue={lane.bpm} min="1"/>
       <label>BPM</label>
+    </div>
 
+    <div className="bpm_container">
+      <input disabled={!activated}
+      className="bpm_input" type="number" 
+      ref={allBPMRef}
+      min="1"/>
+      <button onClick={() => {
+        if(allBPMRef.current) 
+          onSetAllBPM();
+      }}>Apply</button>
+      <label>Set all lanes BPM</label>
     </div>
 
     <div className="measure_count_container">
-      <input className="measure_count_input" type="number" defaultValue={lane.measureCount} min="1"
+      <input disabled={!activated}
+      className="measure_count_input" type="number" defaultValue={lane.measureCount} min="1"
       onChange={onMeasureCountChange}/>
       <label>measure count</label>
       
       { editMode == 'individual' && 
-      <> <button className={`repeat_button ${repeated ? 'selected' : ''}`} disabled={!canRepeat ? true : false} onClick={onRepeatClick}>repeat</button>
+      <> <button 
+      className={`repeat_button ${lane.repeated ? 'selected' : ''}`} disabled={ !canRepeat || !activated } 
+      onClick={onRepeatClick}>repeat</button>
 
       <QuestionMark 
       message={'Repeats the notes in this lane up until the height of the longest lane in the session'}/></>}
@@ -401,14 +445,15 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas, setShowLog
 
     { editMode == 'individual' && <>
       <div className="wrong_notes_container">
-        <input disabled={noFail} ref={wrongNotesInputRef} type="number" 
+        <input disabled={noFail || !activated} ref={wrongNotesInputRef} type="number" 
         className="wrong_notes_input" defaultValue={lane.maxWrongNotes} min={1} onChange={(e) => {
           lane.maxWrongNotes = parseInt(e.target.value); 
           saveCurrentSessionLocally(); 
         }} />
         <label>Misses allowed</label>
         
-        <button className={`noFail_button ${noFail ? 'selected' : ''}`} onClick={() => {
+        <button disabled={!activated}
+        className={`noFail_button ${noFail ? 'selected' : ''}`} onClick={() => {
           setNoFail(!noFail); 
           lane.noFail = !lane.noFail; 
           console.log(lane.noFail)
@@ -417,7 +462,8 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas, setShowLog
       </div>
 
       <div className="precision_container">
-          <select className="precision_select" 
+          <select disabled={!activated}
+          className="precision_select" 
           onChange={(event)=>{
             lane.hitPrecision = parseInt(event.target.value)
             lane.hitzone = lane.calculateHitzone();
@@ -431,7 +477,8 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas, setShowLog
       </div>
 
       <div className="subdivision_container">
-        <select className="subdivision_select"        
+        <select disabled={!activated}
+        className="subdivision_select"        
         onChange={onSubdivisionChange}>
             <option value="2" selected={(lane.subdivision == 2) ? true : false}>2</option>
             <option value="3" selected={(lane.subdivision == 3) ? true : false}>3</option>
@@ -454,35 +501,39 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas, setShowLog
 
       {/* TODO: Update this for new sounds */}
       <div className="lane_sound_container">
-        <select className="lane_sound_select" 
+        <select disabled={!activated}
+        className="lane_sound_select" 
         onChange={(event)=>{
           lane.hitsound = event.target.value;
         }}>
-            <option value="kick1" selected={lane.hitsound == "kick1" ? true : false}>kick1</option>
-            <option value="crash" selected={lane.hitsound == "crash" ? true : false}>crash</option>
-            <option value="hihat_open_close"  selected={lane.hitsound == "hihat_open_close" ? true : false}>hihat_open_close</option>
-            <option value="hihatClose" selected={lane.hitsound == "hihatClose" ? true : false}>hihatClose</option>
-            <option value="hihatOpen"   selected={lane.hitsound == "hihatOpen" ? true : false}>hihatOpen</option>
+            <option value="kick1" selected={lane.hitsound == "kick1" ? true : false}>kick 1</option>
+            <option value="kick2"  selected={lane.hitsound == "kick2" ? true : false}>kick 2</option>
+            <option value="kick3" selected={lane.hitsound == "kick3" ? true : false}>kick 3</option>
 
-            <option value="kick2"  selected={lane.hitsound == "kick2" ? true : false}>kick2</option>
-            <option value="kick3" selected={lane.hitsound == "kick3" ? true : false}>kick3</option>
-            <option value="snare1"  selected={lane.hitsound == "snare1" ? true : false}>snare1</option>
-            <option value="snare2" selected={lane.hitsound == "snare2" ? true : false}>snare2</option>
-            <option value="snare3"   selected={lane.hitsound == "snare3" ? true : false}>snare3</option>
+            <option value="snare1"  selected={lane.hitsound == "snare1" ? true : false}>snare 1</option>
+            <option value="snare2" selected={lane.hitsound == "snare2" ? true : false}>snare 2</option>
+            <option value="snare3"   selected={lane.hitsound == "snare3" ? true : false}>snare 3</option>
+
+            <option value="crash" selected={lane.hitsound == "crash" ? true : false}>crash</option>
+            <option value="hihatClose" selected={lane.hitsound == "hihatClose" ? true : false}>closed hihat</option>
+            <option value="hihatOpen"   selected={lane.hitsound == "hihatOpen" ? true : false}>open hihat</option>
+
             <option value="tom" selected={lane.hitsound == "tom" ? true : false}>tom</option>
         </select>
         <label htmlFor="lane_sound_select">Lane sound</label>
       </div>
 
       <div className="key_alias_container">
-        <input placeholder='Input key alias' className='key_alias_input' type="text" ref={keyAliasRef}/>
+        <input disabled={!activated} placeholder='Input key alias' className='key_alias_input' type="text" ref={keyAliasRef}/>
 
         <div className='key_alias_button_container'>
-        <button onClick={() => {
+        <button disabled={!activated}
+        onClick={() => {
           let value = keyAliasRef.current?.value;
           if(value) lane.keyAlias = value; 
         }}>Set alias</button>
-        <button onClick={() => {
+        <button disabled={!activated}
+        onClick={() => {
           lane.keyAlias = null; 
           if(keyAliasRef.current){ keyAliasRef.current.value='' }
           }}>Remove alias</button>
@@ -493,7 +544,7 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas, setShowLog
       </div>
     </>}
 
-    <button className="clear_notes" onClick={()=>{
+    <button disabled={!activated} className="clear_notes" onClick={()=>{
       if(editMode == "pattern_creation") {
         resetPatternInCreation();
       } else {
@@ -506,24 +557,27 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas, setShowLog
       saveCurrentSessionLocally(); 
     }}>clear notes</button>
 
-    <button className="back_to_start" onClick={()=>{
+    <button disabled={!activated} className="back_to_start" onClick={()=>{
       lane.translationAmount = 0;
       drawSingleLane(lane);
     }}>back to start</button>
 
     <div className={`pattern_loading_container ${editMode == 'pattern' ? 'visible' : ''}`}>
-      <button className="create_pattern" onClick={onPatternCreationClick}>Create new note pattern</button>
+      <button disabled={!activated} 
+      className="create_pattern" onClick={onPatternCreationClick}>
+        Create new note pattern
+      </button>
 
       <PatternEditingPanel lane={lane} patterns={loadedPatterns} 
       inPatternMode={editMode == 'pattern'} setEditMode={setEditMode}
-      setPatternInCreationInputs={setPatternInCreationInputs}/>
-
+      setPatternInCreationInputs={setPatternInCreationInputs} activated={activated}/>
     </div>
 
     { editMode == 'pattern_creation' && <>
     <div className={`pattern_creation_container ${editMode == 'pattern_creation' ? 'visible' : ''}`}>
       <div className="new_pattern_measures_container">
-          <input ref={newPatternMeasuresRef} type="number" className="new_pattern_measures" min="1" 
+          <input disabled={!activated}
+          ref={newPatternMeasuresRef} type="number" className="new_pattern_measures" min="1" 
           defaultValue={patternInCreationInputs ? patternInCreationInputs.measures : '1'}
           onChange={(event)=>{
             setNewPatternMeasures(parseInt(event.target.value));
@@ -532,16 +586,18 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas, setShowLog
           <label htmlFor="new_pattern_measures">Pattern measures</label>
       </div>
 
-      <input ref={newPatternNameRef} type="text" className="pattern_name" placeholder="pattern name"
+      <input disabled={!activated} 
+      ref={newPatternNameRef} type="text" className="pattern_name" placeholder="pattern name"
       defaultValue={patternInCreationInputs ? patternInCreationInputs.patternName : ''}></input>
-      <button className="save_pattern" 
+      <button disabled={!activated} className="save_pattern"
       onClick={onSavePatternClick}>
         Save note pattern
         {popupStatus == 'pattern_save_error' && ( <div className="error_popup">Error saving</div> )}
         {popupStatus == 'pattern_save_success' && ( <div className="confirmation_popup">Pattern saved</div> )}
       </button>
 
-      <button className="close_pattern" onClick={()=>{
+      <button disabled={!activated}
+       className="close_pattern" onClick={()=>{
         resetPatternInCreation();
         onPatternModeClick();
       }}>Close pattern</button>
@@ -549,24 +605,28 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas, setShowLog
     </>}
 
     <div className="lane_loading_container">
-      <select ref={loadLaneSelectRef} className="load_lane_select">
-      </select>
+      <select disabled={!activated}
+      ref={loadLaneSelectRef} className="load_lane_select"/>
+      
       <div className="load_lane_buttons"> 
-          <input ref={saveLaneNameRef} type="text" className="lane_name" placeholder="lane name"></input>
-          <button className="save_lane" onClick={onSaveLaneClick}>
+          <input disabled={!activated}
+          ref={saveLaneNameRef} type="text" className="lane_name" placeholder="lane name"></input>
+          <button disabled={!activated}
+          className="save_lane" onClick={onSaveLaneClick}>
             Save lane
             {popupStatus == 'lane_save_error' && ( <div className="error_popup">Error saving</div> )}
             {popupStatus == 'lane_save_success' && ( <div className="confirmation_popup">Lane saved</div> )}
           </button>
           
-          <button className="load_lane" onClick={onLoadLaneClick}>
+          <button disabled={!activated}
+          className="load_lane" onClick={onLoadLaneClick}>
             Load lane
             {popupStatus == 'lane_load_error' && ( <div className="error_popup">Error loading lane</div> )}
           </button>
       </div>
     </div>
 
-    <button className="close" onClick={() => {
+    <button disabled={!activated} className="close" onClick={() => {
       resetLanesEditingStatus(); 
       saveCurrentSessionLocally(); 
     }}>close</button>
@@ -574,7 +634,7 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas, setShowLog
 
     <div className="tooltips">
       <button
-      disabled={toolTipTab == 0} 
+      disabled={toolTipTab == 0 || !activated} 
       onClick={() => {
         setToolTipTab(toolTipTab-1);
       }}>
@@ -584,7 +644,7 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas, setShowLog
       <p className='editingToolTip'>{tooltips[toolTipTab]}</p>
 
       <button 
-      disabled={toolTipTab == tooltips.length - 1}
+      disabled={toolTipTab == tooltips.length - 1 || !activated}
       onClick={() => {
         setToolTipTab(toolTipTab+1);
       }}>
@@ -592,7 +652,8 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas, setShowLog
       </button>
     </div>
 
-    <button className="delete_button" onClick={()=>{
+    <button disabled={!activated}
+    className="delete_button" onClick={()=>{
       if(lane == longest_lane) {
         lanes.forEach(lane => {
           if(lane.repeated) {
@@ -601,7 +662,7 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas, setShowLog
         });
       }
       
-      deleteLane(lane, canvas); 
+      deleteLane(lane, lane.canvas); 
       setLongestLane();
       
       if(lanes.length == 0) {

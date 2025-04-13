@@ -30,6 +30,7 @@
   .lane_editing {
     
     pointer-events: none;
+    
 
     height: 100vh;
     border-radius: 12.5px;
@@ -557,3 +558,6 @@ button svg {
 }
 
 
+.bpm_container button {
+  padding: .15em .25em;
+}

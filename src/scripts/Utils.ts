@@ -1,6 +1,6 @@
 import Lane from "./Lane";
 import Note from "./Note";
-import { ZONE_NAMES, HIT_STATUSES } from "./constants";
+import { ZONE_NAMES } from "./constants";
 import { COLORS } from "./constants";
 
 export function drawLine(ctx: CanvasRenderingContext2D, startX: number, startY: number, endX: number, endY: number, strokeStyle: string = 'white', weight: number, dashValues?: number[]) {

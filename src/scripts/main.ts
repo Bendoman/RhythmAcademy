@@ -7,9 +7,7 @@ import { StatsObject } from "./types.ts";
 import { findSortedIndex, saveToLocalStorage } from "./Utils.ts";
 import { COLORS, EDIT_MODES } from "./constants.ts";
 import { getPatternOptionHTML } from "./elements.ts";
-import { supabase } from '../scripts/supa-client.ts';
 import { retrieveBucketList } from "./SupaUtils.ts";
-import AudioSpriteData from "../assets/sounds/AudioSpriteData.ts";
 // #endregion
 
 // #region ( Global variables )
@@ -26,10 +24,15 @@ export let maxMeasureCount = 400;
 export let measureHeight = 800;
 export let startY = 800; 
 
+export let global_volume = 1; 
+export function setGlobalVolume(newVolume: number) {
+  global_volume = newVolume; 
+}
+
+
 let ups = 0; 
 let translationAmount = 0; 
 export let currentTime = 0; 
-
 
 let paused = true; 
 let editing = false;
@@ -52,7 +55,7 @@ export function resetPatternInCreation() {
 }
 
 // DOM Elements
-let upsParagraph: HTMLElement | null;
+// let upsParagraph: HTMLElement | null;
 // #endregion
 
 export function handleMIDIMessage(input: MIDIMessageEvent) {
@@ -65,7 +68,7 @@ export function handleMIDIMessage(input: MIDIMessageEvent) {
   console.log(note);
 
   if(velocity > 0) {
-    midiNoteOn(note, velocity)
+    midiNoteOn(note);
   } else { 
     // If velocity == 0 then it is an indication that the note has been released
     midiNoteOff(note);
@@ -122,8 +125,6 @@ function initalizeListeners() {
     laneContainer = document.getElementById('lane_container') as HTMLElement | null; 
     container_width = laneContainer?.clientWidth;
     container_height = laneContainer?.clientHeight;
-
-    upsParagraph = document.getElementById('ups_paragraph') as HTMLElement;
 }
 
 
@@ -207,7 +208,7 @@ function createNewLane(
   
   newCanvas.addEventListener('click', handleCanvasClick);
 
-  const new_lane = new Lane(bpm, measureCount, noteGap, hitsound, maxWrongNotes, notes, timeSignature, inputKey, newCanvas, hitPrecision);
+  const new_lane = new Lane(bpm, measureCount, noteGap, hitsound, maxWrongNotes, notes, timeSignature, inputKey.toUpperCase(), newCanvas, hitPrecision);
 
   // TODO: Review if these can be unified
   lanes.push(new_lane); 
@@ -281,44 +282,6 @@ export function resetLanesEditingStatus() {
   })
 }
 
-// TODO: Add listener for esc key
-function closeClick(event: MouseEvent) {
-  offsetY = -10;
-  patternInCreationNotes = [];
-  patternInCreationPositions = [];
-  editMode = EDIT_MODES.NOTE_MODE;
-
-  let target = event.target as HTMLElement;
-  let patternContainer = target.closest('.lane_editing')?.querySelector('.pattern_loading_container'); 
-  console.log(patternContainer);
-  let loadPatternButton = patternContainer?.querySelector('.load_pattern');
-  let measuresContainer = patternContainer?.querySelector('.new_pattern_measures_container');
-  let nameInput = patternContainer?.querySelector('.pattern_name');
-  let saveButton = patternContainer?.querySelector('.save_pattern');
-  let closeButton = patternContainer?.querySelector('.close_pattern');
-  console.log(loadPatternButton);
-
-  loadPatternButton?.removeAttribute('disabled');
-  measuresContainer?.classList.remove('visible');
-  nameInput?.classList.remove('visible');
-  saveButton?.classList.remove('visible');
-  closeButton?.classList.remove('visible');
-  console.log('close clicked');
-
-  offsetY = null; 
-
-  lanes.forEach(lane => {
-    lane.canvas.classList.remove('editing');
-    lane.canvas.parentElement?.classList.remove('background');
-
-    let laneEditingSection = lane.canvas.parentElement?.querySelector('.lane_editing');
-    laneEditingSection?.classList.remove('activated')
-
-    resetLanes();
-    updateAllLaneSizes();
-    drawSingleLane(lane);
-  })
-}
 
 
 
@@ -359,16 +322,12 @@ type EditMode = keyof typeof EDIT_MODES;
 export function changeEditMode(newEditMode: EditMode) { editMode = newEditMode; }
 
 
-// Have a max number of measures. 
-// createNewLane(60, 1, 200, 'kick', 3, [], [4, 4], 'a', 16);
-// createNewLane(60, 200, 200, 'snare', 3, [], [4, 4], 's', 16);
-// createNewLane(60, 200, 200, 'closed-hihat', 3, [], [4, 4], 'd', 16);
 
 // #region ( Event listeners )
 
 
 
-function midiNoteOn(note: number, velocity: number) {
+function midiNoteOn(note: number) {
   let associatedLane = lanes[input_lane_pairs[note.toString()]];
   if(associatedLane != null)
     associatedLane.handleInputOn(paused); 
@@ -421,7 +380,7 @@ function enableAudio() {
 
   audioSprite = new AudioSprite({
     "src": [
-      "src/assets/sounds/sounds.mp3"
+      "/sounds/sounds.mp3"
     ],
     "sprite": {
       "crash": [
@@ -605,7 +564,7 @@ async function handleCanvasClick(event: MouseEvent) {
         
         // TODO: GET Y FROM INDEX.
         let y = patternInCreationNotes[sortedIndex[0]].getY(lane.noteGap, lane.innerSubdivision, lane.startY); 
-        let dif = (y - lane.startY) / height;
+        // let dif = (y - lane.startY) / height;
         console.debug(patternInCreationNotes[sortedIndex[0]].index);
 
         patternInCreationPositions.splice(sortedIndex[0], 0, patternInCreationNotes[sortedIndex[0]].index);
@@ -698,7 +657,7 @@ export function drawSingleLane(lane: Lane) {
 
   if(editing && editMode != EDIT_MODES.PATTERN_MODE) {
     // TODO: Hold shift to be continuous. 
-    let divider = 16/lane.timeSignature[1];
+    // let divider = 16/lane.timeSignature[1];
 
     let height = lane.noteGap/lane.innerSubdivision; 
     // if(lane.subdivision < 4)
@@ -887,13 +846,6 @@ function gameLoop(timeStamp: number) {
   animationFrameId = window.requestAnimationFrame(gameLoop);
 }
 
-function restartLoop() {
-  if(animationFrameId) {
-    window.cancelAnimationFrame(animationFrameId); 
-    animationFrameId = window.requestAnimationFrame(gameLoop); 
-  }
-}
-
 
 export async function startLoop() {
     initalizeListeners();
@@ -921,15 +873,13 @@ export function onPauseButtonClick() {
   paused = true 
 }
 
-export function onStopButtonClick(): StatsObject[] {
-  console.log("On stop button click");
+export function onStopButtonClick(): {stats: StatsObject[], statsDisqualified: boolean} {
   if(editing) // Should never be true due to React logic, but here just incase
-    return [];
+    return {stats: [], statsDisqualified: false};
   
   paused = true 
   
   let stats: StatsObject[] = [];
-  
   // TODO: Put this in own function
   lanes.forEach(lane => {
     stats[stats.length] = {
@@ -944,8 +894,9 @@ export function onStopButtonClick(): StatsObject[] {
   currentTime = 0; 
 
   resetLanes();
-  lanes.forEach(lane => { drawSingleLane(lane); });
-  return stats;
+  let noFail = false; 
+  lanes.forEach(lane => { drawSingleLane(lane); if(lane.noFail){noFail = true} });
+  return {stats: stats, statsDisqualified: noFail};
 }
 
 export function onEditButtonClick() {
@@ -963,7 +914,7 @@ export function onEditButtonClick() {
     // lane.updateNotes(ups, 0);
     lane.updateAndDrawNotes(editing, ups, 0);
     lane.drawInputVisual();
-  })
+  });
 
   if(editing) {
     laneContainer?.classList.add('editing');
@@ -989,7 +940,7 @@ export function onAddLaneButtonClick(inputKey: string) {
   if(!paused || laneCount >= 6)
     return; 
 
-  let canvasContainer = createNewLane(80, 1, 200, 'kick1', 3, [], [4, 4], inputKey ? inputKey : "(?)", 16);
+  let canvasContainer = createNewLane(80, 1, 200, 'kick1', 5, [], [4, 4], inputKey ? inputKey : "(?)", 16);
 
   resetLanes();
   drawLanes();
@@ -1014,6 +965,8 @@ if (typeof window !== 'undefined') {
   window.longest_lane = longest_lane; 
   // @ts-ignore
   window.input_lane_pairs = input_lane_pairs;
+  // @ts-ignore
+  window.canvas_lane_pairs = canvas_lane_pairs;
 }
 
 
@@ -1023,16 +976,16 @@ export function setNewPatternMeasures(measures: number) {
 }
 
 export function assignLaneInput(lane: Lane, inputKey: string) {
-  console.log(input_lane_pairs, inputKey)
-  if(Object.keys(input_lane_pairs).includes(inputKey.toUpperCase())) {
+  inputKey = inputKey.toUpperCase(); 
+  if(Object.keys(input_lane_pairs).includes(inputKey)) {
     console.error('Input key already in use');
     return -1;
   }
 
-  delete input_lane_pairs[lane.inputKey.toUpperCase()];
+  delete input_lane_pairs[lane.inputKey];
 
   lane.inputKey = inputKey; 
-  input_lane_pairs[inputKey.toUpperCase()] = lanes.indexOf(lane); 
+  input_lane_pairs[inputKey] = lanes.indexOf(lane); 
   drawSingleLane(lane); 
   
   saveCurrentSessionLocally(); 
@@ -1046,7 +999,7 @@ export function resetLongestLane() {
 export function setLongestLane() {   
   if(lanes.length > 0) 
     longest_lane = lanes[0]; 
-    
+
   lanes.forEach(curr => {
     if(curr.getRatio() > longest_lane.getRatio()) {
       longest_lane = curr; 
@@ -1070,7 +1023,7 @@ export function saveCurrentSessionLocally() {
 }
 
 // TODO: Make sure this is complete
-export function remapLane(target: Lane, reference: Lane) {
+export function remapLane(target: Lane, reference: Lane, copyInput?: boolean) {
   console.log('remap called');
   
   target.bpm =  reference.bpm; 
@@ -1094,6 +1047,9 @@ export function remapLane(target: Lane, reference: Lane) {
   target.translationAmount = 0;
   target.nextNoteIndex = 0; 
 
+  if(copyInput)
+    target.inputKey = reference.inputKey; 
+
   target.noFail = reference.noFail; 
 
   // TODO: Optimize this for lower load times
@@ -1101,8 +1057,6 @@ export function remapLane(target: Lane, reference: Lane) {
   
   target.hitzone = target.calculateHitzone(); 
   target.recalculateHeight(); 
-
-  updateAllLaneSizes();
   target.handleResize();
   drawSingleLane(target); 
 

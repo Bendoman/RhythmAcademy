@@ -16,11 +16,12 @@ interface IPatternEditingPanelProps {
     inPatternMode: boolean; 
     setEditMode: React.Dispatch<React.SetStateAction<string>>;
     setPatternInCreationInputs: React.Dispatch<React.SetStateAction<{patternName: string, measures: number} | null>>;
+    activated: boolean; 
 }
 
-const PatternEditingPanel: React.FC<IPatternEditingPanelProps> = ({ lane, patterns, inPatternMode, setEditMode, setPatternInCreationInputs }) => {
+const PatternEditingPanel: React.FC<IPatternEditingPanelProps> = ({ lane, patterns, inPatternMode, setEditMode, setPatternInCreationInputs, activated }) => {
     let canvas = lane.canvas; 
-    const [visible, setVisible] = useState<boolean>(); 
+    // const [visible, setVisible] = useState<boolean>(); 
     let draggedPatternRef = useRef<{name: string, measures: number} | null>(null); 
 
     async function onEditClick(patternName: string) {
@@ -47,29 +48,29 @@ const PatternEditingPanel: React.FC<IPatternEditingPanelProps> = ({ lane, patter
         setPatternInCreationInputs({patternName: patternName, measures: patternData.measures});
     }
 
-    useEffect(() => {
-        let laneEditing = canvas.closest('.canvas_container')?.querySelector('.lane_editing');
-        setVisible(laneEditing?.classList.contains('activated')!);
+    // useEffect(() => {
+    //     let laneEditing = canvas.closest('.canvas_container')?.querySelector('.lane_editing');
+    //     setVisible(laneEditing?.classList.contains('activated')!);
 
-        // Ensures that panel is set to visible when edit mode is activated
-        const observer = new MutationObserver((mutations) => {
-            mutations.forEach((mutation) => {
-                if(mutation.type === 'attributes' && mutation.attributeName === 'class') {
-                    setVisible(laneEditing?.classList.contains('activated')!);  
-                }
-            })      
-        });
+    //     // Ensures that panel is set to visible when edit mode is activated
+    //     const observer = new MutationObserver((mutations) => {
+    //         mutations.forEach((mutation) => {
+    //             if(mutation.type === 'attributes' && mutation.attributeName === 'class') {
+    //                 setVisible(laneEditing?.classList.contains('activated')!);  
+    //             }
+    //         })      
+    //     });
 
-        observer.observe(laneEditing!, {
-            attributes: true, 
-            attributeFilter: ['class'],
-        }); 
+    //     observer.observe(laneEditing!, {
+    //         attributes: true, 
+    //         attributeFilter: ['class'],
+    //     }); 
         
-          return () => { observer.disconnect(); };
-    }, []);   
+    //       return () => { observer.disconnect(); };
+    // }, []);   
 
     return (<>
-        <LanePatternDisplay lane={lane} visible={inPatternMode && visible!} draggedPatternRef={draggedPatternRef}/>
+        <LanePatternDisplay lane={lane} visible={inPatternMode && activated} draggedPatternRef={draggedPatternRef}/>
 
         <div className="patternEditingPanel">
             <p>Saved Patterns {'(drag and drop)'}</p>
@@ -89,13 +90,16 @@ const PatternEditingPanel: React.FC<IPatternEditingPanelProps> = ({ lane, patter
                         </div>
                         
                         <div className="patternMeasureCountContainer">
-                            <input type="number" min='1' defaultValue='1' className='patternMeasureCount'/>
+                            <input disabled={!activated} type="number" min='1' defaultValue='1' className='patternMeasureCount'/>
                             <p>occurances</p>
                         </div>
 
-                        <button className='patternEditButton' onClick={() => {onEditClick(pattern)}}>edit</button>
+                        <button disabled={!activated} 
+                        className='patternEditButton' onClick={() => {onEditClick(pattern)}}>edit</button>
                     </div>
                 })}
+
+                { patterns.length == 0 && <p>No saved patterns</p>}
             </div>
         </div>
     </>)

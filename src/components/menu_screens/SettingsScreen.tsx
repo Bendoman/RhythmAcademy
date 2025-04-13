@@ -3,12 +3,15 @@ import '../styles/session_screen.css';// TODO: Refactor this name
 import '../styles/menu_screens.css';
 
 import { useAppContext } from '../AppContextProvider';
+import { CloseButtonSVG } from '../../assets/svg/Icons';
+import { global_volume, setGlobalVolume } from '../../scripts/main';
 
 
 const SettingsScreen = () => {
     const { setShowSettingsScreen } = useAppContext(); 
     const [selectedTab, setSelectedTab] = useState('public');
-    
+    const [volume, setVolume] = useState(global_volume); 
+
     const handleKeyDown = (event: KeyboardEvent) => {
         if(event.key != 'Escape'){ return; } 
         setShowSettingsScreen(false);
@@ -23,16 +26,24 @@ const SettingsScreen = () => {
         <div className="settings_screen screen">
             <div className="closeContainer"
                 onClick={()=> { setShowSettingsScreen(false); }}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-circle-x"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>
+                <CloseButtonSVG/>
             </div>
 
             <div className="tabs">
                 <div className={`tab ${selectedTab == 'public' ? 'selected' : ''}`} 
-                onClick={()=>{setSelectedTab('public')}}><p>Coming soon</p></div>
-                {/* <div className={`tab ${selectedTab == 'private' ? 'selected' : ''}`} 
-                onClick={()=>{setSelectedTab('private')}}>Private</div>
-                <div className={`tab ${selectedTab == 'friend' ? 'selected' : ''}`} 
-                onClick={()=>{setSelectedTab('friend')}}>Friend's</div> */}
+                onClick={()=>{setSelectedTab('public')}}><p>Settings</p></div>
+            </div>
+
+            <div className="settings_content">
+                <div className="volume_container">
+                    <label>Master volume:</label>
+                    <input type="range" min="0" max="1" step="0.01" value={volume} className="slider" id="myRange" onInput={(e) => {
+                        let target = e.target as HTMLInputElement;
+                        let newVolume = parseFloat(target.value);
+                        setVolume(newVolume);
+                        setGlobalVolume(newVolume);
+                    }}/>
+                </div>
             </div>
         </div>
     </>)

@@ -86,6 +86,7 @@
 
     display: flex;
     gap: .25em;
+    align-items: safe center;
 }
 
 .friend_request button {
@@ -104,6 +105,7 @@
 }
 
 .friend_request .decline:hover {
+    color: #ece5da;
     background-color: #5a3029;
 }
 
@@ -214,4 +216,14 @@
 
 #save_session_button {
     padding: .25em;
+}
+
+.settings_content {
+    padding: 1.5em;
+}
+
+.volume_container {
+    display: flex;
+    gap: .25em;
+    align-items: safe center;
 }

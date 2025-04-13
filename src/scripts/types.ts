@@ -1,4 +1,4 @@
-import Lane from "./Lane";
+// import Lane from "./Lane";
 import Note from "./Note";
 
 export type selectedPattern = {

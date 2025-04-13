@@ -37,6 +37,7 @@ const Homepage = () => {
 
     const updateDevices = (event: MIDIConnectionEvent) => { 
         if(event.port?.state == 'connected' && event.port.type === 'input') {
+            console.log('updated')
             const input = midiAccess.inputs.get(event.port.id);
             if(input) {
                 input.addEventListener('midimessage', processMidiMessage);

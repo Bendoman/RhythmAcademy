@@ -334,7 +334,6 @@ const StatsScreen = () => {
     }
     // #endregion
 
-
     const saveStats = async () => {
         const userId = (await supabase.auth.getUser()).data.user?.id as string;
 
@@ -451,6 +450,7 @@ const StatsScreen = () => {
             ))}
 
             <div 
+            // TODO: Should have a different background for hover and selected
             className={`tab ${previousBestMode ? 'selected' : ''} ${previousBestStats.length == 0 ? 'disabled' : ''}`}
             onClick={()=>{
                 if(previousBestStats.length == 0) { return } 
@@ -463,7 +463,8 @@ const StatsScreen = () => {
         <div className="statContentContainer">
             <div className="statContent">
                 <div className="stats">
-                    {/* { currentSessionName && <p className='stats_title'>{`Stats for session: "${currentSessionName}"`}</p> }  */}
+                    <p>Current session altered: {currentSessionAltered ? "true" : "false"}</p>
+                    { currentSessionName && <p className='stats_title'>{`Stats for session: "${currentSessionName}"`}</p> } 
                     { personalBest && <><p>New Personal Best!</p><br/></> }  
                     { notesPlayed < totalNotes && <><p>Incomplete run</p><br/></> }
 

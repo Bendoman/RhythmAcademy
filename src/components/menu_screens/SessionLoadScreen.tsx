@@ -14,6 +14,7 @@ import LaneEditingPanel from '../lane_editing/LaneEditingPanel';
 import { deleteLane, lanes, onAddLaneButtonClick, remapLane, saveCurrentSessionLocally } from '../../scripts/main'; 
 import { newnewRetrieveBucketList, retrieveBucketData, retrieveFriendBucketList, retrievePublicBucketList } from '../../scripts/SupaUtils';
 import { CloseButtonSVG, RightArrow } from '../../assets/svg/Icons';
+import { checkDomainOfScale } from 'recharts/types/util/ChartUtils';
 
 export const createNewLane = (inputKey: string, setShowLogo: React.Dispatch<React.SetStateAction<boolean>>) => {
     const canvasContainer = onAddLaneButtonClick(inputKey); 
@@ -83,7 +84,7 @@ const SessionLoadScreen = () => {
 
         newLanes.forEach(newLane => {
             createNewLane(newLane.inputKey, setShowLogo);
-            remapLane(lanes[lanes.length - 1], newLane);
+            remapLane(lanes[lanes.length - 1], newLane, true);
         });
 
         saveCurrentSessionLocally(); 
@@ -149,7 +150,7 @@ const SessionLoadScreen = () => {
                     }
                 } else {
                     let f = folder.split('/')[0];
-                    folders.push(f); 
+                    if(!folders.includes(f)){ folders.push(f) }; 
                     sessions.push([`${f}`, folder.split('/').slice(1).join('/')]);
                 }
             }
@@ -159,6 +160,9 @@ const SessionLoadScreen = () => {
             setLoadedFolders(folders); 
         else 
             setLoadedFolders(null); 
+
+
+        console.log(folders);
 
         if(sessions)
             setLoadedSessions(sessions);
@@ -250,6 +254,8 @@ const SessionLoadScreen = () => {
                     && ( <div className="confirmation_popup">Lane loaded</div>)}
                 </div>)
             })} 
+
+            { loadedSessions && loadedSessions.length == 0 && <p>Nothing here</p>}
         </div>
     </div>
     </>)

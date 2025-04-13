@@ -10,6 +10,7 @@
     background-color: var(--site_primary_dim);
 
     border-radius: 5px;
+    border: 1px solid transparent;
 }
 
 .profile_screen button:hover {
