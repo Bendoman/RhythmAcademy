@@ -1,5 +1,5 @@
-import { drawLine } from "./Utils";
-import { COLORS } from "./constants";
+import { drawLine } from "../helpers/utils";
+import { COLORS } from "../helpers/constants";
 
 export default class Hitzone {
     public early_hit_y: number;

@@ -1,11 +1,11 @@
 import '../styles/stats_screen.css'
 import { StatsObject } from '../../scripts/types';
 import { useEffect, useRef, useState } from 'react'
-import { supabase } from '../../scripts/supa-client';
+import { supabase } from '../../scripts/helpers/supa-client';
 import { useAppContext } from '../AppContextProvider';
-import { loadFromLocalStorage, saveToLocalStorage } from '../../scripts/Utils';
+import { loadFromLocalStorage, saveToLocalStorage } from '../../scripts/helpers/utils';
 import { LineChart, Line, Tooltip, CartesianGrid, XAxis, YAxis } from 'recharts';
-import { retrieveBucketData as retrieveBucketData, uploadToBucket } from '../../scripts/SupaUtils';
+import { retrieveBucketData as retrieveBucketData, uploadToBucket } from '../../scripts/helpers/supa-utils';
 import { CloseButtonSVG, LeftArrow, RightArrow } from '../../assets/svg/Icons';
 
 const StatsScreen = () => {
@@ -207,7 +207,6 @@ const StatsScreen = () => {
             statsArray.forEach(statObject => {
                 statObject.notesHit.forEach(note => {
                     const index = Math.floor(note.timeHit / 1000)
-                    console.log(index, deviationGraphData);
                     deviationGraphData[index].deviation += note.timeToZone;
                     deviationGraphData[index].occurances++;
     
@@ -232,7 +231,6 @@ const StatsScreen = () => {
             // Create graph only for selected lane
             statsArray[selectedTab].notesHit.forEach(note => {
                 const index = Math.floor(note.timeHit / 1000)
-                console.log(index, deviationGraphData);
                 deviationGraphData[index].deviation += note.timeToZone;
                 deviationGraphData[index].occurances++;
 
@@ -384,7 +382,6 @@ const StatsScreen = () => {
                 // Previous best better than current
                 previousBestStatsRef.current = previousStats.statsObjectArray;
                 setPreviousBestStatsRef(previousBestStatsRef.current);
-                console.log('local best is better', previousBestStatsRef.current)
             }
         }
     }
@@ -425,7 +422,6 @@ const StatsScreen = () => {
         window.addEventListener('keydown', handleKeyDown);
         populateStats(currentStats); 
         saveStats(); 
-        console.log(previousBestStatsRef.current);
 
         return () => { 
             window.removeEventListener('keydown', handleKeyDown); 

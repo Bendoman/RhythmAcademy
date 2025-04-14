@@ -1,7 +1,7 @@
-import Lane from "./Lane";
-import Note from "./Note";
-import { ZONE_NAMES } from "./constants";
-import { COLORS } from "./constants";
+import Lane from "../classes/Lane.ts";
+import Note from "../classes/Note.ts";
+import { ZONE_NAMES } from "./constants.ts";
+import { COLORS } from "./constants.ts";
 
 export function drawLine(ctx: CanvasRenderingContext2D, startX: number, startY: number, endX: number, endY: number, strokeStyle: string = 'white', weight: number, dashValues?: number[]) {
     // If no dash values are provided then resets the line dash value to unbroken

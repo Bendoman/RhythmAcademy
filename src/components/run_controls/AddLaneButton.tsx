@@ -5,7 +5,7 @@ import { createRoot } from 'react-dom/client';
 import ChangeLaneKey from './ChangeLaneKey.tsx';
 import { midiAccess } from '../Homepage';
 import { useAppContext } from '../AppContextProvider.tsx';
-import { saveToLocalStorage } from '../../scripts/Utils.ts';
+import { saveToLocalStorage } from '../../scripts/helpers/utils.ts';
 
 
 const AddLaneButton = forwardRef<HTMLButtonElement>((props, ref) => {
@@ -80,7 +80,11 @@ const AddLaneButton = forwardRef<HTMLButtonElement>((props, ref) => {
     root.render(<LaneEditingPanel canvas={laneCanvas} setShowLogo={setShowLogo}/>);
 
     laneContent.classList.add('lane_content');
-    contentRoot.render(<ChangeLaneKey canvas={laneCanvas}/>)
+    contentRoot.render(
+    
+    <ChangeLaneKey canvas={laneCanvas}/>
+
+    )
     
     canvasContainer.appendChild(laneContent);
     saveCurrentSessionLocally();

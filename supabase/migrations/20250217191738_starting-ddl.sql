@@ -169,6 +169,11 @@ with check (
   (storage.foldername(name))[1] = (select auth.uid()::text)
 );
 
+insert into storage.buckets
+  (id, name, public)
+values
+  ('public_patterns', 'public_patterns', false);
+  
 -- create policy "Allow authenticated uploads for public sessions bucket"
 -- on storage.objects
 -- for insert

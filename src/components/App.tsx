@@ -2,7 +2,7 @@ import Homepage from './Homepage.tsx';
 
 import { createContext } from 'react';
 import { AppContextProvider } from './AppContextProvider.tsx';
-import { UserInfo, useSession } from '../scripts/use-session.ts';
+import { UserInfo, useSession } from '../scripts/helpers/use-session.ts';
 import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
 
 const App = () => {

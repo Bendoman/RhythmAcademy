@@ -1,12 +1,12 @@
 import '../styles/menu_screens.css';
 import '../styles/session_screen.css';
 
-import Lane from '../../scripts/Lane.ts';
+import Lane from '../../scripts/classes/Lane.ts';
 import { lanes } from '../../scripts/main.ts';
 import { useEffect, useRef, useState } from 'react'
-import { supabase } from '../../scripts/supa-client.ts';
+import { supabase } from '../../scripts/helpers/supa-client.ts';
 import { useAppContext } from '../AppContextProvider.tsx';
-import { uploadToBucket } from '../../scripts/SupaUtils.ts';
+import { uploadToBucket } from '../../scripts/helpers/supa-utils.ts';
 import { CloseButtonSVG } from '../../assets/svg/Icons.tsx';
 
 const SessionSaveScreen = () => {

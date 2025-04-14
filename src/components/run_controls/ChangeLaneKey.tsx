@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react'
-import '../styles/laneContent.css';
-import Lane from '../../scripts/Lane';
+import '../styles/lane_content.css';
+import Lane from '../../scripts/classes/Lane';
 import { assignLaneInput, drawSingleLane, findLaneFromCanvas, lanes, saveCurrentSessionLocally } from '../../scripts/main';
 import { midiAccess } from '../Homepage';
-import { prohibitedKeysList } from '../../scripts/Utils';
+import { prohibitedKeysList } from '../../scripts/helpers/utils';
 
 interface IChangeLaneKeyProps {
     canvas: HTMLCanvasElement;

@@ -1,5 +1,5 @@
 // import Lane from "./Lane";
-import Note from "./Note";
+import Note from "./classes/Note.ts";
 
 export type selectedPattern = {
     measures: number; 
@@ -31,7 +31,6 @@ export type LoadedLanePreview = {
     totalNotes: number; 
     numberOfLanes: number; 
     subdivisions: number[]; 
-    // difficulty: number; 
 }
 
 export type PatternModeSection = { 
@@ -57,4 +56,3 @@ export type HitPercentageGraphData = {
     missedNotes: number,
     wrongNotes: number,
 }
-

@@ -1,7 +1,7 @@
 import { createPortal } from 'react-dom';
 import React, { useEffect, useRef, useState } from 'react'
 
-import Lane from '../../scripts/Lane';
+import Lane from '../../scripts/classes/Lane';
 import DroppedPattern from './DroppedPattern';
 import PatternDropZone from './PatternDropZone';
 

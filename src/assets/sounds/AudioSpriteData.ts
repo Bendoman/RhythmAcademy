@@ -1,4 +1,4 @@
-import AudioSprite from "../../scripts/AudioSprite";
+import AudioSprite from "../../scripts/classes/AudioSprite";
 
 export default new AudioSprite({
   "src": [

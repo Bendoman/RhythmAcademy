@@ -1,13 +1,13 @@
-import Lane from '../../scripts/Lane.ts';
-import { EDIT_MODES } from '../../scripts/constants.ts';
-import { supabase } from '../../scripts/supa-client.ts';
+import Lane from '../../scripts/classes/Lane.ts';
+import { EDIT_MODES } from '../../scripts/helpers/constants.ts';
+import { supabase } from '../../scripts/helpers/supa-client.ts';
 import React, { act, useEffect, useRef, useState } from 'react'
 
 // TODO: Reduce the number of imports here. There must be a cleaner way.
 import PatternEditingPanel from './PatternEditingPanel.tsx';
-import { deleteLane, resetLanesEditingStatus, patternInCreationPositions,  findLaneFromCanvas, drawSingleLane, changeEditMode, maxMeasureCount, resetPatternInCreation, setNewPatternMeasures, longest_lane, setLongestLane, lanes, remapLane, saveCurrentSessionLocally } from '../../scripts/main.ts'
-import { listLocalStorageFolder, loadFromLocalStorage, saveToLocalStorage } from '../../scripts/Utils.ts';
-import { retrieveBucketData, retrieveBucketList, uploadToBucket } from '../../scripts/SupaUtils.ts';
+import { deleteLane, resetLanesEditingStatus, patternInCreationPositions,  findLaneFromCanvas, drawSingleLane, changeEditMode, maxMeasureCount, resetPatternInCreation, setNewPatternMeasures, longest_lane, setLongestLane, lanes, remapLane, saveCurrentSessionLocally, global_volume } from '../../scripts/main.ts'
+import { listLocalStorageFolder, loadFromLocalStorage, saveToLocalStorage } from '../../scripts/helpers/utils.ts';
+import { retrieveBucketData, retrieveBucketList, retrievePublicBucketList, uploadToBucket } from '../../scripts/helpers/supa-utils.ts';
 
 import '../styles/lane_editing.css';
 import { AutoPlay, LeftArrow, Metronome, QuestionMark, RightArrow } from '../../assets/svg/Icons.tsx';
@@ -111,6 +111,16 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas, setShowLog
     }
 
     let patterns: string[] = [];
+    // Retrieve public patterns
+    let publicPatterns = await retrievePublicBucketList('public_patterns')
+    if(publicPatterns) {
+      publicPatterns.forEach((pattern: string) => {
+        let patternSubdivision = parseInt(pattern.split('/')[0]);
+        if(patternSubdivision == lane.subdivision)
+          patterns.push(`public_${pattern}`); 
+      });
+    }
+
     const userId = (await supabase.auth.getUser()).data.user?.id as string;
     if(userId) {
       // Retrieve list of patterns from Supabase
@@ -232,9 +242,7 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas, setShowLog
 
   // #region ( click handlers )
   const onRepeatClick = () => {
-    console.log('here', repeated)
     if(!lane.repeated) {
-      // if(lane.notes.length > 0) 
       lane.repeatNotes();
     } else {
       // Lane has already been repeated. Toggle repeating off
@@ -456,7 +464,6 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas, setShowLog
         className={`noFail_button ${noFail ? 'selected' : ''}`} onClick={() => {
           setNoFail(!noFail); 
           lane.noFail = !lane.noFail; 
-          console.log(lane.noFail)
           saveCurrentSessionLocally(); 
         }}>no fail</button>
       </div>
@@ -505,6 +512,7 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas, setShowLog
         className="lane_sound_select" 
         onChange={(event)=>{
           lane.hitsound = event.target.value;
+          lane.audioSprite.play(lane.hitsound, global_volume);
         }}>
             <option value="kick1" selected={lane.hitsound == "kick1" ? true : false}>kick 1</option>
             <option value="kick2"  selected={lane.hitsound == "kick2" ? true : false}>kick 2</option>

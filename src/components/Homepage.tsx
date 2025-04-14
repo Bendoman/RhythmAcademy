@@ -1,8 +1,8 @@
 // #region ( Imports )
 import { useEffect, useContext } from 'react';
-import { supabase } from '../scripts/supa-client.ts';
+import { supabase } from '../scripts/helpers/supa-client.ts';
 // Custom components
-import Lane from '../scripts/Lane.ts';
+import Lane from '../scripts/classes/Lane.ts';
 import { UserContext } from "./App.tsx";
 import { useAppContext } from './AppContextProvider.tsx';
 import StatsScreen from './menu_screens/StatsScreen.tsx';
@@ -16,8 +16,8 @@ import SessionLoadScreen, { createNewLane } from './menu_screens/SessionLoadScre
 import './styles/homepage.css';
 import './styles/variables.css';
 import './styles/oldHomepage.css';
-import { loadFromLocalStorage, saveToLocalStorage } from '../scripts/Utils.ts';
-import { retrieveFriendsList } from '../scripts/SupaUtils.ts';
+import { loadFromLocalStorage, saveToLocalStorage } from '../scripts/helpers/utils.ts';
+import { retrieveFriendsList } from '../scripts/helpers/supa-utils.ts';
 import { startLoop, handleMIDIMessage, lanes, remapLane } from '../scripts/main.ts';
 import Logo from '../assets/svg/Logo.tsx';
 // #endregion
@@ -37,7 +37,6 @@ const Homepage = () => {
 
     const updateDevices = (event: MIDIConnectionEvent) => { 
         if(event.port?.state == 'connected' && event.port.type === 'input') {
-            console.log('updated')
             const input = midiAccess.inputs.get(event.port.id);
             if(input) {
                 input.addEventListener('midimessage', processMidiMessage);
@@ -119,7 +118,7 @@ const Homepage = () => {
         if(navigator.requestMIDIAccess) {
             navigator.requestMIDIAccess({ sysex: false }).then(midi_connection_success, midi_connection_failure);
         } else {
-            console.log("MIDI Access not supported on current browser");
+            console.warn("MIDI Access not supported on current browser");
         }
 
         // Detects when lane_container is empty

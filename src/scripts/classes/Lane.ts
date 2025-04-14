@@ -1,9 +1,9 @@
 import Note from "./Note.ts";
 import Hitzone from "./Hitzone.ts";
-import { currentTime, global_volume, longest_lane, measureHeight } from "./main.ts";
-import { selectedPattern } from "./types.ts";
-import { drawLine, getNoteFill } from "./Utils";
-import { COLORS, EDIT_MODES, HIT_STATUSES, ZONE_NAMES } from "./constants";
+import { currentTime, global_volume, longest_lane, measureHeight } from "../main.ts";
+import { selectedPattern } from "../types.ts";
+import { drawLine, getNoteFill } from "../helpers/utils.ts";
+import { COLORS, EDIT_MODES, HIT_STATUSES, ZONE_NAMES } from "../helpers/constants.ts";
 
 // TODO: Make sure that values relient on height can be updated when the window size changes. Have an update function for this. 
 export default class Lane {

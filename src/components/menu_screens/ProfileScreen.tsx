@@ -5,9 +5,9 @@ import '../styles/profile_screen.css';
 import { UserContext } from '../App';
 import { CloseButtonSVG } from '../../assets/svg/Icons';
 import { useAppContext } from '../AppContextProvider';
-import { modifyFriend, sendFriendRequest } from '../../scripts/SupaUtils';
+import { modifyFriend, sendFriendRequest } from '../../scripts/helpers/supa-utils';
 import { useContext, useEffect, useRef, useState } from 'react'
-import { supabase } from '../../scripts/supa-client';
+import { supabase } from '../../scripts/helpers/supa-client';
 import { Auth } from '@supabase/auth-ui-react';
 import { ThemeSupa } from "@supabase/auth-ui-shared";
 

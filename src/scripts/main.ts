@@ -1,13 +1,11 @@
 // #region ( Imports )
-import Lane from "./Lane.ts"
-import Note from "./Note.ts";
-import AudioSprite from "./AudioSprite.ts";
+import Lane from "./classes/Lane.ts"
+import Note from "./classes/Note.ts";
+import AudioSprite from "./classes/AudioSprite.ts";
 
 import { StatsObject } from "./types.ts";
-import { findSortedIndex, saveToLocalStorage } from "./Utils.ts";
-import { COLORS, EDIT_MODES } from "./constants.ts";
-import { getPatternOptionHTML } from "./elements.ts";
-import { retrieveBucketList } from "./SupaUtils.ts";
+import { findSortedIndex, saveToLocalStorage } from "./helpers/utils.ts";
+import { COLORS, EDIT_MODES } from "./helpers/constants.ts";
 // #endregion
 
 // #region ( Global variables )
@@ -144,17 +142,21 @@ function updateLaneWidth(lane: Lane, multiplier: number) {
 
 export function updateAllLaneSizes() {
   // TODO: Change this to be more dynamic
+  let laneContainerDiv = document.getElementById('lane_container');
+  if(!laneContainerDiv) { return }
+  
   let multiplier = 1; 
-  switch(laneCount) {
-    case 4:
-      multiplier = (0.75);
-      break;
-    case 5:
-      multiplier = (0.6);
-      break;
-    case 6:
-      multiplier = (0.5);
-      break;
+  if(laneCount == 4) {
+    multiplier = (0.75);
+    laneContainerDiv.style.gap = '2em';
+  } else if(laneCount == 5) {
+    multiplier = (0.6);
+    laneContainerDiv.style.gap = '1em';
+  } else if(laneCount == 6) {
+    multiplier = (0.5);
+    laneContainerDiv.style.gap = '0.5em';
+  } else {
+    laneContainerDiv.style.gap = '3em';
   }
   
   lanes.forEach(lane => {
@@ -341,42 +343,9 @@ function midiNoteOff(note: number) {
 
 const keyHeld: { [key: string]: boolean } = {};
 
-function enableAudio() {
+export function enableAudio() {
   if(audioSprite) 
     return;
-
-  // TODO:  Combine these into one sprite and remove metronome sprite from lane 
-  // audioSprite = new AudioSprite({
-  //   "src": [
-  //     "src/assets/sounds/drums.mp3"
-  //   ],
-  //   "sprite": {
-  //     "clap": [
-  //       0,
-  //       734.2630385487529
-  //     ],
-  //     "closed-hihat": [
-  //       2000,
-  //       445.94104308390035
-  //     ],
-  //     "crash": [
-  //       4000,
-  //       1978.6848072562354
-  //     ],
-  //     "kick": [
-  //       7000,
-  //       553.0839002267571
-  //     ],
-  //     "open-hihat": [
-  //       9000,
-  //       962.7664399092968
-  //     ],
-  //     "snare": [
-  //       11000,
-  //       354.48979591836684
-  //     ]
-  //   }
-  // });
 
   audioSprite = new AudioSprite({
     "src": [
@@ -463,12 +432,6 @@ function canvasMouseWheel(event: WheelEvent) {
   if(lane.translationAmount - event.deltaY/2.5 > 0)
     lane.translationAmount -= event.deltaY/2.5; 
   drawSingleLane(lane);
-
-  // if(event.deltaY > 0) {
-  //     console.log('scroll down in edit mode');    
-  // } else {
-  //     console.log('scroll up in edit mode');
-  // }
 }
 
 let offsetY:number | null = 0; 
@@ -619,20 +582,6 @@ async function handleCanvasClick(event: MouseEvent) {
       drawSingleLane(lane);
     }
   })
-
-  let laneSelect = laneEditingSection?.querySelector('.load_lane_select');
-  let laneSelectInnerHTML = '';
-
-  let data = await retrieveBucketList('lanes');
-  data?.forEach((pattern) => {
-    laneSelectInnerHTML += getPatternOptionHTML(pattern.name); 
-  })
-  
-  if(laneSelect)
-    laneSelect.innerHTML = laneSelectInnerHTML; 
-
-  console.log(laneSelect); 
-
 }
 
 // TODO: Reword this and rework it too, split it into seperate functions
@@ -660,32 +609,8 @@ export function drawSingleLane(lane: Lane) {
     // let divider = 16/lane.timeSignature[1];
 
     let height = lane.noteGap/lane.innerSubdivision; 
-    // if(lane.subdivision < 4)
-    //   height = lane.noteGap/6;
-    // else if(lane.subdivision < 7)
-    //   height = lane.noteGap/4;
-    // else
-    //   height = lane.noteGap/2;
-    
-    // TODO: If time come back. Divider must be even, and be divisible by original value determined above.
-    // if(keyHeld['Control']) {
-    //   const MAX_DISVISOR = 100; 
-      
-    //   let divisor = 1; 
-    //   for(; divisor <= MAX_DISVISOR; divider++) {
-    //     if(lane.noteGap/divisor < 15)
-    //       break; 
-
-    //     divisor++;
-    //     height = lane.noteGap/divisor; 
-    //   }
-    //   console.log(divisor)
-    //   height = lane.noteGap/12; 
-    // }
-      // height = lane.noteGap/12.5; 
-
     // let drawHeight = lane.noteGap/(lane.timeSignature[1] * lane.timeSignature[0]);
-    let drawHeight = 12.5;
+    let drawHeight = 12.5; // Will be dynamic when more time signatures are supported in the future
     
     // So that only non repeated part of lane is shown in edit mode
     let topOfLane = lane.calculateTopOfLane(false); 
@@ -731,14 +656,13 @@ export function drawSingleLane(lane: Lane) {
         let width = lane.canvas.width/2; 
         let x = (width) - (width/2);
 
-        // console.log(newNoteIndex); 
-        // let sortedIndex = findSortedIndex(lane.notes, newNoteIndex, lane);   
-        // if(sortedIndex[1] == 1)
-        //   lane.ctx.fillStyle = 'red'
-        // else 
-        //   lane.ctx.fillStyle = COLORS.HIGHLIGHTED_NOTE_FILL;
+        let sortedIndex = findSortedIndex(lane.notes, newNoteIndex, lane);   
+        console.log(sortedIndex); 
+        if(sortedIndex[1] == 1)
+          lane.ctx.fillStyle = COLORS.EXISTING_NOTE_FILL;
+        else 
+          lane.ctx.fillStyle = COLORS.HIGHLIGHTED_NOTE_FILL;
 
-        lane.ctx.fillStyle = COLORS.HIGHLIGHTED_NOTE_FILL        
         lane.ctx.beginPath();
         lane.ctx.roundRect(x, effectiveY - (drawHeight/2), width, drawHeight, 20); 
         lane.ctx.fill();
@@ -793,7 +717,11 @@ function gameLoop(timeStamp: number) {
     // Determining the speed of translation for each lane based on the current loop interval
     let translationSpeed = (interval / (60000/lane.bpm)) * (measureHeight/lane.timeSignature[1]);
     lane.translationAmount += translationSpeed;
-  
+    
+
+    // console.log((lane.translationAmount - (lane.canvas.height - lane.startY)))
+
+
     lane.ctx.clearRect(0, 0, lane.canvas.width, lane.canvas.height - lane.inputAreaHeight);
     lane.drawHitzone();
     lane.drawMeasureIndicators();
@@ -900,6 +828,9 @@ export function onStopButtonClick(): {stats: StatsObject[], statsDisqualified: b
 }
 
 export function onEditButtonClick() {
+  if(!audioSprite) 
+    enableAudio(); // Required to be triggerd by user action
+
   paused = true;
   editing = !editing;
   offsetY = null;

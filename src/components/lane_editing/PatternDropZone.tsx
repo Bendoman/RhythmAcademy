@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react'
-import Lane from '../../scripts/Lane';
+import Lane from '../../scripts/classes/Lane';
 import { PatternModeSection } from '../../scripts/types';
-import { supabase } from '../../scripts/supa-client';
-import { loadFromLocalStorage } from '../../scripts/Utils';
-import { retrieveBucketData } from '../../scripts/SupaUtils';
+import { supabase } from '../../scripts/helpers/supa-client';
+import { loadFromLocalStorage } from '../../scripts/helpers/utils';
+import { retrieveBucketData } from '../../scripts/helpers/supa-utils';
 
 interface IPatternDropZoneProps {
     lane: Lane; 
@@ -38,11 +38,17 @@ const PatternDropZone: React.FC<IPatternDropZoneProps>
 
     // TODO: Lift this to lane editing panel
     async function loadPattern(occurances: number, patternName: string) {
+        
         let patternData;
         let patternID = crypto.randomUUID(); 
-
+        
         const userId = (await supabase.auth.getUser()).data.user?.id as string;
-        if(userId) {
+        
+        if(patternName.includes('public_')) {
+            // Publicly stored pattern
+            let name = patternName.split('_').slice(1).join('_');
+            patternData = await retrieveBucketData('public_patterns', `${name}`);
+        } else if(userId) {
             // Fetch from Supabase
             patternData = await retrieveBucketData('patterns', `${userId}/${lane.subdivision}/${patternName}`);
         } else {
@@ -58,8 +64,6 @@ const PatternDropZone: React.FC<IPatternDropZoneProps>
             name: patternName, 
             data: patternData
         };
-
-        console.log(pattern);
 
         setDroppedPatterns(prev => {
             const updated = [pattern, ...prev];
@@ -88,7 +92,6 @@ const PatternDropZone: React.FC<IPatternDropZoneProps>
     <div className='pattern_drop_zone' 
     onDragOver={(e) => { 
         if(!draggedPatternRef.current) { return }
-        console.log(draggedPatternRef.current)
         if(lane.patternStartMeasure + draggedPatternRef.current.measures <= lane.measureCount) {
             e.preventDefault();
         }

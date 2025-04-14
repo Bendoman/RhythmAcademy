@@ -3,16 +3,16 @@ import React, { useEffect, useRef, useState } from 'react'
 import '../styles/menu_screens.css';``
 import '../styles/session_screen.css';
 
-import Lane from '../../scripts/Lane';
+import Lane from '../../scripts/classes/Lane';
 import { createRoot } from 'react-dom/client';
-import { supabase } from '../../scripts/supa-client';
+import { supabase } from '../../scripts/helpers/supa-client';
 import { useAppContext } from '../AppContextProvider';
 import { LoadedLanePreview } from '../../scripts/types';
-import { saveToLocalStorage } from '../../scripts/Utils';
+import { saveToLocalStorage } from '../../scripts/helpers/utils';
 import ChangeLaneKey from '../run_controls/ChangeLaneKey';
 import LaneEditingPanel from '../lane_editing/LaneEditingPanel';
 import { deleteLane, lanes, onAddLaneButtonClick, remapLane, saveCurrentSessionLocally } from '../../scripts/main'; 
-import { newnewRetrieveBucketList, retrieveBucketData, retrieveFriendBucketList, retrievePublicBucketList } from '../../scripts/SupaUtils';
+import { newnewRetrieveBucketList, retrieveBucketData, retrieveFriendBucketList, retrievePublicBucketList } from '../../scripts/helpers/supa-utils';
 import { CloseButtonSVG, RightArrow } from '../../assets/svg/Icons';
 import { checkDomainOfScale } from 'recharts/types/util/ChartUtils';
 
@@ -127,7 +127,6 @@ const SessionLoadScreen = () => {
         {sessionName: sessionName, totalNotes: totalNotes, 
             numberOfLanes: numberOfLanes, subdivisions: subdivisions};
         
-        console.log(session);
         setHoveredSession(session);
     }
 
@@ -135,8 +134,8 @@ const SessionLoadScreen = () => {
         let data;
         if(selectedTab == 'friend')
             data = await retrieveFriendBucketList(`${selectedTab}_sessions`);
-        else if(selectedTab == 'public')
-            data = await retrievePublicBucketList();
+        else if(selectedTab == 'public') 
+            data = await retrievePublicBucketList('public_sessions');
         else
             data = await newnewRetrieveBucketList(`${selectedTab}_sessions`);
 
@@ -160,9 +159,6 @@ const SessionLoadScreen = () => {
             setLoadedFolders(folders); 
         else 
             setLoadedFolders(null); 
-
-
-        console.log(folders);
 
         if(sessions)
             setLoadedSessions(sessions);
@@ -194,6 +190,8 @@ const SessionLoadScreen = () => {
         </div>
 
         <div className="load_content">
+            { loadedSessions && loadedSessions.length == 0 && <p>Nothing here</p>}
+
             { loadedFolders && loadedFolders.map((folder, index) => {
                 return (
                 <div key={index} className='drop_down_container'> 
@@ -212,7 +210,7 @@ const SessionLoadScreen = () => {
                             <div className='hoveredInfo'>
                                 <p>Total notes: { hoveredSession.totalNotes }</p>
                                 <p>Number of lanes: { hoveredSession.numberOfLanes }</p>
-                                <p>Subdivisions: { hoveredSession.subdivisions.map((sd) => {return <>{sd}</>}) }</p>
+                                <p>Subdivisions { hoveredSession.subdivisions.map((sd) => {return ` : ${sd}`}) }</p>
                             </div>}
 
                             { !hoveredSession && <button 
@@ -224,7 +222,7 @@ const SessionLoadScreen = () => {
                             { popupStatus == `${folder}/${session[1]}_loading_session_error` 
                             && ( <div className="error_popup">Error loading</div>)}
                             { popupStatus == `${folder}/${session[1]}_loading_session_success` 
-                            && ( <div className="confirmation_popup">Lane loaded</div>)}
+                            && ( <div className="confirmation_popup">Session loaded</div>)}
                         </div>)
                     })}
                 </div>)
@@ -254,8 +252,6 @@ const SessionLoadScreen = () => {
                     && ( <div className="confirmation_popup">Lane loaded</div>)}
                 </div>)
             })} 
-
-            { loadedSessions && loadedSessions.length == 0 && <p>Nothing here</p>}
         </div>
     </div>
     </>)

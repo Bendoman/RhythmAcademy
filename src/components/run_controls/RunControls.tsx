@@ -3,15 +3,12 @@ import PlayButton from './PlayButton';
 import PauseButton from './PauseButton';
 import StopButton from './StopButton';
 import EditButton from './EditButton';
-import Note from '../../scripts/Note.ts';
-import { StatsObject } from '../../scripts/types.ts';
 
-import '../styles/runControls.css';
+import '../styles/run_controls.css';
 import AddLaneButton from './AddLaneButton.tsx';
-import { deleteLane, lanes, onEditButtonClick, onPauseButtonClick, onPlayButtonClick, onStopButtonClick, saveCurrentSessionLocally, toggleLooping } from '../../scripts/main.ts';
+import { deleteLane, enableAudio, lanes, onEditButtonClick, onPauseButtonClick, onPlayButtonClick, onStopButtonClick, saveCurrentSessionLocally, toggleLooping } from '../../scripts/main.ts';
 import NotificationsButton from './NotificationsButton.tsx';
-import Lane from '../../scripts/Lane.ts';
-import { saveToLocalStorage } from '../../scripts/Utils.ts';
+import { saveToLocalStorage } from '../../scripts/helpers/utils.ts';
 import { useAppContext } from '../AppContextProvider.tsx';
 import { Eraser } from '../../assets/svg/Icons.tsx';
 
@@ -61,6 +58,7 @@ const RunControls = () => {
     }
 
     const editButtonClick = () => {
+        enableAudio(); 
         if(!isPlayingRef.current) {
             setCurrentSessionAltered(true); 
             saveToLocalStorage('stats', '');
@@ -123,6 +121,7 @@ const RunControls = () => {
     }
 
     const playButtonClick = () => {
+        enableAudio(); 
         if(lanes.length > 0 && !isEditingRef.current && !isPlayingRef.current) { 
             isPlayingRef.current = !isPlayingRef.current; 
             setIsPlaying(isPlayingRef.current);
@@ -280,6 +279,7 @@ const RunControls = () => {
                 </button>
 
                 <button title="clear session" id="clear_session_button" onClick={() => {
+                    setCurrentSessionAltered(true);
                     for(let i = lanes.length - 1; i >= 0; i--) {
                         deleteLane(lanes[i], lanes[i].canvas);
                     }

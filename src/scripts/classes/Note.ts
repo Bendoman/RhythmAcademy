@@ -1,4 +1,4 @@
-import { ZONE_NAMES } from "./constants";
+import { ZONE_NAMES } from "../helpers/constants";
 
 export default class Note {
     // y: number; 

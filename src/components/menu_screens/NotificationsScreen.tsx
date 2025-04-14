@@ -2,7 +2,7 @@ import React, { useEffect } from 'react'
 // TODO: Refactor this name
 import '../styles/session_screen.css';
 import '../styles/menu_screens.css';
-import { modifyFriend } from '../../scripts/SupaUtils';
+import { modifyFriend } from '../../scripts/helpers/supa-utils';
 import { useAppContext } from '../AppContextProvider';
 
 const NotificationsScreen = () => {

@@ -1,6 +1,6 @@
 import React, { ChangeEvent, useEffect, useRef, useState } from 'react'
 
-import Lane from '../../scripts/Lane';
+import Lane from '../../scripts/classes/Lane';
 import { PatternModeSection } from '../../scripts/types';
 
 interface IDroppedPatternProps {
@@ -93,8 +93,6 @@ const DroppedPattern: React.FC<IDroppedPatternProps> = ({ lane, setDroppedPatter
         currentOccurances.current = pattern.occurances;
         setOccuranceState(currentOccurances.current);
         
-        console.log(pattern.data);
-
         lane.onPatternStartChange(patternStartMeasureChange);
         lane.onPatternChange(measureChange);
 
@@ -106,7 +104,9 @@ const DroppedPattern: React.FC<IDroppedPatternProps> = ({ lane, setDroppedPatter
     
     return (<div className='dropped_pattern'>
         <div className="section_p_container">
-            <p>{pattern.name}</p>
+            <p>{pattern.name && pattern.name.includes('public_') 
+            ? pattern.name.split('/').slice(1).join('/')
+            : pattern.name}</p>
         </div>
         
         <div className="section_inner_container">

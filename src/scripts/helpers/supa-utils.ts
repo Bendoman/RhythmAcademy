@@ -1,5 +1,5 @@
-import { supabase } from '../scripts/supa-client.ts';
-import { FriendRequest } from './types.ts';
+import { supabase } from './supa-client.ts';
+import { FriendRequest } from '../types.ts';
 
 // TODO: Move all supabase data retrieval here.
 export async function retrieveBucketList(bucket: string, folder?: string) {
@@ -26,9 +26,9 @@ const userId = (await supabase.auth.getUser()).data.user?.id as string;
 }
 
 // TODO: Merge these two and add pagination handling to friends bucket
-export async function retrievePublicBucketList() {
+export async function retrievePublicBucketList(bucket: string) {
     const { data } = await supabase.storage
-    .from('public_sessions')
+    .from(bucket)
     .download(`fileManifest.json?t=${Date.now()}`);
 
     const list = JSON.parse(await data?.text() ?? '[]');

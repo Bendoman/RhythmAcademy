@@ -1,5 +1,5 @@
 import '../styles/lane_editing.css'
-import Lane from '../../scripts/Lane';
+import Lane from '../../scripts/classes/Lane';
 import { PatternModeSection } from '../../scripts/types';
 import React, { useEffect, useRef, useState } from 'react';
 

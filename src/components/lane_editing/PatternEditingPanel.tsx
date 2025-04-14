@@ -1,14 +1,14 @@
-import Lane from '../../scripts/Lane';
+import Lane from '../../scripts/classes/Lane';
 import React, { useEffect, useRef, useState } from 'react'
 import LanePatternDisplay from './LanePatternDisplay';
 
-import { supabase } from '../../scripts/supa-client';
-import { EDIT_MODES } from '../../scripts/constants';
-import { retrieveBucketData } from '../../scripts/SupaUtils';
+import { supabase } from '../../scripts/helpers/supa-client';
+import { EDIT_MODES } from '../../scripts/helpers/constants';
+import { retrieveBucketData } from '../../scripts/helpers/supa-utils';
 import { changeEditMode, drawSingleLane, setNewPatternMeasures, setPatternInCreation } from '../../scripts/main';
 
 import '../styles/lane_editing.css';
-import { loadFromLocalStorage } from '../../scripts/Utils';
+import { loadFromLocalStorage } from '../../scripts/helpers/utils';
 
 interface IPatternEditingPanelProps {
     lane: Lane; 
@@ -48,27 +48,6 @@ const PatternEditingPanel: React.FC<IPatternEditingPanelProps> = ({ lane, patter
         setPatternInCreationInputs({patternName: patternName, measures: patternData.measures});
     }
 
-    // useEffect(() => {
-    //     let laneEditing = canvas.closest('.canvas_container')?.querySelector('.lane_editing');
-    //     setVisible(laneEditing?.classList.contains('activated')!);
-
-    //     // Ensures that panel is set to visible when edit mode is activated
-    //     const observer = new MutationObserver((mutations) => {
-    //         mutations.forEach((mutation) => {
-    //             if(mutation.type === 'attributes' && mutation.attributeName === 'class') {
-    //                 setVisible(laneEditing?.classList.contains('activated')!);  
-    //             }
-    //         })      
-    //     });
-
-    //     observer.observe(laneEditing!, {
-    //         attributes: true, 
-    //         attributeFilter: ['class'],
-    //     }); 
-        
-    //       return () => { observer.disconnect(); };
-    // }, []);   
-
     return (<>
         <LanePatternDisplay lane={lane} visible={inPatternMode && activated} draggedPatternRef={draggedPatternRef}/>
 
@@ -86,7 +65,9 @@ const PatternEditingPanel: React.FC<IPatternEditingPanelProps> = ({ lane, patter
                         draggedPatternRef.current = patternData;
                     }}>
                         <div className="pattern_name_container">
-                            <p>{pattern}</p>
+                            <p>{pattern.includes('public_') 
+                            ? pattern.split('/').slice(1).join('/')
+                            : pattern}</p>
                         </div>
                         
                         <div className="patternMeasureCountContainer">
