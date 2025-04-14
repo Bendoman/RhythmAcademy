@@ -43,7 +43,6 @@ const AddLaneButton = forwardRef<HTMLButtonElement>((props, ref) => {
 
     setInputValue(event.key);
     setListening(false);
-    console.log(event); 
   })
 
   const { setShowLogo, setCurrentSessionAltered, showSessionToolTip, setCurrentSessionName } = useAppContext(); 

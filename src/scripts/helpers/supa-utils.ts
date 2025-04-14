@@ -32,7 +32,6 @@ export async function retrievePublicBucketList(bucket: string) {
     .download(`fileManifest.json?t=${Date.now()}`);
 
     const list = JSON.parse(await data?.text() ?? '[]');
-    console.log(list); 
     return list; 
 }
 

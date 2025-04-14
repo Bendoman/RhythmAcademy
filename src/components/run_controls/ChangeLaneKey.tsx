@@ -57,8 +57,6 @@ const ChangeLaneKey: React.FC<IChangeLaneKeyProps> = ({ canvas }) => {
             return;
         }
 
-        console.log(event);
-
         setListening(false);
         listeningRef.current = false;
         buttonRef.current?.blur(); 
@@ -98,7 +96,6 @@ const ChangeLaneKey: React.FC<IChangeLaneKeyProps> = ({ canvas }) => {
             if(listeningRef.current) {
               setListening(false);
               listeningRef.current = false; 
-              console.log(listening)
             }
           }}  
         >

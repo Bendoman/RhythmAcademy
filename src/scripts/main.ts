@@ -63,7 +63,6 @@ export function handleMIDIMessage(input: MIDIMessageEvent) {
 
   const note = inputData[1];
   const velocity = inputData[2];
-  console.log(note);
 
   if(velocity > 0) {
     midiNoteOn(note);
@@ -186,7 +185,6 @@ function createNewLane(
   inputKey: string,
   hitPrecision: number
 ) {
-    // console.log("in here");
   if(!container_width || !container_height) {
     console.error('Container dimensions undefined');
     return;
@@ -212,15 +210,11 @@ function createNewLane(
 
   const new_lane = new Lane(bpm, measureCount, noteGap, hitsound, maxWrongNotes, notes, timeSignature, inputKey.toUpperCase(), newCanvas, hitPrecision);
 
-  // TODO: Review if these can be unified
   lanes.push(new_lane); 
-  // console.log(`Adding new lane: to lanes`); 
-  // console.log(new_lane)
   input_lane_pairs[new_lane.inputKey.toUpperCase()] = lanes.length - 1;
   canvas_lane_pairs[newCanvas.id] = new_lane;
 
   new_lane.drawInputVisual();
-  // populateTestNotes(new_lane);
 
   const canvasContainer = document.createElement('div');
   canvasContainer.classList.add('canvas_container');
@@ -453,7 +447,6 @@ function canvasMouseOut(event: MouseEvent) {
   let associatedLane = findLaneFromEvent(event);
 
   offsetY = null;
-  console.log(offsetY);
   drawSingleLane(associatedLane);
 }
 
@@ -461,8 +454,6 @@ function canvasMouseOut(event: MouseEvent) {
 async function handleCanvasClick(event: MouseEvent) {
   if(!editing)
     return; 
-
-  console.log(newNoteIndex);
 
   let canvas = event.target as HTMLElement; 
 
@@ -475,19 +466,15 @@ async function handleCanvasClick(event: MouseEvent) {
       sortedIndex = findSortedIndex(patternInCreationNotes, newNoteIndex, lane);
     else 
       sortedIndex = findSortedIndex(lane.notes, newNoteIndex, lane);   
-    console.log(sortedIndex);   
     
     if(sortedIndex[1] == 1 && editMode != EDIT_MODES.PATTERN_MODE) {
       if(event.button == 2) {
         if(editMode == EDIT_MODES.CREATE_PATTERN_MODE) {
           patternInCreationNotes.splice(sortedIndex[0], 1);
           patternInCreationPositions.splice(sortedIndex[0], 1);
-          console.log(patternInCreationPositions);
         } else {
           let y = lane.notes[sortedIndex[0]].getY(lane.noteGap, lane.innerSubdivision, lane.startY); 
           let currentMeasure = Math.floor((Math.abs(lane.startY - y)/measureHeight)); 
-
-          console.log(`Deleting in measure ${currentMeasure}`);
 
           if(sortedIndex[0] > 0 && sortedIndex[0] == lane.notes.length - 1) {
             let previousNoteY = lane.notes[sortedIndex[0] - 1].getY(lane.noteGap, lane.innerSubdivision, lane.startY); 
@@ -516,8 +503,6 @@ async function handleCanvasClick(event: MouseEvent) {
       return;
     } else if(event.button != 2 && editMode != EDIT_MODES.PATTERN_MODE) {
       let newNote = new Note(newNoteIndex);
-      // console.log(newNoteIndex);
-      // console.log(newNote.getY(lane.noteGap, lane.innerSubdivision, lane.startY) - lane.startY); 
 
       if(editMode == EDIT_MODES.CREATE_PATTERN_MODE) {
         patternInCreationNotes.splice(sortedIndex[0], 0, newNote);
@@ -525,15 +510,9 @@ async function handleCanvasClick(event: MouseEvent) {
         let divider = 16/lane.timeSignature[1]; 
         let height = lane.noteGap/divider; 
         
-        // TODO: GET Y FROM INDEX.
-        let y = patternInCreationNotes[sortedIndex[0]].getY(lane.noteGap, lane.innerSubdivision, lane.startY); 
+        // let y = patternInCreationNotes[sortedIndex[0]].getY(lane.noteGap, lane.innerSubdivision, lane.startY); 
         // let dif = (y - lane.startY) / height;
-        console.debug(patternInCreationNotes[sortedIndex[0]].index);
-
         patternInCreationPositions.splice(sortedIndex[0], 0, patternInCreationNotes[sortedIndex[0]].index);
-
-        console.log(patternInCreationPositions);
-
       } else {
         if(lane.repeated) {
           lane.notes.splice(lane.notes.length - lane.repeatedNotes, lane.repeatedNotes);
@@ -558,7 +537,6 @@ async function handleCanvasClick(event: MouseEvent) {
   // click to send canvas to edit mode
   canvas.classList.add('editing');
   canvas.parentElement?.classList.remove('background');
-  console.log(canvas.parentElement);
 
   let laneEditingSection = canvas.parentElement?.querySelector('.lane_editing');
   laneEditingSection?.classList.add('activated')
@@ -570,7 +548,6 @@ async function handleCanvasClick(event: MouseEvent) {
     editMode = EDIT_MODES.NOTE_MODE;
   else if(patternModeButton?.classList.contains('selected'))
     editMode = EDIT_MODES.PATTERN_MODE;
-  console.log(editMode, noteModeButton, patternModeButton);
 
   lanes.forEach(lane => {
     if(lane.canvas != canvas) {
@@ -646,18 +623,12 @@ export function drawSingleLane(lane: Lane) {
         // newNoteIndex = Math.round((lane.startY - newNoteY) / (lane.noteGap/lane.timeSignature[1]));
 
         newNoteIndex = Math.round(parseInt(((lane.startY - newNoteY) / (lane.noteGap/lane.innerSubdivision)).toFixed(1)));
-        // console.log(newNoteIndex);
-        
         // let inverse = ((newNoteIndex * (lane.noteGap/lane.timeSignature[1])) - lane.startY) * -1;
-        // console.log(newNoteY, " : ", newNoteIndex, " : ", inverse);
 
-        // console.log(newNoteY);
-        // console.log(lane.notes);
         let width = lane.canvas.width/2; 
         let x = (width) - (width/2);
 
         let sortedIndex = findSortedIndex(lane.notes, newNoteIndex, lane);   
-        console.log(sortedIndex); 
         if(sortedIndex[1] == 1)
           lane.ctx.fillStyle = COLORS.EXISTING_NOTE_FILL;
         else 
@@ -701,9 +672,7 @@ function gameLoop(timeStamp: number) {
   lastLoop = timeStamp;
  
   for(let lane of lanes) {
-
     if(!lane.noFail && lane.notesMissed.length + lane.wrongNotes.length >= lane.maxWrongNotes) {
-      console.log(lane);
       (document.querySelector('#session_stop_button') as HTMLElement)?.click();
     }
 
@@ -711,23 +680,23 @@ function gameLoop(timeStamp: number) {
       lane.drawInputVisual(); // So that when paused an in edit mode you can verify that your input mode works
       continue;
     }
-    // console.log(`${lane.translationAmount} : ${interval} : ${measureHeight/lane.timeSignature[1]} : ${lane.bpm}`); 
-  
     
     // Determining the speed of translation for each lane based on the current loop interval
     let translationSpeed = (interval / (60000/lane.bpm)) * (measureHeight/lane.timeSignature[1]);
     lane.translationAmount += translationSpeed;
-    
 
-    // console.log((lane.translationAmount - (lane.canvas.height - lane.startY)))
 
+    if(lane.metronomeEnabled &&  lane.translationAmount % (measureHeight/lane.timeSignature[0]) < 2 
+      && currentTime - lane.lastMetronomeTick > 50) {
+      lane.lastMetronomeTick = currentTime; 
+      lane.audioSprite.play('metronomeOff', global_volume * .5);
+    }
 
     lane.ctx.clearRect(0, 0, lane.canvas.width, lane.canvas.height - lane.inputAreaHeight);
     lane.drawHitzone();
     lane.drawMeasureIndicators();
     lane.updateAndDrawNotes(editing, ups, translationSpeed);
     lane.drawInputVisual();
-  
   
     // If both tops are visible. Take whichever tranlsation amount is highest. 
     let topOfLongestLaneVisible = -(longest_lane.translationAmount + ((measureHeight/longest_lane.timeSignature[1])/longest_lane.timeSignature[1])) < (longest_lane.calculateTopOfLane(false));
@@ -736,10 +705,7 @@ function gameLoop(timeStamp: number) {
   
     if(topOfLongestLaneVisible && topOfCurrentLaneVisible) {
       let oldTranslationAmount = lane.translationAmount; 
-  
-      // lane.translationAmount = lane.translationAmount - lane.height - (lane.noteGap);
-      
-      
+
       let longest_t = longest_lane.translationAmount - longest_lane.height - ((measureHeight/longest_lane.timeSignature[1])); 
       let current_t = lane.translationAmount - (-lane.calculateTopOfLane(lane.repeated) + lane.startY) - (measureHeight/lane.timeSignature[1]);
       lane.translationAmount = longest_t < current_t ? longest_t : current_t; 
@@ -754,17 +720,11 @@ function gameLoop(timeStamp: number) {
     } 
   
     if(lane == longest_lane) {
-      // console.log(lane.inputKey);
       let overshoot = ((lane.startY - lane.translationAmount) + (measureHeight/lane.timeSignature[1])) - lane.calculateTopOfLane(false);
       if(overshoot <= 0 && looping) {
         resetLanes(overshoot);
-        // TODO: See if this is needed
-        // window.requestAnimationFrame(gameLoop); // Ensures all lanes stay tightly in sync
-        // restartLoop(); 
-        // return; 
         break;
       } else if(overshoot <= 0) {
-        // TODO: See if this can be reworked
         (document.querySelector('#session_stop_button') as HTMLElement)?.click();
       }
     }
@@ -794,7 +754,6 @@ export function onPlayButtonClick() {
 }
 
 export function onPauseButtonClick() {
-  console.log("On paused button click");
   if(editing) // Should never be true due to React logic, but here just incase
     return;
 
@@ -944,7 +903,7 @@ export function setLongestLane() {
   })
 }
 
-export function toggleLooping() { looping = !looping; console.log(looping)}
+export function toggleLooping() { looping = !looping; }
 
 export function saveCurrentSessionLocally() {
   let sessionObject: { lanes: Lane[] } = { lanes: [] };
@@ -955,8 +914,6 @@ export function saveCurrentSessionLocally() {
 
 // TODO: Make sure this is complete
 export function remapLane(target: Lane, reference: Lane, copyInput?: boolean) {
-  console.log('remap called');
-  
   target.bpm =  reference.bpm; 
   target.noteGap = reference.noteGap; 
   target.hitsound = reference.hitsound; 
@@ -965,6 +922,7 @@ export function remapLane(target: Lane, reference: Lane, copyInput?: boolean) {
   target.maxWrongNotes = reference.maxWrongNotes; 
   target.timeSignature = reference.timeSignature; 
   target.metronomeEnabled = reference.metronomeEnabled;
+  target.autoPlayEnabled = reference.autoPlayEnabled; 
   
   target.subdivision = reference.subdivision; 
   target.innerSubdivision = reference.innerSubdivision; 
@@ -992,6 +950,7 @@ export function remapLane(target: Lane, reference: Lane, copyInput?: boolean) {
   drawSingleLane(target); 
 
   setLongestLane();
+
 }
 
 

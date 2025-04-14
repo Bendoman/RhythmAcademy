@@ -5,7 +5,6 @@ import { selectedPattern } from "../types.ts";
 import { drawLine, getNoteFill } from "../helpers/utils.ts";
 import { COLORS, EDIT_MODES, HIT_STATUSES, ZONE_NAMES } from "../helpers/constants.ts";
 
-// TODO: Make sure that values relient on height can be updated when the window size changes. Have an update function for this. 
 export default class Lane {
     public bpm: number;
     public measureCount: number; 
@@ -13,6 +12,7 @@ export default class Lane {
     public autoPlayEnabled: boolean; 
     public metronomeEnabled: boolean; 
 
+    // The number by which measure height is divided by to determine beat markers
     public subdivision: number; 
     public innerSubdivision: number; 
 
@@ -22,7 +22,7 @@ export default class Lane {
     
     public hitzone: Hitzone; 
     public hitsound: string; 
-    public metronomeSound: string; 
+    public inputAreaHeight: number;
     
     // The height above the hitzone that notes will be populated upon run start
     public startY: number; 
@@ -43,7 +43,6 @@ export default class Lane {
     public inputKey: string; 
     public keyAlias: string | null; 
     public pressed: boolean;
-    public inputAreaHeight: number;
     
     public hitPrecision: number; 
     public patternStartMeasure: number; 
@@ -54,7 +53,7 @@ export default class Lane {
     
     public volume: number;
     public audioSprite: any;
-    public metronomeSprite: any;
+    public lastMetronomeTick: number; 
     
     public fullyScrolled: boolean;
 
@@ -120,7 +119,7 @@ export default class Lane {
 
         this.autoPlayEnabled = false; 
         this.metronomeEnabled = false;
-        this.metronomeSound = 'metronome1';
+        this.lastMetronomeTick = 0; 
 
         this.volume = 1; 
     }
@@ -163,12 +162,10 @@ export default class Lane {
         return this.height / this.bpm; 
     }
 
-    // TODO: Give this better name and have one that also removes all notes 
     public resetLane(overshoot?: number) { 
         if(overshoot) {
             // Lane is being looped
             this.loopCount++; 
-            console.log(this.loopCount);
         } else {
             this.loopCount = 1;
             this.notesHit = [];
@@ -183,9 +180,9 @@ export default class Lane {
             note.resetNote();
         }
         this.nextNoteIndex = 0; 
+        this.lastMetronomeTick = 0; 
     }
 
-    // TODO: Update note colours based on hitzone at time of hit
     public handleInputOn(paused: boolean) { 
         this.pressed = true; 
         // Sets pressed so that input modes can be tested, but returns after so that notes can't be hit
@@ -202,14 +199,14 @@ export default class Lane {
 
         switch(nextNote.currentZone) {
             case ZONE_NAMES.EARLY_ZONE:
-                console.log(`Wrong note:\nTime to zone: ${nextNote.timeToZone}\nZone: ${nextNote.currentZone}`);
+                // console.log(`Wrong note:\nTime to zone: ${nextNote.timeToZone}\nZone: ${nextNote.currentZone}`);
                 if(this.audioSprite)
                     this.audioSprite.play("wrongNote", global_volume * 0.25);
                 noteCopy.timeHit = parseInt(currentTime.toFixed(0));
                 this.wrongNotes.push(noteCopy); 
                 break;
             case ZONE_NAMES.EARLY_HIT_ZONE:
-                console.log(`Early hit:\nTime to zone: ${nextNote.timeToZone}\nZone: ${nextNote.currentZone}`);
+                // console.log(`Early hit:\nTime to zone: ${nextNote.timeToZone}\nZone: ${nextNote.currentZone}`);
                 if(this.audioSprite)
                     this.audioSprite.play(this.hitsound, global_volume);
                 nextNote.hitStatus = 'hit';
@@ -220,7 +217,7 @@ export default class Lane {
                 nextNote.startAnimation('hit'); 
                 break;
             case ZONE_NAMES.PERFECT_HIT_ZONE:
-                console.log(`Perfect hit:\nTime to zone: ${nextNote.timeToZone}\nZone: ${nextNote.currentZone}`);
+                // console.log(`Perfect hit:\nTime to zone: ${nextNote.timeToZone}\nZone: ${nextNote.currentZone}`);
                 if(this.audioSprite)
                     this.audioSprite.play(this.hitsound, global_volume);
                 nextNote.hitStatus = 'hit';
@@ -231,7 +228,7 @@ export default class Lane {
                 nextNote.startAnimation('perfect_hit'); 
                 break;
             case ZONE_NAMES.LATE_HIT_ZONE:
-                console.log(`Late hit:\nTime to zone: ${nextNote.timeToZone}\nZone: ${nextNote.currentZone}`);
+                // console.log(`Late hit:\nTime to zone: ${nextNote.timeToZone}\nZone: ${nextNote.currentZone}`);
                 if(this.audioSprite)
                     this.audioSprite.play(this.hitsound, global_volume);
                 nextNote.hitStatus = 'hit';
@@ -366,28 +363,22 @@ export default class Lane {
                 continue; 
             }
             
-            // TODO: Add a continue statement here so that measure lines before the currently visible section aren't drawn either. Potentially use an index range?
-            if(y + this.translationAmount < 0){
+            if(y + this.translationAmount < 0) {
                 return; 
             }
 
             // So that the actual y values can be held constant
             let effectiveY = y + this.translationAmount;
-            // TODO: Choose more generic starting X value
-            // if(y == topOfLane + this.noteGap)
-            //     drawLine(this.ctx, 30, effectiveY, this.canvas.width - 30, effectiveY, COLORS.MEASURE_LINE, 1, [25, 5]);
-            // else 
             drawLine(this.ctx, 30, effectiveY, this.canvas.width - 30, effectiveY, COLORS.MEASURE_LINE, 1);
 
             // Emphasises the first note of a bar by giving it bigger text
-            // TODO: Create a functional pixel to em converted and use relative units to position these.
             this.ctx.fillStyle = COLORS.MEASURE_NUMBER;
             if(noteCount == 1) {
                 this.ctx.font = "italic 36px Inria-serif"
-                this.ctx.fillText(noteCount.toString(), 6, y + 10 + this.translationAmount)
+                this.ctx.fillText(noteCount.toString(), 6, y + 10 + this.translationAmount);
             } else {
                 this.ctx.font = "italic 20px Inria-serif"
-                this.ctx.fillText(noteCount.toString(), 10, y + 5 + this.translationAmount)
+                this.ctx.fillText(noteCount.toString(), 10, y + 5 + this.translationAmount);
             }
 
             noteCount++;
@@ -419,7 +410,7 @@ export default class Lane {
       this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height - this.inputAreaHeight);
     }
 
-    private calculatePerfectHitY() { return this.canvas.height - (this.canvas.height * 0.25); }
+    public calculatePerfectHitY() { return this.canvas.height - (this.canvas.height * 0.25); }
 
     public calculateHitzone(): Hitzone {
         // TODO: Decide if this level of dynamic sizing is even necessary.
@@ -447,18 +438,15 @@ export default class Lane {
         let repeatedHeight = longest_lane.getRatio() * this.bpm;
         while(highestNoteY >= this.startY - repeatedHeight) {
             for(let i = 0; i < length; i++) {
-            
                 let newNoteY = this.notes[i].getY(this.noteGap, this.innerSubdivision, this.startY) - (this.height * l)
                 let newNoteIndex = (this.startY - newNoteY) / (this.noteGap/this.innerSubdivision);
                 highestNoteY = newNoteY; 
-                console.log(highestNoteY);
 
                 if(highestNoteY <= this.startY - repeatedHeight)
                     return; 
 
                 let newNote = new Note(newNoteIndex);
 
-                // TODO: Change this to repeated notes?
                 this.notes.push(newNote); 
                 this.repeatedNotes++; 
             }
@@ -467,7 +455,6 @@ export default class Lane {
     }
 
     public unrepeatNotes() {
-        console.log(this.notes, this.repeatedNotes); 
         this.notes.splice(this.notes.length - this.repeatedNotes, this.repeatedNotes);
         this.repeatedNotes = 0;
         this.repeated = false; 
@@ -495,10 +482,7 @@ export default class Lane {
         else 
             startingMeasure = this.patternStartMeasure;
 
-        // console.log(`startingMeasure ${startingMeasure}`);
-
         let notePositions = selectedPattern.notePositions;
-        // console.log(notePositions, measures);
         let newNotes = []; 
         let startingNotesLength = this.notes.length; 
         for(let i = 0; i < occurances; i++) {
@@ -521,22 +505,17 @@ export default class Lane {
             startingMeasure += selectedPattern.measures;
         }
 
-        // console.log(newNotes)
         if(spliceIndex != undefined) {
             for(let i = 0; i < newNotes.length; i++) {
                 this.notes.splice(spliceIndex + i, 0, newNotes[i]); 
             }
         }
 
-        console.log(this.patternStartMeasure)
-        // console.log(this.notes)
         if(startMeasure == undefined) {
-            console.log('setting measures')
             this.setPatternStartMeasure(startingMeasure);
         } else {
             this.setPatternStartMeasure(this.patternStartMeasure + difference!);
         }
-        console.log(this.patternStartMeasure)
     }    
 
     public handleResize() {
@@ -606,25 +585,21 @@ export default class Lane {
             revertRepeat = true;
         }
         
-        let measureDifference = (oldOccurances - newOccurnaces) * measures; 
-        console.log(measureDifference, oldOccurances, newOccurnaces, measures);
-        
+        let measureDifference = (oldOccurances - newOccurnaces) * measures;         
         let patternStartY = this.startY - (startMeasure * (this.noteGap * this.subdivision));
         let patternStartIndex = Math.round(parseInt(((this.startY - patternStartY) / (this.noteGap/this.innerSubdivision)).toFixed(1)));
 
         let notesInMeasure = this.innerSubdivision * this.subdivision;
-        
         let lastPossibleIndex = patternStartIndex + (notesInMeasure * measures * oldOccurances) - 1; 
+
         if(newOccurnaces > 0)
             patternStartIndex = lastPossibleIndex - (measureDifference * notesInMeasure);
         
-        console.log(patternStartY, patternStartIndex, lastPossibleIndex);
         for(let i = this.notes.length - 1; i >= 0; i--) {
-            if(this.notes[i].index < patternStartIndex) 
+            if(this.notes[i].index < patternStartIndex) {
                 break; 
-            else if(this.notes[i].index > lastPossibleIndex) {
-                console.log('reached past pattern')
-                // break;
+            } else if(this.notes[i].index > lastPossibleIndex) {
+                // Reached past pattern
                 this.notes[i].index -= (measureDifference * notesInMeasure); 
                 continue;
             } else {
@@ -636,7 +611,6 @@ export default class Lane {
         this.notifyPatternChange(startMeasure, -measureDifference);
 
         let newPatternStartMeasure = this.patternStartMeasure - measureDifference;
-        console.log('newPattenrmeapouhsdf', newPatternStartMeasure);
         this.setPatternStartMeasure(newPatternStartMeasure < 0 ? 0 : newPatternStartMeasure);
 
         if(this.notes.length == 0)
@@ -648,7 +622,6 @@ export default class Lane {
     }
 
     public increasePatternOccurances(startMeasure: number, measures: number, oldOccurances: number, newOccurnaces: number, patternData: {measures: number}): number {        
-        console.log(startMeasure,' from in here');
         if(newOccurnaces < oldOccurances)
             return -1; 
 
@@ -659,12 +632,8 @@ export default class Lane {
         }
 
         let measureDifference = (newOccurnaces - oldOccurances) * measures; 
-        console.log(this.patternStartMeasure, newOccurnaces, patternData.measures);
 
-        if(this.patternStartMeasure + measureDifference > this.measureCount) {
-            console.log('will overflow');
-            return -1; 
-        }
+        if(this.patternStartMeasure + measureDifference > this.measureCount) { return -1; }
         
         let patternStartY = this.startY - (startMeasure * (this.noteGap * this.subdivision));
         let patternStartIndex = Math.round(parseInt(((this.startY - patternStartY) / (this.noteGap/this.innerSubdivision)).toFixed(1)));
@@ -686,27 +655,18 @@ export default class Lane {
             } else if(i == 0 && spliceIndex == undefined) {
                 spliceIndex = 0; 
             } else if(this.notes[i].index > lastPossibleIndex && measureDifference > 0) {
-                console.log('past pattern')
-                // break;
                 this.notes[i].index += (measureDifference * notesInMeasure); 
                 continue;
             } 
         }
-        console.log('before load ', patternData, this.notes[0], newOccurnaces, startMeasure, spliceIndex)
 
         // @ts-ignore
         this.loadPattern(patternData, newOccurnaces, startMeasure, spliceIndex, measureDifference);
-        console.log('loaded returning 0');
-
-
         this.notifyPatternChange(startMeasure, measureDifference);
-
 
         if(revertRepeat)
             this.repeatNotes();
         
         return 0; 
     }
-
-
 }

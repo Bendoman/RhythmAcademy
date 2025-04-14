@@ -369,6 +369,9 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas, setShowLog
 
           let canRepeat = lane.getRatio() < longest_lane.getRatio();
           setCanRepeat(canRepeat);
+
+          setMetronomeEnabled(lane.metronomeEnabled); 
+          setAutoplayEnabled(lane.autoPlayEnabled); 
           // Updates UI based on current lane repeated status 
           if(!lane.repeated){ setRepeated(false) };
         }
