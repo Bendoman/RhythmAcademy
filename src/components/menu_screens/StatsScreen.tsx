@@ -6,7 +6,7 @@ import { useAppContext } from '../AppContextProvider';
 import { loadFromLocalStorage, saveToLocalStorage } from '../../scripts/helpers/utils';
 import { LineChart, Line, Tooltip, CartesianGrid, XAxis, YAxis } from 'recharts';
 import { retrieveBucketData as retrieveBucketData, uploadToBucket } from '../../scripts/helpers/supa-utils';
-import { CloseButtonSVG, LeftArrow, RightArrow } from '../../assets/svg/Icons';
+import { CloseIcon, LeftArrowIcon, RightArrowIcon } from '../../assets/svg/Icons';
 
 const StatsScreen = () => {
     const { setShowStats, stats, currentSessionName, currentSessionAltered, setCurrentSessionAltered } = useAppContext(); 
@@ -432,7 +432,7 @@ const StatsScreen = () => {
     return (
     <div className="statsScreen screen">
         <div className="closeContainer" onClick={()=> { setShowStats(false); }}>
-            <CloseButtonSVG/>
+            <CloseIcon/>
         </div>
 
         <div className="tabs">
@@ -490,7 +490,7 @@ const StatsScreen = () => {
                         <button
                         disabled={currentChart == 0} 
                         onClick={() => { setCurrentChart(currentChart-1) }}>
-                            <LeftArrow/>
+                            <LeftArrowIcon/>
                         </button>
                         
                         <p>{chartNames[currentChart]}</p>
@@ -498,7 +498,7 @@ const StatsScreen = () => {
                         <button 
                         disabled={currentChart == chartNames.length - 1}
                         onClick={() => { setCurrentChart(currentChart+1) }}>
-                            <RightArrow/>
+                            <RightArrowIcon/>
                         </button>
                     </div>
                 </div>

@@ -15,7 +15,6 @@ import SessionLoadScreen, { createNewLane } from './menu_screens/SessionLoadScre
 // Custom scripts and styles
 import './styles/homepage.css';
 import './styles/variables.css';
-import './styles/oldHomepage.css';
 import { loadFromLocalStorage, saveToLocalStorage } from '../scripts/helpers/utils.ts';
 import { retrieveFriendsList } from '../scripts/helpers/supa-utils.ts';
 import { startLoop, handleMIDIMessage, lanes, remapLane } from '../scripts/main.ts';

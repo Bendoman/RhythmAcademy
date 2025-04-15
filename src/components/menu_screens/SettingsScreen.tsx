@@ -3,7 +3,7 @@ import '../styles/session_screen.css';// TODO: Refactor this name
 import '../styles/menu_screens.css';
 
 import { useAppContext } from '../AppContextProvider';
-import { CloseButtonSVG } from '../../assets/svg/Icons';
+import { CloseIcon } from '../../assets/svg/Icons';
 import { global_volume, setGlobalVolume } from '../../scripts/main';
 
 
@@ -26,7 +26,7 @@ const SettingsScreen = () => {
         <div className="settings_screen screen">
             <div className="closeContainer"
                 onClick={()=> { setShowSettingsScreen(false); }}>
-                <CloseButtonSVG/>
+                <CloseIcon/>
             </div>
 
             <div className="tabs">

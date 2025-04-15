@@ -54,7 +54,7 @@
 }
 
 
-#lock_button.selected {
+#expand_button.selected {
   top: .25em;
   right: -5.5em;
 
@@ -67,7 +67,7 @@
   background-color: var(--site_primary) !important;
 }
 
-#lock_button.selected:hover {
+#expand_button.selected:hover {
   border: 1px solid #ecdfccd5 !important;
   color: #ecdfccd5 !important;
   background-color: #131b23e5 !important;
@@ -95,5 +95,13 @@
 
 
 .save_pattern {
+  position: relative;
+}
+
+.add_lane_button {
+  position: relative;
+}
+
+#open_workspace_load_button {
   position: relative;
 }

@@ -49,6 +49,28 @@
     overflow: auto;
   }
   
+  /* TODO: See if this can be merged with menu screen */
+  .statsScreen {
+    position: absolute;
+    top: 2em; 
+    left: 50%; 
+    
+    width: 50vw;
+    height: 60vh;
+    min-height: 200px;
+  
+    border-radius: 15px;
+    border: 3px solid #ECDFCC;
+    background-color: var(--site_secondary);
+  
+    transform: translateX(-50%);
+  
+    z-index: 1;
+  
+    color: var(--site_primary);
+    display: flex;
+    flex-direction: column;
+  }
   
   .graph_container p {
     text-align: center;
@@ -60,3 +82,30 @@
     transform: translateX(-50%);
     position: absolute;
   }
+
+  .graphControls{
+    gap: .5em;
+    display: flex;
+    justify-content: safe center;
+    align-items: safe center;
+}
+
+.graphControls button {
+    text-decoration: none;
+    background-color: #ECDFCC;
+    border: 1px solid transparent;
+    display: flex;
+    align-items: safe center;
+    padding: .25em;
+    border-radius: 10px;
+}
+
+.graphControls button:hover {
+    color: #ECDFCC;
+    background-color: #ecdfcc54;
+    border: 1px solid #ECDFCC;
+}
+
+.graphControls button:disabled {
+    background-color: #ecdfcc91;
+}

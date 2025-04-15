@@ -1,11 +1,9 @@
 @import './variables.css';
 
-
+/* So that number input arrows are always visible in chrome */
 input[type=number]::-webkit-inner-spin-button, 
 input[type=number]::-webkit-outer-spin-button {  
-
    opacity: 1;
-
 }
 
 * {
@@ -19,109 +17,76 @@ body {
     overflow-y: hidden;
     background-color: var(--site_secondary);
 }
-/* #endregion */
-
-/* #region ( session info & debug text ) */
-
-
-#debug_text {
-    right: 1em;
-    bottom: .5em;
-    padding: .5em;
-    position: absolute;
-
-    color: black; 
-    border-radius: 15px;
-    background-color: var(--site_primary); 
-}
-/* #endregion */
-
-/* TODO: Move to settings panel css if converted to own component */
-/* #region ( settings panel ) */
-#settings_panel {
-    display: none;
-}
-
-#settings_panel.visible {
-    top: 25vh;
-    left: 25vw;
-    width: 50vw;
-    height: 50vh;
-    position: absolute;
-    
-    gap: 1em;
-    z-index: 2;
-    display: flex;
-    align-items: center;
-    flex-direction: column;
-    justify-content: center;
-
-    border-radius: 15px;
-    background-color: teal;
-}
-
-
-/* #endregion */
-
 
 #content {
     width: 100vw;
     height: 100vh;
-  
     display: flex;
 }
 
-
-
-
-
-
-.dropTest {
-    height: 10vh;
-    width: 10vw;
-    background-color: red;
+.logo {
+    top: 45%;
+    left: 50%; 
+    position: fixed;
+    transform: translate(-50%, -50%) scale(0.65);
 }
 
-.patternMeasureCountContainer {
-    padding: .5em;
-    /* background-color: red; */
+/* #region ( lane container and canvases ) */
+.lane_canvas {
+    z-index: 2;
+    border-radius: 15px;
+    background-color: var(--site_primary);
 }
 
+#lane_container {
+    width: 100%;
+    height: 100%;
 
-
-
-.testContainer {
-    overflow-y: auto;
+    gap: 3em;
+    display: flex;
+    justify-content: center;
 }
 
+.canvas_container {
+    z-index: 0;
+    height: 100vh;
+    padding: 0 1em 0 1em;
+    border: 1px dashed #eccccc00;
+    transition: border .1s linear, background-color .5s ease;
 
-
-
-
-
-
-.add_lane_button {
+    display: flex;
     position: relative;
 }
 
+.canvas_container.background {
+    display: none;
+}
+
+#lane_container.editing .canvas_container:hover {
+    border-radius: 5px;
+    border-left: 1px dashed var(--site_primary); 
+    border-right: 1px dashed var(--site_primary); 
+    background-color: #ecdfcc33;
+}
+/* #endregion */
+
+/* #region ( tooltips ) */
 .tooltip {
-    pointer-events: none;
-    position: absolute;
     top: 50%;
     left: 200%; /* position to the right of the button */
+    position: absolute;
+    pointer-events: none;
     transform: translateY(-50%);
-    background: #333;
+
     color: #ECDFCC;
+    background: #333;
     border: 1px solid #ECDFCC;
+
+    z-index: 100;
+    font-size: 14px;
     padding: 8px 12px;
     border-radius: 6px;
-    font-size: 14px;
     white-space: nowrap;
-    z-index: 100;
-  }
-  
-#open_workspace_load_button {
-    position: relative;
 }
 
 .tooltip-arrow {
@@ -141,72 +106,40 @@ body {
 }
 
 .input_key_tooltip .tooltip-arrow {
-
     left: auto;
     right: -15px;
 
-    border-top: 5px solid transparent;
-    border-bottom: 5px solid transparent;
-    border-left: 15px solid #ECDFCC;
     border-right: none;
+    border-top: 5px solid transparent;
+    border-left: 15px solid #ECDFCC;
+    border-bottom: 5px solid transparent;
 }
+/* #endregion */
 
-
-.graphControls{
-    gap: .5em;
-    display: flex;
-    justify-content: safe center;
-    align-items: safe center;
-}
-
-.graphControls button {
-    text-decoration: none;
-    background-color: #ECDFCC;
-    border: 1px solid transparent;
-    display: flex;
-    align-items: safe center;
-    padding: .25em;
-    border-radius: 10px;
-}
-
-.graphControls button:hover {
-    color: #ECDFCC;
-    background-color: #ecdfcc54;
-    border: 1px solid #ECDFCC;
-}
-
-.graphControls button:disabled {
-    background-color: #ecdfcc91;
-}
-
-
-/* Entire scrollbar */
+/* #region ( scrollbar ) */
 ::-webkit-scrollbar {
     width: 10px;
-    height: 10px; /* for horizontal scroll */
-  }
+    height: 10px; 
+}
   
-  /* Scrollbar track (background) */
-  ::-webkit-scrollbar-track {
+::-webkit-scrollbar-track {
     background: #1a1a1a;
     border-radius: 5px;
-  }
+}
   
-  /* Scrollbar thumb (the draggable part) */
-  ::-webkit-scrollbar-thumb {
+::-webkit-scrollbar-thumb {
     background: #888;
     border-radius: 5px;
-    border: 2px solid #1a1a1a; /* Creates space around thumb */
-  }
+    border: 2px solid #1a1a1a;
+}
   
-  /* On hover */
-  ::-webkit-scrollbar-thumb:hover {
+::-webkit-scrollbar-thumb:hover {
     background: #aaa;
 }
+/* #endregion */
 
-
-.confirmation_popup {
-    
+/* #region ( popups ) */
+.confirmation_popup {    
     background-color: #2ecc71;
     animation: riseAndFade 1.5s ease-out forwards;
 }
@@ -214,35 +147,35 @@ body {
 .error_popup {
     background-color: #cc2e2e;
     animation: shakeFade 1.5s ease-out forwards;
+}
 
-  }
-
-  .confirmation_popup, .error_popup {
-    position: absolute;
+.confirmation_popup, .error_popup {
     top: -30px; /* adjust as needed */
     left: 50%;
-    transform: translateX(-50%);
-    color: white;
     padding: 6px 12px;
-    border-radius: 10px;
-    font-size: 0.85rem;
-    pointer-events: none;
+    position: absolute;
+    transform: translateX(-50%);
+
     opacity: 0;
     z-index: 10;
-  }
+    color: white;
+    font-size: 0.85rem;
+    border-radius: 10px;
+    pointer-events: none;
+}
   
-  @keyframes riseAndFade {
+@keyframes riseAndFade {
     0% {
-      transform: translate(-50%, 0);
-      opacity: 1;
+        transform: translate(-50%, 0);
+        opacity: 1;
     }
     100% {
-      transform: translate(-50%, -30px);
-      opacity: 0;
+        transform: translate(-50%, -30px);
+        opacity: 0;
     }
-  }
+}
 
-  @keyframes shakeFade {
+@keyframes shakeFade {
     0%   { transform: translateX(-50%) translateX(0); opacity: 1; }
     5%   { transform: translateX(-50%) translateX(-5px); }
     10%  { transform: translateX(-50%) translateX(5px); }
@@ -251,31 +184,14 @@ body {
     25%  { transform: translateX(-50%) translateX(-3px); }
     30%  { transform: translateX(-50%) translateX(3px); }
     35%  { transform: translateX(-50%) translateX(0); }
-  
+
     /* Now fade out smoothly */
     50%  { opacity: 1; }
     100% { opacity: 0; }
-  }
-
-
+}
 
 .input_key_error {
     width: fit-content;
-    top: -60px; /* adjust as needed */
-    /* right: -60px; */
+    top: -60px; 
 }
-
-.logo {
-    top: 45%;
-    left: 50%; 
-    position: fixed;
-    transform: translate(-50%, -50%) scale(0.65);
-}
-
-.user_button {
-    position: relative;
-}
-
-.lane_canvas.editing {
-    /* min-width: 310px; */
-}
+/* #endregion */

@@ -10,7 +10,7 @@ import { listLocalStorageFolder, loadFromLocalStorage, saveToLocalStorage } from
 import { retrieveBucketData, retrieveBucketList, retrievePublicBucketList, uploadToBucket } from '../../scripts/helpers/supa-utils.ts';
 
 import '../styles/lane_editing.css';
-import { AutoPlay, LeftArrow, Metronome, QuestionMark, RightArrow } from '../../assets/svg/Icons.tsx';
+import { AutoPlay, LeftArrowIcon, Metronome, QuestionMark, RightArrowIcon } from '../../assets/svg/Icons.tsx';
 
 interface ILaneEditingPanelProps {
   canvas: HTMLCanvasElement;
@@ -649,7 +649,7 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas, setShowLog
       onClick={() => {
         setToolTipTab(toolTipTab-1);
       }}>
-        <LeftArrow/>
+        <LeftArrowIcon/>
       </button>
 
       <p className='editingToolTip'>{tooltips[toolTipTab]}</p>
@@ -659,7 +659,7 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas, setShowLog
       onClick={() => {
         setToolTipTab(toolTipTab+1);
       }}>
-        <RightArrow/>
+        <RightArrowIcon/>
       </button>
     </div>
 

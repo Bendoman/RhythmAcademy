@@ -3,7 +3,7 @@ import '../styles/menu_screens.css';
 import '../styles/profile_screen.css';
 
 import { UserContext } from '../App';
-import { CloseButtonSVG } from '../../assets/svg/Icons';
+import { CloseIcon } from '../../assets/svg/Icons';
 import { useAppContext } from '../AppContextProvider';
 import { modifyFriend, sendFriendRequest } from '../../scripts/helpers/supa-utils';
 import { useContext, useEffect, useRef, useState } from 'react'
@@ -44,7 +44,7 @@ const ProfileScreen = () => {
         <div className="profile_screen screen">
             <div className="closeContainer"
             onClick={()=> { setShowProfileScreen(false); }}>
-                <CloseButtonSVG/>
+                <CloseIcon/>
             </div>
 
             <div className="tabs">

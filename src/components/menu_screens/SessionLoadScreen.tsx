@@ -13,7 +13,7 @@ import ChangeLaneKey from '../run_controls/ChangeLaneKey';
 import LaneEditingPanel from '../lane_editing/LaneEditingPanel';
 import { deleteLane, lanes, onAddLaneButtonClick, remapLane, saveCurrentSessionLocally } from '../../scripts/main'; 
 import { newnewRetrieveBucketList, retrieveBucketData, retrieveFriendBucketList, retrievePublicBucketList } from '../../scripts/helpers/supa-utils';
-import { CloseButtonSVG, RightArrow } from '../../assets/svg/Icons';
+import { CloseIcon, RightArrowIcon } from '../../assets/svg/Icons';
 import { checkDomainOfScale } from 'recharts/types/util/ChartUtils';
 
 export const createNewLane = (inputKey: string, setShowLogo: React.Dispatch<React.SetStateAction<boolean>>) => {
@@ -177,7 +177,7 @@ const SessionLoadScreen = () => {
     <div className="session_load_screen screen">
         <div className="closeContainer"
             onClick={()=> { setSessionLoadScreen(false) }}>
-            <CloseButtonSVG/>
+            <CloseIcon/>
         </div>
 
         <div className="tabs">

@@ -10,7 +10,6 @@ interface IChangeLaneKeyProps {
 }
 
 const ChangeLaneKey: React.FC<IChangeLaneKeyProps> = ({ canvas }) => {
-
     const lane: Lane = findLaneFromCanvas(canvas);
     const [index, setIndex] = useState(lanes.indexOf(lane)); 
     const [currentInput, setCurrentInput] = useState(lane.inputKey);
@@ -18,12 +17,9 @@ const ChangeLaneKey: React.FC<IChangeLaneKeyProps> = ({ canvas }) => {
     const [listening, setListening] = useState(false);
     const [showInputKeyToolTip, setShowInputKeyToolTip] = useState(true);
     const listeningRef = useRef(false);
-    
 
     const [showErrorBubble, setShowErrorBubble] = useState(false);
-    
     const buttonRef = useRef<HTMLButtonElement>(null);
-
 
     const processMidiMessage = (input: MIDIMessageEvent) => {
         if(!listeningRef.current) return; 
@@ -81,7 +77,6 @@ const ChangeLaneKey: React.FC<IChangeLaneKeyProps> = ({ canvas }) => {
         }
     }, []);
     
-
     return (<>
     <div className="change_lane_key">
 
@@ -108,7 +103,6 @@ const ChangeLaneKey: React.FC<IChangeLaneKeyProps> = ({ canvas }) => {
           <div className="tooltip-arrow" />
         </div> }
     </button>
-
 
     </div>
     </> 

@@ -7,7 +7,7 @@ import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../../scripts/helpers/supa-client.ts';
 import { useAppContext } from '../AppContextProvider.tsx';
 import { uploadToBucket } from '../../scripts/helpers/supa-utils.ts';
-import { CloseButtonSVG } from '../../assets/svg/Icons.tsx';
+import { CloseIcon } from '../../assets/svg/Icons.tsx';
 
 const SessionSaveScreen = () => {
     let sessionName = useRef<string>('');
@@ -68,7 +68,7 @@ const SessionSaveScreen = () => {
     <div className="session_save_screen screen">
         <div className="closeContainer"
             onClick={()=> { setSessionSaveScreen(false); }}>
-            <CloseButtonSVG/>
+            <CloseIcon/>
         </div>
 
         <div className="tabs">

@@ -75,6 +75,7 @@ export function handleMIDIMessage(input: MIDIMessageEvent) {
 // TODO: Move all of these somewhere more appropriate
 function initalizeListeners() {    
     window.addEventListener('keydown', (event) => {
+
         if(keyHeld[event.key] == true)
           return;
 
@@ -88,13 +89,12 @@ function initalizeListeners() {
           return; 
         }
 
-
+        const screenOpen = document.querySelector('div.screen') !== null;
         let associatedLane = lanes[input_lane_pairs[event.key.toUpperCase()]];
-        if(associatedLane != null)
+        if(associatedLane != null && !screenOpen)
           associatedLane.handleInputOn(paused); 
       
         keyHeld[event.key] = true
-    
     })
 
     window.addEventListener('keyup', (event) => {
@@ -455,7 +455,7 @@ async function handleCanvasClick(event: MouseEvent) {
   if(!editing)
     return; 
 
-  let canvas = event.target as HTMLElement; 
+  let canvas = event.target as HTMLCanvasElement; 
 
   if(canvas.classList.contains('editing')) {
     // click while in edit mote     
@@ -533,8 +533,10 @@ async function handleCanvasClick(event: MouseEvent) {
     return;
   }
 
-  
-  // click to send canvas to edit mode
+  sendCanvasToEditMode(canvas);
+}
+
+export function sendCanvasToEditMode(canvas: HTMLCanvasElement) {
   canvas.classList.add('editing');
   canvas.parentElement?.classList.remove('background');
 

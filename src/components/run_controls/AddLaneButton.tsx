@@ -6,6 +6,7 @@ import ChangeLaneKey from './ChangeLaneKey.tsx';
 import { midiAccess } from '../Homepage';
 import { useAppContext } from '../AppContextProvider.tsx';
 import { saveToLocalStorage } from '../../scripts/helpers/utils.ts';
+import EditLaneButton from './EditLaneButton.tsx';
 
 
 const AddLaneButton = forwardRef<HTMLButtonElement>((props, ref) => {
@@ -78,12 +79,8 @@ const AddLaneButton = forwardRef<HTMLButtonElement>((props, ref) => {
     
     root.render(<LaneEditingPanel canvas={laneCanvas} setShowLogo={setShowLogo}/>);
 
-    laneContent.classList.add('lane_content');
-    contentRoot.render(
-    
-    <ChangeLaneKey canvas={laneCanvas}/>
-
-    )
+    laneContent.classList.add('lane_content'); 
+    contentRoot.render(<ChangeLaneKey canvas={laneCanvas}/>);
     
     canvasContainer.appendChild(laneContent);
     saveCurrentSessionLocally();

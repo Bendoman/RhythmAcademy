@@ -1,25 +1,30 @@
+.change_lane_key, .edit_lane_button {
+    gap: .25em;
+    z-index: 2;
+    bottom: 1.5em;
+    display: flex;
+    position: absolute;
+}
+
 .change_lane_key {
     left: 1.25em;
-    bottom: 1.5em;
-    position: absolute;
-
-    z-index: 2;
-
-    display: flex;
-    gap: .25em;
 }
 
-.change_lane_key button {
-  border: 1px solid transparent;
-  padding: 0.25em;
-  border-radius: 5px;
-  text-decoration: none;
-
-  color: #ECDFCC;
-  background-color: #131B23;
+.edit_lane_button {
+    right: 1.25em;
 }
 
-.change_lane_key button:hover {
+.change_lane_key button, .edit_lane_button button {
+    border: 1px solid transparent;
+    padding: 0.25em;
+    border-radius: 5px;
+    text-decoration: none;
+
+    color: #ECDFCC;
+    background-color: #131B23;
+}
+
+.change_lane_key button:hover, .edit_lane_button button:hover {
     cursor: pointer;
     /* background-color: orange; */
     color: #131b23e5;

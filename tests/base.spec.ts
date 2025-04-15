@@ -10,7 +10,7 @@ test.describe("Layout functions", () => {
   test('collapse run controls', async ({ page }) => {
       await page.screenshot({ path: 'screenshots/before-click.png' });
 
-      await page.click('#lock_button');
+      await page.click('#expand_button');
 
       await page.waitForTimeout(200); 
 
