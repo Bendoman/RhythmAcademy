@@ -15,7 +15,7 @@ export const COLORS = {
     MEASURE_NUMBER: "#141414",
     
     // Zones
-    MISS_ZONE_FILL: "rgba(232, 49, 81, 10)",
+    MISS_ZONE_FILL: "rgba(255, 0, 0, 0.085)",
     LATE_HITZONE_FILL: "rgba(28, 124, 84, .1)",
     EARLY_HITZONE_FILL: "rgba(28, 124, 84, .1)",
     PERFECT_HITZONE_FILL: "rgba(28, 124, 84, .25)",

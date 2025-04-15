@@ -29,7 +29,7 @@ export default class Hitzone {
         this.late_hit_height = late_hit_height; 
     }
 
-    public drawHitZone(ctx: CanvasRenderingContext2D, width: number) {
+    public drawHitZone(ctx: CanvasRenderingContext2D, width: number, canvasHeight: number) {
         // Perfect hit zone
         ctx.fillStyle = COLORS.PERFECT_HITZONE_FILL;
         drawLine(ctx, 0, this.perfect_hit_y, width, this.perfect_hit_y, 'black', 1);
@@ -45,5 +45,10 @@ export default class Hitzone {
         ctx.fillStyle = COLORS.LATE_HITZONE_FILL;
         ctx.fillRect(0, this.late_hit_y, width, this.late_hit_height);
         drawLine(ctx, 0, this.late_hit_y + this.late_hit_height, width, this.late_hit_y + this.late_hit_height, 'black', 1, [5, 5]);
+
+        // Miss zone 
+        ctx.fillStyle = COLORS.MISS_ZONE_FILL;
+        ctx.fillRect(0, this.late_hit_y + this.late_hit_height, width, canvasHeight);
+        // drawLine(ctx, 0, this.late_hit_y + this.late_hit_height, width, this.late_hit_y + this.late_hit_height, 'black', 1, [5, 5]);
     }
 }

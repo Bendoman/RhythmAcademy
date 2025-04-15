@@ -506,7 +506,7 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas, setShowLog
             <option value="15" selected={(lane.subdivision == 15) ? true : false}>15</option>
             <option value="16" selected={(lane.subdivision == 16) ? true : false}>16</option>
         </select>
-        <label htmlFor="subdivision_select">Subdivision</label>
+        <label htmlFor="subdivision_select">Beats per measure</label>
       </div>    
 
       {/* TODO: Update this for new sounds */}

@@ -17,6 +17,7 @@ const EditLaneButton: React.FC<IEditLaneButtonProps> = ({ canvas }) => {
                 sendCanvasToEditMode(canvas);
             }}>
                 Edit Lane
+                
             </button>
         </div>
     )

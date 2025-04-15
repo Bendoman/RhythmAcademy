@@ -630,7 +630,12 @@ export function drawSingleLane(lane: Lane) {
         let width = lane.canvas.width/2; 
         let x = (width) - (width/2);
 
-        let sortedIndex = findSortedIndex(lane.notes, newNoteIndex, lane);   
+        let sortedIndex; 
+        if(editMode == EDIT_MODES.CREATE_PATTERN_MODE)
+          sortedIndex = findSortedIndex(patternInCreationNotes, newNoteIndex, lane);
+        else 
+          sortedIndex = findSortedIndex(lane.notes, newNoteIndex, lane);   
+        
         if(sortedIndex[1] == 1)
           lane.ctx.fillStyle = COLORS.EXISTING_NOTE_FILL;
         else 

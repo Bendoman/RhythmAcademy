@@ -7,6 +7,7 @@ import { midiAccess } from '../Homepage';
 import { useAppContext } from '../AppContextProvider.tsx';
 import { saveToLocalStorage } from '../../scripts/helpers/utils.ts';
 import EditLaneButton from './EditLaneButton.tsx';
+import { AddIcon } from '../../assets/svg/Icons.tsx';
 
 
 const AddLaneButton = forwardRef<HTMLButtonElement>((props, ref) => {
@@ -120,8 +121,8 @@ const AddLaneButton = forwardRef<HTMLButtonElement>((props, ref) => {
         id="add_button"
         className='add_lane_button'
         onClick={handleOnClick}>
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-circle-plus"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>
-
+          
+        <AddIcon/>
 
         { showToolTips &&   
         <div className="tooltip">

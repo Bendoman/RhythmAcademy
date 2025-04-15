@@ -10,7 +10,7 @@ import { deleteLane, enableAudio, lanes, onEditButtonClick, onPauseButtonClick, 
 import NotificationsButton from './NotificationsButton.tsx';
 import { saveToLocalStorage } from '../../scripts/helpers/utils.ts';
 import { useAppContext } from '../AppContextProvider.tsx';
-import { Eraser, ExpanderIcon, LoadIcon, LoopIcon, SaveIcon, SettingsIcon, UserIcon } from '../../assets/svg/Icons.tsx';
+import { Eraser, ExpanderIcon, LoadIcon, LoopIcon, QuestionMarkIcon, SaveIcon, SettingsIcon, UserIcon } from '../../assets/svg/Icons.tsx';
 
 const RunControls = () => {
     const {
@@ -148,7 +148,7 @@ const RunControls = () => {
 
         const screenOpen = document.querySelector('div.screen') !== null;
         const currentlyEditing = document.querySelector('canvas.editing') !== null;
-        if(!screenOpen && event.key == ' ') {
+        if(!screenOpen && !currentlyEditing && event.key == ' ') {
             event.preventDefault(); 
             if(!isPlayingRef.current)
                 playButtonClick(); 
@@ -310,6 +310,12 @@ const RunControls = () => {
                     <SettingsIcon/>
                 </button>
                 
+                <a href="https://github.com/Bendoman/RhythmAcademy/blob/main/README.md" target='blank'>
+                <button id="help_button">
+                    <QuestionMarkIcon/>
+                </button>
+                </a>
+
                 {/* TODO: Refactor this name and change how the toggle works*/}
                 <button id="expand_button"
                 className={menuHover ? 'selected' : ''}

@@ -98,6 +98,12 @@ const ChangeLaneKey: React.FC<IChangeLaneKeyProps> = ({ canvas }) => {
         {showErrorBubble && ( <div className="error_popup input_key_error">Key already in use</div> )}
 
         { showInputKeyToolTip && index == 0 && currentInput == '(?)' &&
+        <div className="tooltip lane_edit_tooltip">
+          Enter edit mode and click lane<br/>to add notes
+          <div className="tooltip-arrow" />
+        </div> }
+
+        { showInputKeyToolTip && index == 0 && currentInput == '(?)' &&
         <div className="tooltip input_key_tooltip">
           Set your new lane's input key
           <div className="tooltip-arrow" />

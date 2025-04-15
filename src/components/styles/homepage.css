@@ -105,7 +105,12 @@ body {
     left: -290%;
 }
 
-.input_key_tooltip .tooltip-arrow {
+.lane_edit_tooltip {
+    left: -300%;
+    top: -500%;
+}
+
+.input_key_tooltip .tooltip-arrow, .lane_edit_tooltip .tooltip-arrow {
     left: auto;
     right: -15px;
 

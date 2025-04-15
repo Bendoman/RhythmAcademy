@@ -189,8 +189,11 @@ export default class Lane {
         if(paused)
             return; 
 
-        let nextNote;
-        nextNote = this.notes[this.nextNoteIndex];
+        let nextNote = this.notes[this.nextNoteIndex];
+        if(nextNote == null) {
+            this.audioSprite.play('wrongNote', global_volume * 0.25);
+            return; 
+        }
 
         let noteCopy = new Note(nextNote.index);
         noteCopy.currentZone = nextNote.currentZone;
@@ -343,7 +346,7 @@ export default class Lane {
     }
 
     public drawHitzone() {
-        this.hitzone.drawHitZone(this.ctx, this.canvas.width);
+        this.hitzone.drawHitZone(this.ctx, this.canvas.width, this.canvas.height);
     }
     
     public drawMeasureIndicators(editMode?: string, newPatternMeasures?: number) {
@@ -410,7 +413,9 @@ export default class Lane {
       this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height - this.inputAreaHeight);
     }
 
-    public calculatePerfectHitY() { return this.canvas.height - (this.canvas.height * 0.25); }
+    public calculatePerfectHitY() { 
+        return this.canvas.height - (this.canvas.height * 0.15); 
+    }
 
     public calculateHitzone(): Hitzone {
         // TODO: Decide if this level of dynamic sizing is even necessary.

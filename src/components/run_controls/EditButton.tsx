@@ -9,7 +9,7 @@ interface IPauseButtonProps {
 
 const EditButton: React.FC<IPauseButtonProps> = ({ isEditing, onComponentClick }) => {
     const [hovered, setHovered] = useState(false);
-    const {showSessionToolTip} = useAppContext(); 
+    const {showToolTips, showSessionToolTip} = useAppContext(); 
 
     return (<button 
         title="Edit mode"
@@ -21,6 +21,12 @@ const EditButton: React.FC<IPauseButtonProps> = ({ isEditing, onComponentClick }
 
         <EditIcon/>
 
+        { showToolTips &&   
+        <div className="tooltip">
+          Edit mode
+          <div className="tooltip-arrow" />
+        </div> }
+        
         { showSessionToolTip && hovered && 
         <div className="tooltip">
           Stats for this preset wont count if go into edit mode
