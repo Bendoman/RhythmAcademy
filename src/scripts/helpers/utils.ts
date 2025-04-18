@@ -24,29 +24,16 @@ export function resetLaneStats(lane: Lane) {
 }
 
 export function getNoteFill(currentZone: string, hitStatus: string): string {
-    let fillStyle = ''; 
-    if(currentZone == ZONE_NAMES.EARLY_ZONE)
-        fillStyle = COLORS.NOTE_FILL; 
+    let fillStyle = COLORS.NOTE_FILL; 
+    if(hitStatus == 'hit')
+        fillStyle = '#139A43'; 
     else if(currentZone == ZONE_NAMES.MISS_ZONE) {
         fillStyle = '#A40606'; 
-        if(hitStatus == 'hit')
-            fillStyle = '#139A43'; 
     }
 
     return fillStyle; 
 }
 
-
-// TODO: Come back to this
-// export function pixelsToEm(baseFontSize: number, pixels: number): number {
-//     if(baseFontSize <= 0) 
-//         throw new Error("Invalid base font size provided");
-
-//     return pixels / baseFontSize; 
-// }
-
-
-// TODO Extrapolate Y values from index
 export function findSortedIndex(notes: Note[], newNoteIndex: number, lane: Lane): number[] {
     let newNoteY = ((newNoteIndex * (lane.noteGap/lane.innerSubdivision)) - lane.startY) * -1;
 

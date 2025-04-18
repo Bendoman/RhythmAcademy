@@ -120,8 +120,8 @@ const AddLaneButton = forwardRef<HTMLButtonElement>((props, ref) => {
         ref={ref}
         id="add_button"
         className='add_lane_button'
-        onClick={handleOnClick}>
-          
+        onClick={handleOnClick}
+        title='Add lane'>
         <AddIcon/>
 
         { showToolTips &&   

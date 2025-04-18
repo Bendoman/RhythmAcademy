@@ -1,5 +1,4 @@
 import React, { useEffect } from 'react'
-// TODO: Refactor this name
 import '../styles/session_screen.css';
 import '../styles/menu_screens.css';
 import { modifyFriend } from '../../scripts/helpers/supa-utils';
@@ -31,6 +30,8 @@ const NotificationsScreen = () => {
         </div>
 
         <div className="notifications_content">
+            {pendingFriendRequests && pendingFriendRequests.length == 0 && <p>Nothing here {':('}</p>}
+            
             {pendingFriendRequests && pendingFriendRequests.map((requestArray, index) => (
                 <div key={index}>
                     <p>{`Date sent: ${new Date(requestArray[2]).toLocaleDateString('en-GB', {day: 'numeric', month: 'short', year: 'numeric'})}`}</p>

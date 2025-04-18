@@ -459,7 +459,6 @@ const StatsScreen = () => {
         <div className="statContentContainer">
             <div className="statContent">
                 <div className="stats">
-                    <p>Current session altered: {currentSessionAltered ? "true" : "false"}</p>
                     { currentSessionName && <p className='stats_title'>{`Stats for session: "${currentSessionName}"`}</p> } 
                     { personalBest && <><p>New Personal Best!</p><br/></> }  
                     { notesPlayed < totalNotes && <><p>Incomplete run</p><br/></> }

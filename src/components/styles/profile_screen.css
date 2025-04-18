@@ -78,6 +78,7 @@
 .friends_tab {
     display: flex;
     flex-direction: column;
+    gap: .25em;
 }
 
 .request_form_container {

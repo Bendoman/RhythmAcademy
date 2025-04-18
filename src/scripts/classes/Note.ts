@@ -7,7 +7,6 @@ export default class Note {
     hitStatus: string; 
     timeToZone: number; 
     animationHeight: number; 
-    animationColour: string; 
     timeHit: number; 
     
     constructor(index: number) {
@@ -19,7 +18,6 @@ export default class Note {
         this.hitStatus = 'unhit';
 
         this.animationHeight = 0; 
-        this.animationColour = '';
 
         this.timeHit = 0; 
     }
@@ -28,7 +26,6 @@ export default class Note {
         this.currentZone = ZONE_NAMES.EARLY_ZONE; 
         this.hitStatus = 'unhit';
         this.animationHeight = 0; 
-        this.animationColour = ''; 
     }
 
     public getY(noteGap: number, innerSubdivision: number, laneStartY: number) {

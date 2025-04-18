@@ -1,8 +1,7 @@
 import { supabase } from './supa-client.ts';
 import { FriendRequest } from '../types.ts';
 
-// TODO: Move all supabase data retrieval here.
-export async function retrieveBucketList(bucket: string, folder?: string) {
+export async function retrieveBucketListWithFolders(bucket: string, folder?: string) {
   let path = '';
 
   const userId = (await supabase.auth.getUser()).data.user?.id as string;
@@ -16,16 +15,6 @@ export async function retrieveBucketList(bucket: string, folder?: string) {
       return data; 
 }
 
-export async function newRetrieveBucketList(bucket: string) {
-const userId = (await supabase.auth.getUser()).data.user?.id as string;
-
-  const { data, error } = await supabase.storage.from(bucket).list(userId); 
-
-  if(!error)
-      return [{ownerid: userId, data: data}]; 
-}
-
-// TODO: Merge these two and add pagination handling to friends bucket
 export async function retrievePublicBucketList(bucket: string) {
     const { data } = await supabase.storage
     .from(bucket)
@@ -35,8 +24,7 @@ export async function retrievePublicBucketList(bucket: string) {
     return list; 
 }
 
-
-export async function newnewRetrieveBucketList(bucket: string) {
+export async function retrieveBucketList(bucket: string) {
     const userId = (await supabase.auth.getUser()).data.user?.id as string;
 
     let allItems: any[] = [];
@@ -66,8 +54,6 @@ export async function newnewRetrieveBucketList(bucket: string) {
     return [{ ownerid: userId, data: allItems }];
 }
   
-
-// TODO: Conditionally retrieve friends list with parameter
 export async function retrieveFriendBucketList(bucket: string) {
     const userId = (await supabase.auth.getUser()).data.user?.id as string;
 
@@ -77,9 +63,8 @@ export async function retrieveFriendBucketList(bucket: string) {
     .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
     .eq('status', 'accepted');
 
-    // 2. Extract unique friend IDs (exclude self to avoid duplication)
+    // Extract unique friend IDs (exclude self to avoid duplication)
     const friendIds = new Set<string>();
-    // friendIds.add(userId); // add self
 
     if(!friends)
         return; 
@@ -89,7 +74,7 @@ export async function retrieveFriendBucketList(bucket: string) {
         if (fr.receiver_id !== userId) friendIds.add(fr.receiver_id);
     }
 
-    // 3. List files for each friend
+    // List files for each friend
     const allFiles = [];
 
     for (const id of friendIds) {
@@ -104,9 +89,7 @@ export async function retrieveFriendBucketList(bucket: string) {
 }
 
 export async function getEmailFromID(id: string) {
-    // const userId = (await supabase.auth.getUser()).data.user?.id as string;
-
-    // 1. Look up the receiver's user ID by email
+    // Look up the receiver's user ID by email
     const { data: profiles, error: profileError } = await supabase
     .from('public_profiles')
     .select('email')
@@ -197,7 +180,6 @@ export async function modifyFriend(currentStatus: string, newStatus: string, sen
         status: currentStatus,
     });
 
-    // TODO: Handle this
     console.log(data, error);
 }
 
@@ -230,7 +212,3 @@ export async function retrieveBucketData(bucket: string, path: string) {
         return data.text().then(JSON.parse); 
     }
 }
-
-// export async function deleteFromBucket(bucket: string, path: string) {
-//     // TODO: Implement this
-// }

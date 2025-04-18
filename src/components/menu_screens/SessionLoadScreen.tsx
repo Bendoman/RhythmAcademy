@@ -12,7 +12,7 @@ import { saveToLocalStorage } from '../../scripts/helpers/utils';
 import ChangeLaneKey from '../run_controls/ChangeLaneKey';
 import LaneEditingPanel from '../lane_editing/LaneEditingPanel';
 import { deleteLane, lanes, onAddLaneButtonClick, remapLane, saveCurrentSessionLocally } from '../../scripts/main'; 
-import { newnewRetrieveBucketList, retrieveBucketData, retrieveFriendBucketList, retrievePublicBucketList } from '../../scripts/helpers/supa-utils';
+import { retrieveBucketList, retrieveBucketData, retrieveFriendBucketList, retrievePublicBucketList } from '../../scripts/helpers/supa-utils';
 import { CloseIcon, RightArrowIcon } from '../../assets/svg/Icons';
 import { checkDomainOfScale } from 'recharts/types/util/ChartUtils';
 
@@ -137,7 +137,7 @@ const SessionLoadScreen = () => {
         else if(selectedTab == 'public') 
             data = await retrievePublicBucketList('public_sessions');
         else
-            data = await newnewRetrieveBucketList(`${selectedTab}_sessions`);
+            data = await retrieveBucketList(`${selectedTab}_sessions`);
 
         let folders: string[] = [];
         let sessions: [string,string][] = []; 
@@ -204,7 +204,7 @@ const SessionLoadScreen = () => {
                     { expanded[folder] && loadedSessions && loadedSessions.map((session, index) => {
                         if(session[0] == folder) return (
                         <div key={index} className="loaded_session_info"
-                            onClick={() => {onLoadSessionClick(session[0], session[1])}}>
+                            onClick={() => {onLoadSessionClick(session[0], session[1]); setSessionLoadScreen(false);}}>
                             <p>{session[1]}</p>
                             { hoveredSession && hoveredSession.sessionName === `${session[1]}` && 
                             <div className='hoveredInfo'>
@@ -231,7 +231,7 @@ const SessionLoadScreen = () => {
             { !loadedFolders && loadedSessions && loadedSessions.map((session, index) => {
                 return (
                 <div key={index} className="loaded_session_info nofolders"
-                    onClick={() => {onLoadSessionClick(session[0], session[1])}}>
+                    onClick={() => {onLoadSessionClick(session[0], session[1]); setSessionLoadScreen(false);}}>
                     <p>{session[1]}</p>
                     { hoveredSession && hoveredSession.sessionName === `${session[1]}` && 
                     <div className='hoveredInfo'>

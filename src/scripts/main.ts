@@ -15,6 +15,7 @@ export let longest_lane: Lane;
 const input_lane_pairs: { [key: string ]: number } = {}; 
 // Associates a canvas' ID with its lane
 const canvas_lane_pairs: { [key: string ]: Lane } = {};
+const keyHeld: { [key: string]: boolean } = {};
 
 let laneCount = 0; 
 let looping = false; 
@@ -26,7 +27,6 @@ export let global_volume = 1;
 export function setGlobalVolume(newVolume: number) {
   global_volume = newVolume; 
 }
-
 
 let ups = 0; 
 let translationAmount = 0; 
@@ -51,10 +51,20 @@ export function resetPatternInCreation() {
   patternInCreationNotes = [];
   patternInCreationPositions = [];
 }
-
-// DOM Elements
-// let upsParagraph: HTMLElement | null;
 // #endregion
+
+// #region ( MIDI )
+function midiNoteOn(note: number) {
+  let associatedLane = lanes[input_lane_pairs[note.toString()]];
+  if(associatedLane != null)
+    associatedLane.handleInputOn(paused); 
+}
+
+function midiNoteOff(note: number) {
+  let associatedLane = lanes[input_lane_pairs[note.toString()]];
+  if(associatedLane != null)
+    associatedLane.handleInputOff(); 
+}
 
 export function handleMIDIMessage(input: MIDIMessageEvent) {
   const inputData = input.data; 
@@ -71,11 +81,11 @@ export function handleMIDIMessage(input: MIDIMessageEvent) {
     midiNoteOff(note);
   }
 }
+// #endregion
 
-// TODO: Move all of these somewhere more appropriate
+// #region ( Lane functions )
 function initalizeListeners() {    
     window.addEventListener('keydown', (event) => {
-
         if(keyHeld[event.key] == true)
           return;
 
@@ -103,7 +113,17 @@ function initalizeListeners() {
           associatedLane.handleInputOff(); 
       
         keyHeld[event.key] = false
-    })
+    });
+
+    window.addEventListener('blur', () => {
+      Object.keys(keyHeld).forEach(key => {
+        keyHeld[key] = false;
+        let associatedLane = lanes[input_lane_pairs[key.toUpperCase()]];
+        if(associatedLane){
+          associatedLane.handleInputOff();
+        }
+      })
+    });
 
     document.addEventListener('contextmenu', (event) => {
         event.preventDefault();
@@ -124,7 +144,6 @@ function initalizeListeners() {
     container_height = laneContainer?.clientHeight;
 }
 
-
 function resetLanes(overshoot?: number) {
     lanes.forEach(lane => {
       if(overshoot)
@@ -139,8 +158,7 @@ function updateLaneWidth(lane: Lane, multiplier: number) {
     lane.canvas.width = (laneContainer.clientWidth / 4) * multiplier;
 }
 
-export function updateAllLaneSizes() {
-  // TODO: Change this to be more dynamic
+function updateAllLaneSizes() {
   let laneContainerDiv = document.getElementById('lane_container');
   if(!laneContainerDiv) { return }
   
@@ -159,7 +177,6 @@ export function updateAllLaneSizes() {
   }
   
   lanes.forEach(lane => {
-    // TODO: Include this part in the handleResize method too
     if(laneContainer) {
       lane.canvas.width = (laneContainer.clientWidth / 4) * multiplier;
       lane.canvas.height = laneContainer.clientHeight;
@@ -170,9 +187,6 @@ export function updateAllLaneSizes() {
     drawSingleLane(lane)
   });
 }
-
-
-
 
 function createNewLane(        
   bpm: number, 
@@ -258,7 +272,6 @@ function findLaneFromEvent(event: Event): Lane {
   return associatedLane;
 }
 
-
 export function resetLanesEditingStatus() {
   offsetY = null; 
   patternInCreationNotes = [];
@@ -277,10 +290,6 @@ export function resetLanesEditingStatus() {
     drawSingleLane(lane);
   })
 }
-
-
-
-
 
 export function deleteLane(lane: Lane, canvas: HTMLCanvasElement) {
   resetLanesEditingStatus();
@@ -313,29 +322,86 @@ export function deleteLane(lane: Lane, canvas: HTMLCanvasElement) {
   updateAllLaneSizes(); 
 }
 
+export function assignLaneInput(lane: Lane, inputKey: string) {
+  inputKey = inputKey.toUpperCase(); 
+  if(Object.keys(input_lane_pairs).includes(inputKey)) {
+    console.error('Input key already in use');
+    return -1;
+  }
+
+  delete input_lane_pairs[lane.inputKey];
+
+  lane.inputKey = inputKey; 
+  input_lane_pairs[inputKey] = lanes.indexOf(lane); 
+  drawSingleLane(lane); 
+  
+  saveCurrentSessionLocally(); 
+  return 0;
+}
+
+export function resetLongestLane() {
+  longest_lane = lanes[0]; 
+}
+
+export function setLongestLane() {   
+  if(lanes.length > 0) 
+    longest_lane = lanes[0]; 
+
+  lanes.forEach(curr => {
+    if(curr.getRatio() > longest_lane.getRatio()) {
+      longest_lane = curr; 
+    }
+  });
+
+  lanes.forEach(curr => {
+    if(curr.repeated && curr.getRatio() >= longest_lane.getRatio()) {
+      curr.unrepeatNotes();
+    }
+  })
+}
+
+export function remapLane(target: Lane, reference: Lane, copyInput?: boolean) {
+  target.bpm =  reference.bpm; 
+  target.noteGap = reference.noteGap; 
+  target.hitsound = reference.hitsound; 
+  target.measureCount = reference.measureCount; 
+  target.hitPrecision = reference.hitPrecision; 
+  target.maxWrongNotes = reference.maxWrongNotes; 
+  target.timeSignature = reference.timeSignature; 
+  target.metronomeEnabled = reference.metronomeEnabled;
+  target.autoPlayEnabled = reference.autoPlayEnabled; 
+  
+  target.subdivision = reference.subdivision; 
+  target.innerSubdivision = reference.innerSubdivision; 
+
+  target.repeated = reference.repeated;
+  target.repeatedNotes = reference.repeatedNotes;
+
+  target.patternStartMeasure = reference.patternStartMeasure; 
+
+  target.notes = []; 
+  target.translationAmount = 0;
+  target.nextNoteIndex = 0; 
+
+  if(copyInput)
+    target.inputKey = reference.inputKey; 
+
+  target.noFail = reference.noFail; 
+
+  reference.notes.forEach((note) => { target.notes.push(new Note(note.index)) });
+  
+  target.hitzone = target.calculateHitzone(); 
+  target.recalculateHeight(); 
+  target.handleResize();
+  drawSingleLane(target); 
+
+  setLongestLane();
+
+}
+// #endregion
 
 type EditMode = keyof typeof EDIT_MODES;
 export function changeEditMode(newEditMode: EditMode) { editMode = newEditMode; }
-
-
-
-// #region ( Event listeners )
-
-
-
-function midiNoteOn(note: number) {
-  let associatedLane = lanes[input_lane_pairs[note.toString()]];
-  if(associatedLane != null)
-    associatedLane.handleInputOn(paused); 
-}
-
-function midiNoteOff(note: number) {
-  let associatedLane = lanes[input_lane_pairs[note.toString()]];
-  if(associatedLane != null)
-    associatedLane.handleInputOff(); 
-}
-
-const keyHeld: { [key: string]: boolean } = {};
 
 export function enableAudio() {
   if(audioSprite) 
@@ -416,7 +482,105 @@ export function enableAudio() {
   })
 }
 
+// #region ( Run Controls Event Handlers ) 
+export function onPlayButtonClick() {
+  if(editing) // Should never be true due to React logic, but here just incase
+    return;
+  
+  if(!audioSprite) 
+    enableAudio(); // Required to be triggerd by user action
 
+  paused = false; 
+}
+
+export function onPauseButtonClick() {
+  if(editing) // Should never be true due to React logic, but here just incase
+    return;
+
+  paused = true 
+}
+
+export function onStopButtonClick(): {stats: StatsObject[], statsDisqualified: boolean} {
+  if(editing) // Should never be true due to React logic, but here just incase
+    return {stats: [], statsDisqualified: false};
+  
+  paused = true 
+  
+  let stats: StatsObject[] = [];
+  lanes.forEach(lane => {
+    stats[stats.length] = {
+      lane: lane.inputKey, 
+      totalNotes: lane.notes.length * lane.loopCount, 
+      notesHit: lane.notesHit, 
+      notesMissed: lane.notesMissed, 
+      wrongNotes: lane.wrongNotes,
+      runTotalTime: currentTime
+    };
+  })
+  currentTime = 0; 
+
+  resetLanes();
+  let noFail = false; 
+  lanes.forEach(lane => { drawSingleLane(lane); if(lane.noFail){noFail = true} });
+  return {stats: stats, statsDisqualified: noFail};
+}
+
+export function onEditButtonClick() {
+  if(!audioSprite) 
+    enableAudio(); // Required to be triggerd by user action
+
+  paused = true;
+  editing = !editing;
+  offsetY = null;
+  
+  resetLanes();
+  lanes.forEach(lane => {
+    lane.ctx.clearRect(0, 0, lane.canvas.width, lane.canvas.height - lane.inputAreaHeight);
+
+    lane.drawHitzone();
+    lane.drawMeasureIndicators();
+    // lane.updateNotes(ups, 0);
+    lane.updateAndDrawNotes(editing, ups, 0);
+    lane.drawInputVisual();
+  });
+
+  if(editing) {
+    laneContainer?.classList.add('editing');
+  } else {
+    laneContainer?.classList.remove('editing');
+
+    lanes.forEach(lane => {
+      lane.canvas.classList.remove('editing');
+      lane.canvas.parentElement?.classList.remove('background');
+
+      let laneEditingSection = lane.canvas.parentElement?.querySelector('.lane_editing');
+      laneEditingSection?.classList.remove('activated')
+    })
+  
+    resetLanes();
+    updateAllLaneSizes();
+    drawLanes();
+  }
+}
+
+export function onAddLaneButtonClick(inputKey: string) {  
+  if(!paused || laneCount >= 6)
+    return; 
+
+  let canvasContainer = createNewLane(80, 1, 200, 'kick1', 5, [], [4, 4], inputKey ? inputKey : "(?)", 16);
+
+  resetLanes();
+  drawLanes();
+
+  return canvasContainer; 
+}
+
+export function findLaneFromCanvas(canvas: HTMLCanvasElement) {
+  return canvas_lane_pairs[canvas.id];
+}
+// #endregion
+
+// #region ( Canvas functions )
 function canvasMouseWheel(event: WheelEvent) { 
   let canvas = event.target as HTMLCanvasElement;
   if(!editing || !canvas.classList.contains('editing'))
@@ -450,7 +614,6 @@ function canvasMouseOut(event: MouseEvent) {
   drawSingleLane(associatedLane);
 }
 
-// TODO: Comment out the flow of this function. Potentially restructure to make it more readable. 
 async function handleCanvasClick(event: MouseEvent) {
   if(!editing)
     return; 
@@ -563,7 +726,6 @@ export function sendCanvasToEditMode(canvas: HTMLCanvasElement) {
   })
 }
 
-// TODO: Reword this and rework it too, split it into seperate functions
 let newNoteY = -1; 
 let newNoteIndex = 0;
 export function drawSingleLane(lane: Lane) {
@@ -574,7 +736,6 @@ export function drawSingleLane(lane: Lane) {
     lane.drawMeasureIndicators(editMode, newPatternMeasures);
   else
     lane.drawMeasureIndicators(editMode);
-  // lane.updateNotes(ups, 0);
 
   if(editMode == EDIT_MODES.CREATE_PATTERN_MODE)
     lane.updateAndDrawNotes(editing, ups, 0, patternInCreationNotes); 
@@ -584,9 +745,6 @@ export function drawSingleLane(lane: Lane) {
   lane.drawInputVisual();
 
   if(editing && editMode != EDIT_MODES.PATTERN_MODE) {
-    // TODO: Hold shift to be continuous. 
-    // let divider = 16/lane.timeSignature[1];
-
     let height = lane.noteGap/lane.innerSubdivision; 
     // let drawHeight = lane.noteGap/(lane.timeSignature[1] * lane.timeSignature[0]);
     let drawHeight = 12.5; // Will be dynamic when more time signatures are supported in the future
@@ -607,8 +765,6 @@ export function drawSingleLane(lane: Lane) {
       if(effectiveY < -lane.noteGap)
         break;
 
-      // if(!keyHeld['Control']) {          
-      // }
       lane.ctx.fillStyle = COLORS.NOTE_AREA_HIGHLIGHT;
       lane.ctx.beginPath();
       lane.ctx.roundRect(30, effectiveY - (drawHeight/2), lane.canvas.width - 60, drawHeight, 20); 
@@ -621,8 +777,6 @@ export function drawSingleLane(lane: Lane) {
       let effectiveOffsetY = offsetY - translationAmount;
       if(effectiveOffsetY > (effectiveY - (height/2)) && effectiveOffsetY <= (effectiveY - (height/2)) + height) {
         newNoteY = y; 
-        // newNoteIndex = (lane.startY - newNoteY) / (lane.noteGap/lane.timeSignature[1]);
-        // newNoteIndex = Math.round((lane.startY - newNoteY) / (lane.noteGap/lane.timeSignature[1]));
 
         newNoteIndex = Math.round(parseInt(((lane.startY - newNoteY) / (lane.noteGap/lane.innerSubdivision)).toFixed(1)));
         // let inverse = ((newNoteIndex * (lane.noteGap/lane.timeSignature[1])) - lane.startY) * -1;
@@ -658,14 +812,38 @@ function drawLanes() {
     lane.drawInputVisual();
   })
 }
+// #endregion
+
+export function setNewPatternMeasures(measures: number) {
+  newPatternMeasures = measures
+}
+
+export function saveCurrentSessionLocally() {
+  let sessionObject: { lanes: Lane[] } = { lanes: [] };
+  lanes.forEach(lane => { sessionObject.lanes.push(lane); });
+  let content = JSON.stringify(sessionObject);
+  saveToLocalStorage('current_session', content); 
+}
+
+export function getEditMode() { return editMode }
+export function toggleLooping() { looping = !looping; }
+
+export function setPatternInCreation(notePositions: number[]) {
+  patternInCreationNotes = [];
+  patternInCreationPositions = [];
+
+  notePositions.forEach(position => {
+    patternInCreationPositions.push(position); 
+    patternInCreationNotes.push(new Note(position));
+  });
+}
+
 
 // #region ( Main game loop )
-let lastLoop = performance.now();
 let updateTime = 0; 
 let filterStrength = 20; 
-
+let lastLoop = performance.now();
 let animationFrameId: number | null = null; 
-// TODO: Pause updating when the window is out of focus. 
 function gameLoop(timeStamp: number) {
   // Calculating the number of updates per second
   // Relevant for determining the time it will take for notes to reach the hitzone 
@@ -675,7 +853,6 @@ function gameLoop(timeStamp: number) {
 
   updateTime += (interval - updateTime) / filterStrength; 
   ups = (1000/updateTime); 
-  // upsParagraph!.innerText = ups.toString().substring(0, 6); 
   lastLoop = timeStamp;
  
   for(let lane of lanes) {
@@ -741,115 +918,12 @@ function gameLoop(timeStamp: number) {
   animationFrameId = window.requestAnimationFrame(gameLoop);
 }
 
-
 export async function startLoop() {
     initalizeListeners();
     window.requestAnimationFrame(gameLoop);
 }
 // #endregion
 
-// #section ( Run Controls Event Handlers ) 
-// TODO: Look into single lane playing while in edit mode
-export function onPlayButtonClick() {
-  if(editing) // Should never be true due to React logic, but here just incase
-    return;
-  
-  if(!audioSprite) 
-    enableAudio(); // Required to be triggerd by user action
-
-  paused = false; 
-}
-
-export function onPauseButtonClick() {
-  if(editing) // Should never be true due to React logic, but here just incase
-    return;
-
-  paused = true 
-}
-
-export function onStopButtonClick(): {stats: StatsObject[], statsDisqualified: boolean} {
-  if(editing) // Should never be true due to React logic, but here just incase
-    return {stats: [], statsDisqualified: false};
-  
-  paused = true 
-  
-  let stats: StatsObject[] = [];
-  // TODO: Put this in own function
-  lanes.forEach(lane => {
-    stats[stats.length] = {
-      lane: lane.inputKey, 
-      totalNotes: lane.notes.length * lane.loopCount, 
-      notesHit: lane.notesHit, 
-      notesMissed: lane.notesMissed, 
-      wrongNotes: lane.wrongNotes,
-      runTotalTime: currentTime
-    };
-  })
-  currentTime = 0; 
-
-  resetLanes();
-  let noFail = false; 
-  lanes.forEach(lane => { drawSingleLane(lane); if(lane.noFail){noFail = true} });
-  return {stats: stats, statsDisqualified: noFail};
-}
-
-export function onEditButtonClick() {
-  if(!audioSprite) 
-    enableAudio(); // Required to be triggerd by user action
-
-  paused = true;
-  editing = !editing;
-  offsetY = null;
-  
-  resetLanes();
-  // TODO: Put this in own function
-  lanes.forEach(lane => {
-    lane.ctx.clearRect(0, 0, lane.canvas.width, lane.canvas.height - lane.inputAreaHeight);
-
-    lane.drawHitzone();
-    lane.drawMeasureIndicators();
-    // lane.updateNotes(ups, 0);
-    lane.updateAndDrawNotes(editing, ups, 0);
-    lane.drawInputVisual();
-  });
-
-  if(editing) {
-    laneContainer?.classList.add('editing');
-  } else {
-    laneContainer?.classList.remove('editing');
-
-    lanes.forEach(lane => {
-      lane.canvas.classList.remove('editing');
-      lane.canvas.parentElement?.classList.remove('background');
-
-      let laneEditingSection = lane.canvas.parentElement?.querySelector('.lane_editing');
-      laneEditingSection?.classList.remove('activated')
-    })
-  
-    // TODO: Dynamic
-    resetLanes();
-    updateAllLaneSizes();
-    drawLanes();
-  }
-}
-
-export function onAddLaneButtonClick(inputKey: string) {  
-  if(!paused || laneCount >= 6)
-    return; 
-
-  let canvasContainer = createNewLane(80, 1, 200, 'kick1', 5, [], [4, 4], inputKey ? inputKey : "(?)", 16);
-
-  resetLanes();
-  drawLanes();
-
-  return canvasContainer; 
-}
-// #endsection
-
-
-export function findLaneFromCanvas(canvas: HTMLCanvasElement) {
-  return canvas_lane_pairs[canvas.id];
-}
 
 // Expose to window during dev or test mode
 // @ts-ignore
@@ -864,114 +938,4 @@ if (typeof window !== 'undefined') {
   window.input_lane_pairs = input_lane_pairs;
   // @ts-ignore
   window.canvas_lane_pairs = canvas_lane_pairs;
-}
-
-
-// TODO: Change this implementation
-export function setNewPatternMeasures(measures: number) {
-  newPatternMeasures = measures
-}
-
-export function assignLaneInput(lane: Lane, inputKey: string) {
-  inputKey = inputKey.toUpperCase(); 
-  if(Object.keys(input_lane_pairs).includes(inputKey)) {
-    console.error('Input key already in use');
-    return -1;
-  }
-
-  delete input_lane_pairs[lane.inputKey];
-
-  lane.inputKey = inputKey; 
-  input_lane_pairs[inputKey] = lanes.indexOf(lane); 
-  drawSingleLane(lane); 
-  
-  saveCurrentSessionLocally(); 
-  return 0;
-}
-
-export function resetLongestLane() {
-  longest_lane = lanes[0]; 
-}
-
-export function setLongestLane() {   
-  if(lanes.length > 0) 
-    longest_lane = lanes[0]; 
-
-  lanes.forEach(curr => {
-    if(curr.getRatio() > longest_lane.getRatio()) {
-      longest_lane = curr; 
-    }
-  });
-
-  lanes.forEach(curr => {
-    if(curr.repeated && curr.getRatio() >= longest_lane.getRatio()) {
-      curr.unrepeatNotes();
-    }
-  })
-}
-
-export function toggleLooping() { looping = !looping; }
-
-export function saveCurrentSessionLocally() {
-  let sessionObject: { lanes: Lane[] } = { lanes: [] };
-  lanes.forEach(lane => { sessionObject.lanes.push(lane); });
-  let content = JSON.stringify(sessionObject);
-  saveToLocalStorage('current_session', content); 
-}
-
-// TODO: Make sure this is complete
-export function remapLane(target: Lane, reference: Lane, copyInput?: boolean) {
-  target.bpm =  reference.bpm; 
-  target.noteGap = reference.noteGap; 
-  target.hitsound = reference.hitsound; 
-  target.measureCount = reference.measureCount; 
-  target.hitPrecision = reference.hitPrecision; 
-  target.maxWrongNotes = reference.maxWrongNotes; 
-  target.timeSignature = reference.timeSignature; 
-  target.metronomeEnabled = reference.metronomeEnabled;
-  target.autoPlayEnabled = reference.autoPlayEnabled; 
-  
-  target.subdivision = reference.subdivision; 
-  target.innerSubdivision = reference.innerSubdivision; 
-
-  target.repeated = reference.repeated;
-  target.repeatedNotes = reference.repeatedNotes;
-
-  target.patternStartMeasure = reference.patternStartMeasure; 
-
-  target.notes = []; 
-  target.translationAmount = 0;
-  target.nextNoteIndex = 0; 
-
-  if(copyInput)
-    target.inputKey = reference.inputKey; 
-
-  target.noFail = reference.noFail; 
-
-  // TODO: Optimize this for lower load times
-  reference.notes.forEach((note) => { target.notes.push(new Note(note.index)) });
-  
-  target.hitzone = target.calculateHitzone(); 
-  target.recalculateHeight(); 
-  target.handleResize();
-  drawSingleLane(target); 
-
-  setLongestLane();
-
-}
-
-
-export function getEditMode() { return editMode }
-
-
-export function setPatternInCreation(notePositions: number[]) {
-  patternInCreationNotes = [];
-  patternInCreationPositions = [];
-
-  notePositions.forEach(position => {
-    patternInCreationPositions.push(position); 
-    patternInCreationNotes.push(new Note(position));
-  });
-
-  
 }

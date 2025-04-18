@@ -7,7 +7,7 @@ import React, { act, useEffect, useRef, useState } from 'react'
 import PatternEditingPanel from './PatternEditingPanel.tsx';
 import { deleteLane, resetLanesEditingStatus, patternInCreationPositions,  findLaneFromCanvas, drawSingleLane, changeEditMode, maxMeasureCount, resetPatternInCreation, setNewPatternMeasures, longest_lane, setLongestLane, lanes, remapLane, saveCurrentSessionLocally, global_volume } from '../../scripts/main.ts'
 import { listLocalStorageFolder, loadFromLocalStorage, saveToLocalStorage } from '../../scripts/helpers/utils.ts';
-import { retrieveBucketData, retrieveBucketList, retrievePublicBucketList, uploadToBucket } from '../../scripts/helpers/supa-utils.ts';
+import { retrieveBucketData, retrieveBucketListWithFolders, retrievePublicBucketList, uploadToBucket } from '../../scripts/helpers/supa-utils.ts';
 
 import '../styles/lane_editing.css';
 import { AutoPlay, LeftArrowIcon, Metronome, QuestionMark, RightArrowIcon } from '../../assets/svg/Icons.tsx';
@@ -69,7 +69,7 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas, setShowLog
 
     if(userId) {
       // Retrieve saved lanes from Supabase
-      data = await retrieveBucketList('lanes');
+      data = await retrieveBucketListWithFolders('lanes');
       if(data) { data.forEach((lane) => {lanes.push(lane.name)}) }
     } else {
       // Retrieve saved lanes from local storage
@@ -124,7 +124,7 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas, setShowLog
     const userId = (await supabase.auth.getUser()).data.user?.id as string;
     if(userId) {
       // Retrieve list of patterns from Supabase
-      let data = await retrieveBucketList('patterns', lane.subdivision.toString());
+      let data = await retrieveBucketListWithFolders('patterns', lane.subdivision.toString());
       if(data) { data.forEach(pattern => { patterns.push(pattern.name) }) }
     } else {
       // Retrieve list of patterns from local storage
@@ -369,6 +369,7 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas, setShowLog
 
           let canRepeat = lane.getRatio() < longest_lane.getRatio();
           setCanRepeat(canRepeat);
+          getSavedLanes();
 
           setMetronomeEnabled(lane.metronomeEnabled); 
           setAutoplayEnabled(lane.autoPlayEnabled); 

@@ -24,12 +24,10 @@ import Logo from '../assets/svg/Logo.tsx';
 export let midiAccess: MIDIAccess; 
 const Homepage = () => {
     const { session } = useContext(UserContext);
-    const { 
-        showStats, showSessionLoadScreen, showSessionSaveScreen, 
+    const { showStats, showSessionLoadScreen, showSessionSaveScreen, 
         setShowToolTips, setPendingFriendRequests, setAcceptedFriends,
         showSettingsScreen, showProfileScreen, showNotificationsScreen, 
-        setNotificationsNumber, showLogo, setShowLogo, isEditingRef
-    } = useAppContext();
+        setNotificationsNumber, showLogo, setShowLogo, isEditingRef} = useAppContext();
    
     // #region ( MIDI Setup )
     const processMidiMessage = (input: MIDIMessageEvent) => { handleMIDIMessage(input) }
@@ -77,10 +75,11 @@ const Homepage = () => {
     // #region ( useEffects )
     useEffect(() => {
         // Runs on component mount
-        startLoop();
+        startLoop(); // Starts the main script's animation loop
 
         setShowLogo(true); 
         const navEntries = performance.getEntriesByType("navigation") as PerformanceNavigationTiming[];
+        // Loads cached sessions from local storage on page reload
         if (navEntries.length > 0 && navEntries[0].type === "reload") {
             // Page reloaded
             let current_session: {lanes: Lane[]} | null = loadFromLocalStorage<{lanes: Lane[]}>('current_session');
@@ -101,12 +100,10 @@ const Homepage = () => {
         }
         
         const { data: listener } = supabase.auth.onAuthStateChange((event) => {
-            if(isEditingRef.current) {
-                // Ensures that saved pattern and lane data is repopulated correctly after auth change
-                // window.location.reload();
-            }
-
             if(event === 'SIGNED_OUT') {
+                if(isEditingRef.current) 
+                    (document.querySelector('#edit_mode_button') as HTMLElement)?.click();
+                
                 setAcceptedFriends([]);
                 setNotificationsNumber(0); 
                 setPendingFriendRequests([]);
@@ -120,14 +117,14 @@ const Homepage = () => {
             console.warn("MIDI Access not supported on current browser");
         }
 
-        // Detects when lane_container is empty
-
-
         return () => { listener.subscription.unsubscribe(); };
     }, []);
 
     useEffect(() => {
         if(session) {
+            if(isEditingRef.current) 
+                (document.querySelector('#edit_mode_button') as HTMLElement)?.click();
+
             // Rerequests friends list on session change
             fetchFriendsList('pending');
             fetchFriendsList('accepted');
@@ -145,11 +142,6 @@ const Homepage = () => {
     // #endregion
 
     return (<>
-        {/* <div id="debug_text">
-            <p id="ups_paragraph">0</p>
-            <button id="enable_audio">Enable audio</button>
-        </div> */}
-
         <section id='content'>
             <RunControls />
             { showStats && <StatsScreen/> }

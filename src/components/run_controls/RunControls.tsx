@@ -278,6 +278,8 @@ const RunControls = () => {
 
                 <button title="clear session" id="clear_session_button" onClick={() => {
                     setCurrentSessionAltered(true);
+                    setShowSessionToolTip(false); 
+                    setCurrentSessionName('');
                     for(let i = lanes.length - 1; i >= 0; i--) {
                         deleteLane(lanes[i], lanes[i].canvas);
                     }
