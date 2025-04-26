@@ -295,10 +295,9 @@ export default class Lane {
         } else {
             this.ctx.fillStyle = getNoteFill(note.currentZone, note.hitStatus); 
             if(this.notes.indexOf(note) == this.nextNoteIndex)
-                this.ctx.fillStyle = '#08A4BD';
+                this.ctx.fillStyle = COLORS.NEXT_NOTE_FILL;
         }
         
-        // TODO: Review this, justify it.
         let height = 12.5;
         if(!editing && note.animationHeight > 0) {
             height += note.animationHeight;
@@ -308,18 +307,13 @@ export default class Lane {
         this.ctx.beginPath();
         this.ctx.roundRect(x, y - (height/2), width, height, 20);
         this.ctx.fill();
-
-        // this.ctx.fillStyle = 'white';
-        // this.ctx.font = "12px sans-serif"
-        // this.ctx.fillText(`${note.timeToZone.toFixed(1)}ms to zone`, x, y + 3)
     }
 
     // Updates the hitzone and hitstatus of a specific note
     public updateNote(note: Note, y: number, ups: number, translationSpeed: number) {
-        // TODO: Change for new note object
-        let distanceToPerfectHitzone = ((this.hitzone.perfect_hit_y - this.translationAmount) - note.getY(this.noteGap, this.innerSubdivision, this.startY))
+        let distanceToPerfectHitzone = 
+        ((this.hitzone.perfect_hit_y - this.translationAmount) - note.getY(this.noteGap, this.innerSubdivision, this.startY));
 
-        // TODO: Review if this can be done cleaner
         if(note.hitStatus == 'unhit')
             note.timeToZone = ((distanceToPerfectHitzone/translationSpeed)/ups)*1000;
 
@@ -443,7 +437,7 @@ export default class Lane {
         let repeatedHeight = longest_lane.getRatio() * this.bpm;
         while(highestNoteY >= this.startY - repeatedHeight) {
             for(let i = 0; i < length; i++) {
-                let newNoteY = this.notes[i].getY(this.noteGap, this.innerSubdivision, this.startY) - (this.height * l)
+                let newNoteY = this.notes[i].getY(this.noteGap, this.innerSubdivision, this.startY) - (this.height * l);
                 let newNoteIndex = (this.startY - newNoteY) / (this.noteGap/this.innerSubdivision);
                 highestNoteY = newNoteY; 
 
@@ -560,7 +554,6 @@ export default class Lane {
         this.patternStartListeners.push(callback);
     }
 
-    // Optional cleanup
     public removePatternStartChange(callback: (value: number) => void) {
         this.patternStartListeners = this.patternStartListeners.filter(cb => cb !== callback);
     }

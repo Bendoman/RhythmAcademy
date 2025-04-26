@@ -30,6 +30,7 @@ export type LoadedLanePreview = {
     sessionName: string; 
     totalNotes: number; 
     numberOfLanes: number; 
+    tempos: number[];
     subdivisions: number[]; 
 }
 

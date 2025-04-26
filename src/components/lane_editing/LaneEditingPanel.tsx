@@ -525,10 +525,12 @@ const LaneEditingPanel: React.FC<ILaneEditingPanelProps> = ({ canvas, setShowLog
             <option value="snare1"  selected={lane.hitsound == "snare1" ? true : false}>snare 1</option>
             <option value="snare2" selected={lane.hitsound == "snare2" ? true : false}>snare 2</option>
             <option value="snare3"   selected={lane.hitsound == "snare3" ? true : false}>snare 3</option>
+            {/* <option value="rim"   selected={lane.hitsound == "rim" ? true : false}>rim</option> */}
 
             <option value="crash" selected={lane.hitsound == "crash" ? true : false}>crash</option>
             <option value="hihatClose" selected={lane.hitsound == "hihatClose" ? true : false}>closed hihat</option>
             <option value="hihatOpen"   selected={lane.hitsound == "hihatOpen" ? true : false}>open hihat</option>
+            <option value="ride"   selected={lane.hitsound == "ride" ? true : false}> ride</option>
 
             <option value="tom" selected={lane.hitsound == "tom" ? true : false}>tom</option>
         </select>

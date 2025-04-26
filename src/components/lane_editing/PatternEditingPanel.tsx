@@ -75,7 +75,7 @@ const PatternEditingPanel: React.FC<IPatternEditingPanelProps> = ({ lane, patter
                             <p>occurances</p>
                         </div>
 
-                        <button disabled={!activated} 
+                        <button disabled={!activated || pattern.includes('public_')} 
                         className='patternEditButton' onClick={() => {onEditClick(pattern)}}>edit</button>
                     </div>
                 })}

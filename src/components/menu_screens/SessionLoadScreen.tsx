@@ -106,6 +106,7 @@ const SessionLoadScreen = () => {
         }
         let totalNotes = 0; 
         let numberOfLanes = 0; 
+        let tempos: number[] = []; 
         let subdivisions: number[] = [];
         
         let sessionData;
@@ -121,11 +122,14 @@ const SessionLoadScreen = () => {
             if (!subdivisions.some(sd => sd === lane.subdivision)) {
                 subdivisions.push(lane.subdivision);
             }
+
+            if (!tempos.some(bpm => bpm === lane.bpm)) {
+                tempos.push(lane.bpm);
+            }
         });
 
-        let session:LoadedLanePreview = 
-        {sessionName: sessionName, totalNotes: totalNotes, 
-            numberOfLanes: numberOfLanes, subdivisions: subdivisions};
+        let session:LoadedLanePreview = { sessionName: sessionName, totalNotes: totalNotes, 
+            numberOfLanes: numberOfLanes, tempos: tempos, subdivisions: subdivisions };
         
         setHoveredSession(session);
     }
@@ -210,6 +214,7 @@ const SessionLoadScreen = () => {
                             <div className='hoveredInfo'>
                                 <p>Total notes: { hoveredSession.totalNotes }</p>
                                 <p>Number of lanes: { hoveredSession.numberOfLanes }</p>
+                                <p>Tempo { hoveredSession.tempos.map((tempo) => {return ` : ${tempo}`}) }</p>
                                 <p>Subdivisions { hoveredSession.subdivisions.map((sd) => {return ` : ${sd}`}) }</p>
                             </div>}
 

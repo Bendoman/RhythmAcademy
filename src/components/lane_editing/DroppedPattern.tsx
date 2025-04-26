@@ -55,7 +55,6 @@ const DroppedPattern: React.FC<IDroppedPatternProps> = ({ lane, setDroppedPatter
             setStartMeasure(startMeasureRef.current + 1);
         }
         updatePattern({start: startMeasureRef.current, length: pattern.data.measures * currentOccurances.current});
-        console.debug(pattern.id, startMeasureRef.current, currentOccurances.current, pattern.data.measures * currentOccurances.current);
     }
 
     const onDeleteClick = () => {

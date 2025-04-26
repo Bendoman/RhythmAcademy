@@ -475,10 +475,8 @@ export function enableAudio() {
     }
   });
 
-
   lanes.forEach(lane => {
     lane.audioSprite = audioSprite;
-    // lane.metronomeSprite = metronomeSprite;
   })
 }
 
@@ -669,12 +667,6 @@ async function handleCanvasClick(event: MouseEvent) {
 
       if(editMode == EDIT_MODES.CREATE_PATTERN_MODE) {
         patternInCreationNotes.splice(sortedIndex[0], 0, newNote);
-
-        let divider = 16/lane.timeSignature[1]; 
-        let height = lane.noteGap/divider; 
-        
-        // let y = patternInCreationNotes[sortedIndex[0]].getY(lane.noteGap, lane.innerSubdivision, lane.startY); 
-        // let dif = (y - lane.startY) / height;
         patternInCreationPositions.splice(sortedIndex[0], 0, patternInCreationNotes[sortedIndex[0]].index);
       } else {
         if(lane.repeated) {
