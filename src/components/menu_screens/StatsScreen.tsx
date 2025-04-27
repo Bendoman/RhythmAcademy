@@ -96,8 +96,10 @@ const StatsScreen = () => {
                 ? hits.reduce((sum, note) => sum + note.timeToZone, 0) / hits.length 
                 : 0; 
             });
-            if (trueLength === 0) return "N/A";
-            average = average > 0 ? average/trueLength : 0; 
+            if (trueLength === 0) {
+                return "N/A";
+            }
+            average = average != 0 ? average/trueLength : 0; 
         } else {
             let hits = statsArray[selectedTab].notesHit;
             if (hits.length === 0) return "N/A";
@@ -262,6 +264,15 @@ const StatsScreen = () => {
                 node.missedNotes += hitPercentageGraphData[index - 1].missedNotes;
                 node.wrongNotes += hitPercentageGraphData[index - 1].wrongNotes;
             }
+
+
+            if(node.hitNotes > 0) {
+                node.hitPercentage = parseInt(((node.hitNotes / (node.missedNotes + node.hitNotes)) * 100).toFixed(2)); 
+            } else if(index > 0) {
+                let prevNode = hitPercentageGraphData[index - 1];
+                node.hitPercentage = prevNode.hitPercentage;
+            }
+
             node.hitPercentage = node.hitNotes > 0 
             ? parseInt(((node.hitNotes / (node.missedNotes + node.hitNotes)) * 100).toFixed(2))
             : 0; 
@@ -456,6 +467,7 @@ const StatsScreen = () => {
             }}>Previous best</div>
         </div>
 
+        {/* <p>Mode hit deviation: {  getRoundedModeDeviation(currentStats) }</p> */}
         <div className="statContentContainer">
             <div className="statContent">
                 <div className="stats">
@@ -477,7 +489,6 @@ const StatsScreen = () => {
 
                     <p>Mean hit deviation: { getAverageDeviation(currentStats) }</p>
                     <p>Median hit deviation: {  getMedianDeviation(currentStats) }</p>
-                    <p>Mode hit deviation: {  getRoundedModeDeviation(currentStats) }</p>
                 </div>
 
                 <div className="graph_container">
