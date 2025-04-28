@@ -140,7 +140,7 @@ export async function sendFriendRequest(email: string): Promise<string> {
     if(insertError) {
         return 'Insert error while sending request'; 
     }
-    return `Friend request sent to ${userId}`;
+    return `Friend request sent to ${email}`;
 }
 
 
