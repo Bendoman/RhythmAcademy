@@ -487,7 +487,8 @@ export function onPlayButtonClick() {
   
   if(!audioSprite) 
     enableAudio(); // Required to be triggerd by user action
-
+  
+  currentTime = 0; 
   paused = false; 
 }
 
